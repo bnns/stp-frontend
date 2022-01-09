@@ -25,10 +25,15 @@ const LinkWrapper = styled.a`
 
 type ClickableProps = React.HTMLProps<HTMLButtonElement> & {
   link?: string;
-  children: ReactNode;
+  children: React.ReactNode;
 };
 
-export default function Clickable({ onClick, link, children, ...props }) {
+export default function Clickable({
+  onClick,
+  link,
+  children,
+  ...props
+}: ClickableProps) {
   if (link) {
     return (
       <LinkWrapper href={link} target="_blank" rel="noopener noreferrer">
@@ -36,9 +41,5 @@ export default function Clickable({ onClick, link, children, ...props }) {
       </LinkWrapper>
     );
   }
-  return (
-    <ButtonWrapper onClick={onClick} {...props}>
-      {children}
-    </ButtonWrapper>
-  );
-};
+  return <ButtonWrapper onClick={onClick}>{children}</ButtonWrapper>;
+}

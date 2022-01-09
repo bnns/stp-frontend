@@ -30,7 +30,7 @@ export default function Nav() {
     return (
         <Box>
             <Title>Bibliography</Title>
-            {bibliography.map(({link, name}) => (
+            {bibliography.map(({link, name}: {link: string; name: string}) => (
                 <Link
                     key={name}
                     href={link}

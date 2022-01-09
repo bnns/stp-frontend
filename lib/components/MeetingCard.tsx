@@ -1,12 +1,16 @@
 import React from "react";
 import styled from "@emotion/styled";
-import { Meeting } from "types";
+import { Meeting } from "../types";
 import Clickable from "./Clickable";
 
 const shadow =
   "0 5px 10px rgba(154, 160, 185, 0.05), 0 15px 40px rgba(166, 173, 201, 0.2);";
 
-const Card = styled.div`
+type CardProps = {
+    raised?: boolean;
+}
+
+const Card = styled.div<CardProps>`
   padding: 40px;
   background: #fff;
   max-width: 360px;

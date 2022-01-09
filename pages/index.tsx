@@ -58,21 +58,21 @@ const Filter = styled.input`
 `;
 
 const Home: NextPage = () => {
-  const [term, setTerm] = React.useState(null);
+  const [term, setTerm] = React.useState<string>("");
   const { data, error } = useSWR("/api/meetings", axios);
   const meetings = data?.data?.meetings;
   const sortedMeetings = React.useMemo<Meeting[]>(
     () => (meetings ? meetings.sort(sortByMeetingDate) : []),
     [meetings]
   );
-  const nextMeeting = React.useMemo<Meeting | {}>(
-    () => (sortedMeetings ? sortedMeetings.find(findNextMeeting) : {}),
+  const nextMeeting = React.useMemo<Meeting | null>(
+    () => sortedMeetings?.find(findNextMeeting) || null,
     [sortedMeetings]
   );
 
   const filterMeetings = React.useCallback(
     (m: Meeting) => {
-      if (m.id === nextMeeting.id) {
+      if (m.id === nextMeeting?.id) {
         return false;
       }
       if (term) {
@@ -92,7 +92,7 @@ const Home: NextPage = () => {
 
   const filteredMeetings = React.useMemo<Meeting[]>(
     () => (sortedMeetings ? sortedMeetings.filter(filterMeetings) : []),
-      [sortedMeetings, filterMeetings]
+    [sortedMeetings, filterMeetings]
   );
 
   if (error)
@@ -124,8 +124,15 @@ const Home: NextPage = () => {
           <CenterPiece>
             <Title>Subset of Theoretical Practice</Title>
             <Nav />
-            <Text>Next Meeting: {formatMeetingDate(nextMeeting.date)}</Text>
-            <MeetingCard raised {...nextMeeting} />
+            <Text>
+              Next Meeting:{" "}
+              {nextMeeting
+                ? formatMeetingDate(nextMeeting?.date || "")
+                : "Not scheduled currently"}
+            </Text>
+            {nextMeeting ? (
+              <MeetingCard raised {...(nextMeeting || {})} />
+            ) : null}
             <Text>Previous Meetings</Text>
             <Filter
               value={term}

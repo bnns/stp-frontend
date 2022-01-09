@@ -7,15 +7,19 @@ dayjs.extend(calendar)
 dayjs.extend(isSameOrAfter)
 dayjs.extend(isSameOrBefore)
 
-export function sortByMeetingDate(m1, m2) {
-    return new Date(m2.date) - new Date(m1.date);
+type WithDate = {
+    date: string;
 }
 
-export function findNextMeeting(m) {
+export function sortByMeetingDate(m1: WithDate, m2: WithDate) {
+    return (new Date(m2.date)).getTime() - (new Date(m1.date)).getTime();
+}
+
+export function findNextMeeting(m: WithDate) {
     return dayjs().isSameOrBefore(dayjs(m.date))
 }
 
-export function formatMeetingDate(date) {
+export function formatMeetingDate(date: string) {
     if (!date) { return '' }
     return dayjs(date).calendar(dayjs())
 }

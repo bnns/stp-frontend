@@ -10,7 +10,7 @@ export function getBearerToken() {
     return process.env.PUBLIC_STRAPI_API_TOKEN
 }
 
-export async function fetchAPI(path) {
+export async function fetchAPI(path: string) {
     const requestUrl = getStrapiUrl(path)
     const response = await fetch(requestUrl, {
         headers: {
