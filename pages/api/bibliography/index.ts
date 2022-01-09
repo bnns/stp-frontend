@@ -10,7 +10,7 @@ export default async function handler(
 ) {
   const bibData = await fetchAPI('bibliographies')
     const {data, ...others} = bibData
-    const responseData = { bibliography: data.map(format), ...others}
+    const responseData = { bibliography: data?.map(format) ?? [], ...others}
 
   res.status(200).json(responseData)
 }
