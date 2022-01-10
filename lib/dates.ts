@@ -12,11 +12,12 @@ type WithDate = {
 }
 
 export function sortByMeetingDate(m1: WithDate, m2: WithDate) {
-    return (new Date(m2.date)).getTime() - (new Date(m1.date)).getTime();
+    // earlier dates go first
+    return (new Date(m1.date)).getTime() - (new Date(m2.date)).getTime();
 }
 
 export function findNextMeeting(m: WithDate) {
-    return dayjs().isSameOrBefore(dayjs(m.date))
+    return dayjs().isSameOrBefore(dayjs(m.date).add(6, 'hours'))
 }
 
 export function formatMeetingDate(date: string) {
