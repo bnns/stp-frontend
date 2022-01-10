@@ -41,5 +41,9 @@ export default function Clickable({
       </LinkWrapper>
     );
   }
-  return <ButtonWrapper onClick={onClick}>{children}</ButtonWrapper>;
+  if (onClick) {
+    return <ButtonWrapper onClick={onClick}>{children}</ButtonWrapper>;
+  }
+
+  return <>{ children }</>;
 }

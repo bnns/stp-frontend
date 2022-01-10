@@ -42,13 +42,17 @@ const Text = styled.p`
   font-size: 14px;
 `;
 
+const LightText = styled(Text)`
+  font-family: Inter;
+`
+
 const Filter = styled.input`
   font-size: 12px;
   background-color: transparent;
   border: none;
   border-bottom: 2px solid #444;
   padding: 5px;
-  font-family: Helvetica;
+  font-family: Futura;
   font-weight: 700;
   max-width: 420px;
 
@@ -57,6 +61,13 @@ const Filter = styled.input`
   }
 `;
 
+const Row = styled.div`
+    display: flex;
+    justify-content: space-between;
+    max-width: 420px;
+    padding: 10px 15px;
+`
+
 const Home: NextPage = () => {
   const [term, setTerm] = React.useState<string>("");
   const { data, error } = useSWR("/api/meetings", axios);
@@ -64,10 +75,10 @@ const Home: NextPage = () => {
   const sortedMeetings = React.useMemo<Meeting[]>(
     () => (meetings ? meetings.sort(sortByMeetingDate) : []),
     [meetings]
-  );
+  )
   const [nextMeeting, idx] = React.useMemo<[Meeting | null, number]>(() => {
     const idx = sortedMeetings?.findIndex(findNextMeeting);
-    if (idx) {
+    if (idx > -1) {
       return [sortedMeetings[idx], idx];
     }
     return [null, -1];
@@ -143,7 +154,10 @@ const Home: NextPage = () => {
             ) : null}
             <Text>Planned Meetings</Text>
             {futureMeetings.map((m) => (
-                <div key={m.date}><Text>{m.name} - {formatMeetingDate(m.date)}</Text></div>
+                <Row key={m.date}>
+                    <LightText>{formatMeetingDate(m.date)}</LightText>
+                    <LightText>{m.name}</LightText> 
+                </Row>
             ))}
             <Text>Previous Meetings</Text>
             <Filter
