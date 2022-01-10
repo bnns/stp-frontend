@@ -110,8 +110,8 @@ const Home: NextPage = () => {
   );
 
   const filteredMeetings = React.useMemo<Meeting[]>(
-    () => (sortedMeetings ? sortedMeetings.filter(filterMeetings) : []),
-    [sortedMeetings, filterMeetings]
+    () => (sortedMeetings ? sortedMeetings.slice(0, idx).filter(filterMeetings) : []),
+    [sortedMeetings, filterMeetings, idx]
   );
 
   if (error)
