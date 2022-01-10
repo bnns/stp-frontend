@@ -65,9 +65,17 @@ const Home: NextPage = () => {
     () => (meetings ? meetings.sort(sortByMeetingDate) : []),
     [meetings]
   );
-  const nextMeeting = React.useMemo<Meeting | null>(
-    () => sortedMeetings?.find(findNextMeeting) || null,
-    [sortedMeetings]
+  const [nextMeeting, idx] = React.useMemo<[Meeting | null, number]>(() => {
+    const idx = sortedMeetings?.findIndex(findNextMeeting);
+    if (idx) {
+      return [sortedMeetings[idx], idx];
+    }
+    return [null, -1];
+  }, [sortedMeetings]);
+
+  const futureMeetings = React.useMemo<Meeting[]>(
+    () => (sortedMeetings && idx > -1 ? sortedMeetings.slice(idx + 1) : []),
+    [sortedMeetings, idx]
   );
 
   const filterMeetings = React.useCallback(
@@ -133,6 +141,10 @@ const Home: NextPage = () => {
             {nextMeeting ? (
               <MeetingCard raised {...(nextMeeting || {})} />
             ) : null}
+            <Text>Planned Meetings</Text>
+            {futureMeetings.map((m) => (
+                <div key={m.date}><Text>{m.name} - {formatMeetingDate(m.date)}</Text></div>
+            ))}
             <Text>Previous Meetings</Text>
             <Filter
               value={term}
