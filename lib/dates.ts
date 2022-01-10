@@ -17,7 +17,7 @@ export function sortByMeetingDate(m1: WithDate, m2: WithDate) {
 }
 
 export function findNextMeeting(m: WithDate) {
-    return dayjs().isSameOrBefore(dayjs(m.date).add(6, 'hours'))
+    return dayjs().isSameOrBefore(dayjs(m.date), 'day')
 }
 
 export function formatMeetingDate(date: string) {
