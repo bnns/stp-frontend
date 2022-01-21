@@ -69,7 +69,7 @@ const Home: NextPage = () => {
         const lowerTerm = term.toLowerCase();
         if (
           m.name.toLowerCase().includes(lowerTerm) ||
-          m.description.toLowerCase().includes(lowerTerm)
+          m.description?.toLowerCase().includes(lowerTerm)
         ) {
           return true;
         }
@@ -83,7 +83,10 @@ const Home: NextPage = () => {
   const filteredPastMeetings = React.useMemo<Meeting[]>(
     () =>
       sortedMeetings
-        ? sortedMeetings.slice(0, idx > -1 ? idx : sortedMeetings.length).filter(filterMeetings).reverse()
+        ? sortedMeetings
+            .slice(0, idx > -1 ? idx : sortedMeetings.length)
+            .filter(filterMeetings)
+            .reverse()
         : [],
     [sortedMeetings, filterMeetings, idx]
   );
@@ -96,7 +99,9 @@ const Home: NextPage = () => {
           ? formatMeetingDate(nextMeeting?.date || "")
           : "Not scheduled currently"}
       </Text>
-      {nextMeeting ? <MeetingCard raised current {...(nextMeeting || {})} /> : null}
+      {nextMeeting ? (
+        <MeetingCard raised current {...(nextMeeting || {})} />
+      ) : null}
       <Text>Planned Meetings</Text>
       {futureMeetings.map((m) => (
         <Row key={m.date}>
@@ -104,7 +109,7 @@ const Home: NextPage = () => {
           <LightText>{m.name}</LightText>
         </Row>
       ))}
-      <Text>Previous Meetings</Text>
+      <Text>Previous Meetings ({filteredPastMeetings.length})</Text>
       <Filter
         value={term}
         onChange={(e) => setTerm(e.target.value)}
