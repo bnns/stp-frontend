@@ -4,6 +4,7 @@ import { Meeting } from "../types";
 import Clickable from "./Clickable";
 import Image from "next/image";
 import { getStrapiMedia } from "../media";
+import { formatDate } from "../dates";
 
 const shadow =
   "0 5px 10px rgba(154, 160, 185, 0.05), 0 15px 40px rgba(166, 173, 201, 0.2);";
@@ -42,7 +43,7 @@ const Text = styled.p`
   font-family: Futura;
   font-weight: 500;
   font-size: 12px;
-`
+`;
 
 const Description = styled.div`
   font-family: Futura Light;
@@ -82,18 +83,25 @@ export default function MeetingCard({
   link,
   raised,
   materials,
+  date,
   current = false,
 }: Meeting & { raised?: boolean; current?: boolean }) {
   return (
     <Clickable link={current && link ? link : undefined}>
       <Card raised={raised}>
         <Title>{name}</Title>
+        <Description>{formatDate(date)}</Description>
         <Description>{description}</Description>
         {materials?.length ? <Subtitle>Meeting Materials</Subtitle> : null}
         {materials?.map((attributes) => {
           return (
-            <a key={attributes.name} href={getStrapiMedia(attributes)} target="_blank" rel="noopener noreferrer">
-                <Text>{attributes.name}</Text>
+            <a
+              key={attributes.name}
+              href={getStrapiMedia(attributes)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Text>{attributes.name}</Text>
             </a>
           );
         })}

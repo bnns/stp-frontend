@@ -11,6 +11,10 @@ type WithDate = {
     date: string;
 }
 
+export function formatDate(date: string | Date) {
+    return dayjs(date).format('DD MMMM YYYY')
+}
+
 export function sortByMeetingDate(m1: WithDate, m2: WithDate) {
     // earlier dates go first
     return (new Date(m1.date)).getTime() - (new Date(m2.date)).getTime();
