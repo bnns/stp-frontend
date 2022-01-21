@@ -83,7 +83,7 @@ const Home: NextPage = () => {
   const filteredPastMeetings = React.useMemo<Meeting[]>(
     () =>
       sortedMeetings
-        ? sortedMeetings.slice(0, idx).filter(filterMeetings).reverse()
+        ? sortedMeetings.slice(0, idx > -1 ? idx : sortedMeetings.length).filter(filterMeetings).reverse()
         : [],
     [sortedMeetings, filterMeetings, idx]
   );
