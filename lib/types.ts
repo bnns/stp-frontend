@@ -8,4 +8,10 @@ export type Meeting = {
     description: string;
     name: string;
     link: string;
+    materials?: MeetingMaterial[]
+}
+
+export type MeetingMaterial = {
+    name: string;
+    url: string;
 }

@@ -9,7 +9,7 @@ const Box = styled.div`
   top: 50px;
   border: 3px solid #444;
   padding: 10px 15px;
-  @media (max-width: 1000px) {
+  @media (max-width: 1450px) {
     position: inherit;
   }
 `;
@@ -29,7 +29,11 @@ export default function Nav() {
 
     return (
         <Box>
-            <Title>Bibliography</Title>
+            <Title>Pages</Title>
+            <Link href="/">Home</Link>
+            <Link href="/about">About STP</Link>
+            <Link href="/contact">Contact Us</Link>
+            <Title>Our Work</Title>
             {bibliography.map(({link, name}: {link: string; name: string}) => (
                 <Link
                     key={name}

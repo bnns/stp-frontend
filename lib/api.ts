@@ -1,6 +1,6 @@
-export function getStrapiUrl(path = '') {
+export function getStrapiUrl(path = '', api = true) {
     const base = process.env.PUBLIC_STRAPI_API_URL || 'http://localhost:1337'
-    return `${base}/api/${path}`
+    return `${base}${api ? '/api/' : ''}${path}`
 }
 
 export function getBearerToken() {
