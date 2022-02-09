@@ -23,9 +23,7 @@ export const Row = styled.div`
   display: flex;
   justify-content: space-between;
   max-width: 540px;
-  padding: 10px 15px;
 `;
-
 
 const Title = styled.h1`
   font-size: 35px;
@@ -38,7 +36,11 @@ type PageWrapperProps = {
   children: React.ReactNode;
 };
 
-export default function PageWrapper({ error, loading, children }: PageWrapperProps) {
+export default function PageWrapper({
+  error,
+  loading,
+  children,
+}: PageWrapperProps) {
   if (error)
     return (
       <Wrapper>
