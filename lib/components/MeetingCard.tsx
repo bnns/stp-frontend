@@ -138,7 +138,7 @@ export default function MeetingCard({
                 <Tag
                   key={Name}
                   onClick={() => {
-                    setSearch(Name);
+                    setSearch?.(Name);
                   }}
                 >
                   <p>{Name}</p>

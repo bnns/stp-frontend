@@ -13,7 +13,7 @@ export type Meeting = {
 };
 
 export type Tag = {
-  name: string;
+  Name: string;
 };
 
 export type MeetingMaterial = {
