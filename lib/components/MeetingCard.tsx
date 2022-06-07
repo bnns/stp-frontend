@@ -27,6 +27,25 @@ const Card = styled.div<CardProps>`
   }
 `;
 
+const RightItem = styled.div`
+  margin-left: auto;
+`;
+
+const Tag = styled.div`
+  padding: 5px 10px 10px;
+  height: 20px;
+  border-radius: 5px;
+  background-color: #eee;
+  font-family: Futura;
+  display: flex;
+  align-content: center;
+  align-self: flex-start;
+  cursor: pointer;
+  p {
+    margin: 0;
+  }
+`;
+
 const Title = styled.h3`
   font-family: Futura;
   font-weight: 700;
@@ -54,8 +73,10 @@ const Description = styled.div`
 `;
 
 const Row = styled.div`
+  margin-top: 20px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: flex-start;
 `;
 
 const Icon = ({
@@ -84,8 +105,14 @@ export default function MeetingCard({
   raised,
   materials,
   date,
+  tags,
+  setSearch,
   current = false,
-}: Meeting & { raised?: boolean; current?: boolean }) {
+}: Meeting & {
+  raised?: boolean;
+  current?: boolean;
+  setSearch?: (val: string) => void;
+}) {
   return (
     <Clickable link={current && link ? link : undefined}>
       <Card raised={raised}>
@@ -106,25 +133,41 @@ export default function MeetingCard({
           );
         })}
         <Row>
+          {tags?.length
+            ? tags.map(({ Name }) => (
+                <Tag
+                  key={Name}
+                  onClick={() => {
+                    setSearch(Name);
+                  }}
+                >
+                  <p>{Name}</p>
+                </Tag>
+              ))
+            : null}
           {current && link ? (
-            <Icon
-              name="/zoomus-icon.svg"
-              tooltip="Click to join the meeting."
-              height={25}
-              width={35}
-              alt="Zoom link"
-            />
-          ) : null}
-          {recording ? (
-            <a href={recording} target="_blank" rel="noopener noreferrer">
+            <RightItem>
               <Icon
-                name="/yt_icon_rgb.png"
-                tooltip="Click to view the recording."
+                name="/zoomus-icon.svg"
+                tooltip="Click to join the meeting."
                 height={25}
                 width={35}
-                alt="YouTube recording"
+                alt="Zoom link"
               />
-            </a>
+            </RightItem>
+          ) : null}
+          {recording ? (
+            <RightItem>
+              <a href={recording} target="_blank" rel="noopener noreferrer">
+                <Icon
+                  name="/yt_icon_rgb.png"
+                  tooltip="Click to view the recording."
+                  height={25}
+                  width={35}
+                  alt="YouTube recording"
+                />
+              </a>
+            </RightItem>
           ) : null}
         </Row>
       </Card>

@@ -6,19 +6,16 @@ type Formattable = {
   id: string;
   attributes: Record<string, unknown>;
 };
-type MaterialAttribute = { data: Formattable[] };
+type ExpandableAttribute = { data: Formattable[] };
 
 const format = ({ id, attributes }: Formattable): Record<string, unknown> => {
-  if (attributes.materials) {
-    return {
-      id,
-      ...attributes,
-      materials:
-        (attributes.materials as MaterialAttribute).data?.map(format) ?? [],
-    };
-  }
-
-  return { id, ...attributes };
+  return {
+    id,
+    ...attributes,
+    materials:
+      (attributes?.materials as ExpandableAttribute)?.data?.map(format) ?? [],
+    tags: (attributes?.tags as ExpandableAttribute)?.data?.map(format) ?? [],
+  };
 };
 
 export default async function handler(

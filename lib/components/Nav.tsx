@@ -4,6 +4,7 @@ import useSWR from "swr";
 import axios from "axios";
 
 const Box = styled.div`
+  z-index: 1;
   position: absolute;
   right: 50px;
   top: 50px;
@@ -15,35 +16,33 @@ const Box = styled.div`
 `;
 
 const Title = styled.div`
-    margin-bottom: 15px;
+  margin-bottom: 15px;
 `;
 
 const Link = styled.a`
-    display: block;
-    margin-bottom: 14px;
-`
+  display: block;
+  margin-bottom: 14px;
+`;
 
 export default function Nav() {
-    const { data, error } = useSWR("/api/bibliography", axios);
-    const bibliography = data?.data?.bibliography ?? [];
+  const { data, error } = useSWR("/api/bibliography", axios);
+  const bibliography = React.useMemo(
+    () => data?.data?.bibliography ?? [],
+    [data]
+  );
 
-    return (
-        <Box>
-            <Title>Pages</Title>
-            <Link href="/">Home</Link>
-            <Link href="/about">About STP</Link>
-            <Link href="/contact">Contact Us</Link>
-            <Title>Our Work</Title>
-            {bibliography.map(({link, name}: {link: string; name: string}) => (
-                <Link
-                    key={name}
-                    href={link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    {name}
-                </Link>
-            ))}
-        </Box>
-    )
-} ;
+  return (
+    <Box>
+      <Title>Pages</Title>
+      <Link href="/">Home</Link>
+      <Link href="/about">About STP</Link>
+      <Link href="/contact">Contact Us</Link>
+      <Title>Our Work</Title>
+      {bibliography.map(({ link, name }: { link: string; name: string }) => (
+        <Link key={name} href={link} target="_blank" rel="noopener noreferrer">
+          {name}
+        </Link>
+      ))}
+    </Box>
+  );
+}

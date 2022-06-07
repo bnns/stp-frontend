@@ -1,6 +1,5 @@
 import React from "react";
 import styled from "@emotion/styled";
-import Nav from "./Nav";
 
 const Wrapper = styled.div`
   display: flex;
@@ -65,7 +64,6 @@ export default function PageWrapper({
           <Row>
             <Title>Subset of Theoretical Practice</Title>
           </Row>
-          <Nav />
           {children}
         </CenterPiece>
       </Wrapper>

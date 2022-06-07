@@ -12,7 +12,6 @@ import {
 } from "../lib/dates";
 import { Meeting } from "../lib/types";
 import MeetingCard from "../lib/components/MeetingCard";
-import Nav from "../lib/components/Nav";
 import PageWrapper, { Row } from "../lib/components/PageWrapper";
 
 const Text = styled.p`
@@ -33,10 +32,26 @@ const Filter = styled.input`
   font-family: Futura;
   font-weight: 700;
   max-width: 420px;
+  width: 100%;
 
   &:focus {
     outline: none;
   }
+`;
+
+const Close = styled.div`
+  position: absolute;
+  right: 50px;
+  top: 0;
+  cursor: pointer;
+  &:after {
+    display: inline-block;
+    content: "\u2179";
+  }
+`;
+
+const FilterContainer = styled.div`
+  position: relative;
 `;
 
 const Home: NextPage = () => {
@@ -69,7 +84,8 @@ const Home: NextPage = () => {
         const lowerTerm = term.toLowerCase();
         if (
           m.name.toLowerCase().includes(lowerTerm) ||
-          m.description?.toLowerCase().includes(lowerTerm)
+          m.description?.toLowerCase().includes(lowerTerm) ||
+          m.tags?.find(({ Name }) => Name.toLowerCase().includes(lowerTerm))
         ) {
           return true;
         }
@@ -110,13 +126,16 @@ const Home: NextPage = () => {
         </Row>
       ))}
       <Text>Previous Meetings ({filteredPastMeetings.length})</Text>
-      <Filter
-        value={term}
-        onChange={(e) => setTerm(e.target.value)}
-        placeholder="Search for a meeting"
-      />
+      <FilterContainer>
+        <Filter
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder="Search for a meeting"
+        />
+        {term ? <Close onClick={() => setTerm("")} /> : null}
+      </FilterContainer>
       {filteredPastMeetings.map((m) => (
-        <MeetingCard key={m.date} {...m} />
+        <MeetingCard key={m.date} {...m} setSearch={setTerm} />
       ))}
     </PageWrapper>
   );

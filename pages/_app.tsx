@@ -1,9 +1,8 @@
 import App from "next/app";
+import Nav from "../lib/components/Nav";
 import Head from "next/head";
 import { createContext } from "react";
 import "../styles/global.css";
-
-export const GlobalContext = createContext({});
 
 type PageProps = {};
 
@@ -29,9 +28,8 @@ const MyApp = ({
         />
       </Head>
 
-      <GlobalContext.Provider value={{}}>
-        <Component {...pageProps} />
-      </GlobalContext.Provider>
+      <Nav />
+      <Component {...pageProps} />
     </>
   );
 };
