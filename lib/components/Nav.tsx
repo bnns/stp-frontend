@@ -1,7 +1,6 @@
 import React from "react";
 import styled from "@emotion/styled";
-import useSWR from "swr";
-import axios from "axios";
+import { Bibliography } from "../types";
 
 const Box = styled.div`
   z-index: 1;
@@ -24,13 +23,11 @@ const Link = styled.a`
   margin-bottom: 14px;
 `;
 
-export default function Nav() {
-  const { data, error } = useSWR("/api/bibliography", axios);
-  const bibliography = React.useMemo(
-    () => data?.data?.bibliography ?? [],
-    [data]
-  );
+export interface NavProps {
+  bibliography?: Bibliography[];
+}
 
+export default function Nav({ bibliography }: NavProps) {
   return (
     <Box>
       <Title>Pages</Title>
@@ -38,8 +35,8 @@ export default function Nav() {
       <Link href="/about">About STP</Link>
       <Link href="/contact">Contact Us</Link>
       <Link href="/badiou">Badiou Reading Group</Link>
-      <Title>Our Work</Title>
-      {bibliography.map(({ link, name }: { link: string; name: string }) => (
+      {bibliography ? <Title>Our Work</Title> : null}
+      {bibliography?.map(({ link, name }: { link: string; name: string }) => (
         <Link key={name} href={link} target="_blank" rel="noopener noreferrer">
           {name}
         </Link>

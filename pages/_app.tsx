@@ -1,7 +1,5 @@
 import App from "next/app";
-import Nav from "../lib/components/Nav";
 import Head from "next/head";
-import { createContext } from "react";
 import "../styles/global.css";
 
 type PageProps = {};
@@ -22,13 +20,8 @@ const MyApp = ({
         <title>Subset of Theoretical Practice</title>
         <meta name="description" content={meta} />
         <link rel="icon" href="/favicon.ico" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css?family=Raleway:wght@300;400;500;700"
-        />
       </Head>
 
-      <Nav />
       <Component {...pageProps} />
     </>
   );

@@ -1,4 +1,5 @@
 import React from "react";
+import Nav, { NavProps } from "./Nav";
 import Head from "next/head";
 import styled from "@emotion/styled";
 
@@ -30,12 +31,16 @@ const Title = styled.h1`
   font-weight: 300;
 `;
 
-type PageWrapperProps = {
+interface PageWrapperProps extends NavProps {
   children: React.ReactNode;
   title?: string;
-};
+}
 
-export default function PageWrapper({ children, title }: PageWrapperProps) {
+export default function PageWrapper({
+  children,
+  title,
+  ...navProps
+}: PageWrapperProps) {
   return (
     <main>
       <Head>
@@ -49,6 +54,7 @@ export default function PageWrapper({ children, title }: PageWrapperProps) {
           <Row>
             <Title>Subset of Theoretical Practice</Title>
           </Row>
+          <Nav {...(navProps as NavProps)} />
           {children}
         </CenterPiece>
       </Wrapper>

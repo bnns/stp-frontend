@@ -1,12 +1,15 @@
 import React from "react";
+import { NavProps } from "../lib/components/Nav";
+import { format as formatBibliographies } from "./api/bibliography";
+import { fetchAPI } from "../lib/api";
 import type { NextPage } from "next";
-import useSWR from "swr";
-import axios from "axios";
 import PageWrapper, { Row } from "../lib/components/PageWrapper";
 
-const Contact: NextPage = () => {
+interface Props extends NavProps {}
+
+const Contact: NextPage<Props> = ({ bibliography }) => {
   return (
-    <PageWrapper title="Contact">
+    <PageWrapper title="Contact" bibliography={bibliography}>
       <p>
         <a
           style={{ display: "inline" }}
@@ -20,5 +23,14 @@ const Contact: NextPage = () => {
     </PageWrapper>
   );
 };
+
+export async function getStaticProps() {
+  const bibliography = await fetchAPI("bibliographies");
+  return {
+    props: {
+      bibliography: bibliography?.data?.map(formatBibliographies) || [],
+    },
+  };
+}
 
 export default Contact;

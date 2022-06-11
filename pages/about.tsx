@@ -1,20 +1,20 @@
 import React from "react";
 import type { NextPage } from "next";
-import useSWR from "swr";
-import axios from "axios";
+import { format as formatBibliographies } from "./api/bibliography";
 import PageWrapper, { Row } from "../lib/components/PageWrapper";
 import { fetchAPI } from "../lib/api";
 import ReactMarkdown from "react-markdown";
+import { NavProps } from "../lib/components/Nav";
 
-interface Props {
+interface Props extends NavProps {
   markdown: string;
 }
 
 const STP_INTRO = "SyixzsrWCAI";
 
-const About: NextPage<Props> = ({ markdown }: Props) => {
+const About: NextPage<Props> = ({ markdown, bibliography }: Props) => {
   return (
-    <PageWrapper title="About">
+    <PageWrapper title="About" bibliography={bibliography}>
       <div className="video-responsive">
         <iframe
           width="600"
@@ -32,14 +32,13 @@ const About: NextPage<Props> = ({ markdown }: Props) => {
 };
 
 export async function getStaticProps() {
+  const bibliography = await fetchAPI("bibliographies");
   const about = await fetchAPI("about");
-  if (about?.data?.attributes?.text) {
-    return {
-      props: { markdown: about?.data?.attributes?.text },
-    };
-  }
   return {
-    props: {},
+    props: {
+      markdown: about?.data?.attributes?.text || "",
+      bibliography: bibliography?.data?.map(formatBibliographies) || [],
+    },
   };
 }
 
