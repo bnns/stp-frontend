@@ -37,6 +37,7 @@ export default function Nav() {
       <Link href="/">Home</Link>
       <Link href="/about">About STP</Link>
       <Link href="/contact">Contact Us</Link>
+      <Link href="/badiou">Badiou Reading Group</Link>
       <Title>Our Work</Title>
       {bibliography.map(({ link, name }: { link: string; name: string }) => (
         <Link key={name} href={link} target="_blank" rel="noopener noreferrer">

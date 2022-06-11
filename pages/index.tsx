@@ -1,9 +1,8 @@
 import type { NextPage } from "next";
+import { fetchAPI } from "../lib/api";
+import { format } from "./api/meetings";
 import React from "react";
-import Head from "next/head";
 import Image from "next/image";
-import useSWR from "swr";
-import axios from "axios";
 import styled from "@emotion/styled";
 import {
   sortByMeetingDate,
@@ -54,10 +53,12 @@ const FilterContainer = styled.div`
   position: relative;
 `;
 
-const Home: NextPage = () => {
+interface Props {
+  meetings: Meeting[];
+}
+
+const Home: NextPage<Props> = ({ meetings }) => {
   const [term, setTerm] = React.useState<string>("");
-  const { data, error } = useSWR("/api/meetings", axios);
-  const meetings = data?.data?.meetings;
   const sortedMeetings = React.useMemo<Meeting[]>(
     () => (meetings ? meetings.sort(sortByMeetingDate) : []),
     [meetings]
@@ -108,7 +109,7 @@ const Home: NextPage = () => {
   );
 
   return (
-    <PageWrapper error={error} loading={!data}>
+    <PageWrapper>
       <Text>
         Next Meeting:{" "}
         {nextMeeting
@@ -140,5 +141,17 @@ const Home: NextPage = () => {
     </PageWrapper>
   );
 };
+
+export async function getStaticProps() {
+  const meetings = await fetchAPI("meetings?populate=*&pagination[limit]=200");
+  if (meetings?.data) {
+    return {
+      props: { meetings: meetings?.data?.map(format) || [] },
+    };
+  }
+  return {
+    props: {},
+  };
+}
 
 export default Home;

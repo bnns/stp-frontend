@@ -14,7 +14,7 @@ const STP_INTRO = "SyixzsrWCAI";
 
 const About: NextPage<Props> = ({ markdown }: Props) => {
   return (
-    <PageWrapper>
+    <PageWrapper title="About">
       <div className="video-responsive">
         <iframe
           width="600"

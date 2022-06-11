@@ -1,4 +1,5 @@
 import React from "react";
+import Head from "next/head";
 import styled from "@emotion/styled";
 
 const Wrapper = styled.div`
@@ -30,35 +31,19 @@ const Title = styled.h1`
 `;
 
 type PageWrapperProps = {
-  error?: boolean;
-  loading?: boolean;
   children: React.ReactNode;
+  title?: string;
 };
 
-export default function PageWrapper({
-  error,
-  loading,
-  children,
-}: PageWrapperProps) {
-  if (error)
-    return (
-      <Wrapper>
-        <CenterPiece>
-          <div>failed to load</div>
-        </CenterPiece>
-      </Wrapper>
-    );
-  if (loading)
-    return (
-      <Wrapper>
-        <CenterPiece>
-          <div>loading...</div>
-        </CenterPiece>
-      </Wrapper>
-    );
-
+export default function PageWrapper({ children, title }: PageWrapperProps) {
   return (
     <main>
+      <Head>
+        <title>
+          `Subset of Theoretical Practice${title ? " - " : ""}${title}`
+        </title>
+        <meta name="viewport" content="initial-scale=1.0, width=device-width" />
+      </Head>
       <Wrapper>
         <CenterPiece>
           <Row>

@@ -8,7 +8,10 @@ type Formattable = {
 };
 type ExpandableAttribute = { data: Formattable[] };
 
-const format = ({ id, attributes }: Formattable): Record<string, unknown> => {
+export const format = ({
+  id,
+  attributes,
+}: Formattable): Record<string, unknown> => {
   return {
     id,
     ...attributes,
