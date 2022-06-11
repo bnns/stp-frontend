@@ -22,6 +22,7 @@ const Text = styled.p`
 const LightText = styled(Text)`
   font-family: Raleway;
   font-weight: 300;
+  margin-right: 20px;
 `;
 
 const Filter = styled.input`

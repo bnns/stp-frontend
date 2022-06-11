@@ -7,7 +7,6 @@ export function getBearerToken() {
   if (!process.env.PUBLIC_STRAPI_API_TOKEN) {
     throw new Error("missing PUBLIC_STRAPI_API_TOKEN");
   }
-  console.log(process.env.PUBLIC_STRAPI_API_TOKEN);
   return process.env.PUBLIC_STRAPI_API_TOKEN;
 }
 

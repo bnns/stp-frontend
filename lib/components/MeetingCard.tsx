@@ -150,8 +150,8 @@ export default function MeetingCard({
               <Icon
                 name="/zoomus-icon.svg"
                 tooltip="Click to join the meeting."
-                height={25}
-                width={35}
+                height={32}
+                width={32}
                 alt="Zoom link"
               />
             </RightItem>
