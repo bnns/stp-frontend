@@ -14,7 +14,7 @@ const STP_INTRO = "SyixzsrWCAI";
 
 const About: NextPage<Props> = ({ markdown, bibliography }: Props) => {
   return (
-    <PageWrapper title="About" bibliography={bibliography}>
+    <PageWrapper title="About STP" bibliography={bibliography}>
       <div className="video-responsive">
         <iframe
           width="600"

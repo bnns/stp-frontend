@@ -9,7 +9,7 @@ interface Props extends NavProps {}
 
 const Contact: NextPage<Props> = ({ bibliography }) => {
   return (
-    <PageWrapper title="Contact" bibliography={bibliography}>
+    <PageWrapper title="Contact STP" bibliography={bibliography}>
       <p>
         <a
           style={{ display: "inline" }}

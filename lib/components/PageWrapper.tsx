@@ -44,9 +44,7 @@ export default function PageWrapper({
   return (
     <main>
       <Head>
-        <title>
-          `Subset of Theoretical Practice${title ? " - " : ""}${title}`
-        </title>
+        <title>{title ?? "Subset of Theoretical Practice"}</title>
         <meta name="viewport" content="initial-scale=1.0, width=device-width" />
       </Head>
       <Wrapper>

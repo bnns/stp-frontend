@@ -4,7 +4,7 @@ import PageWrapper, { Row } from "../lib/components/PageWrapper";
 
 const Badiou: NextPage = () => {
   return (
-    <PageWrapper title="Badiou">
+    <PageWrapper title="Badiou Reading Group">
       <p>Coming Soon</p>
     </PageWrapper>
   );
