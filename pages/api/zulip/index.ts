@@ -55,14 +55,14 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  process.env.NODE_ENV === "development" && console.log(req.body);
-  if (req.headers.authorization === process.env.WEBHOOK_TOKEN) {
+  if (req.headers.authorization?.trim() === process.env.WEBHOOK_TOKEN?.trim()) {
     const zulipClient = await zulipInit({
       username: process.env.ZULIP_USERNAME,
       apiKey: process.env.ZULIP_API_KEY,
       realm: process.env.ZULIP_REALM,
     });
     const { event, model, entry, media } = req.body;
+    console.log(req.body);
     let message = "";
     if (model === "about") {
       message = "Someone changed the about page";
