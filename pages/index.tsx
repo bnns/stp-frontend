@@ -153,6 +153,7 @@ export async function getStaticProps() {
       meetings: meetings?.data?.map(formatMeetings) || [],
       bibliography: bibliography?.data?.map(formatBibliographies) || [],
     },
+    revalidate: 60,
   };
 }
 

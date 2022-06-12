@@ -30,6 +30,7 @@ export async function getStaticProps() {
     props: {
       bibliography: bibliography?.data?.map(formatBibliographies) || [],
     },
+    revalidate: 60,
   };
 }
 

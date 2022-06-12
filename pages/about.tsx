@@ -39,6 +39,7 @@ export async function getStaticProps() {
       markdown: about?.data?.attributes?.text || "",
       bibliography: bibliography?.data?.map(formatBibliographies) || [],
     },
+    revalidate: 60,
   };
 }
 
