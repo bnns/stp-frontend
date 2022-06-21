@@ -19,7 +19,7 @@ const zulipMessage = (
   media: Record<string, unknown>
 ): string => {
   let message = "";
-  let displayName = entry?.name || entry?.Name; // TODO: annoying
+  let displayName = entry?.name || entry?.Name || media.name; // TODO: annoying
   switch (event) {
     case Event.CREATE:
       message = `Someone created a new ${model} "${displayName}"`;
