@@ -7,12 +7,12 @@ export default function Document() {
         <Html>
             <Head>
                 <link
-                    href="https://fonts.googleapis.com/css2?family=Inter&display=optional"
+                    href="https://fonts.googleapis.com/css2?family=Inter&display=swap"
                     rel="stylesheet"
                 />
                 <link
                     rel="stylesheet"
-                    href="https://fonts.googleapis.com/css?family=Raleway:wght@300;400;500;700&display=optional"
+                    href="https://fonts.googleapis.com/css?family=Raleway:wght@300;400;500;700&display=swap"
                 />
             </Head>
             <body>

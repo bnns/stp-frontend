@@ -19,10 +19,16 @@ const Text = styled.p`
   font-size: 14px;
 `;
 
-const LightText = styled(Text)`
+type LightTextProps = {
+  isDate?: boolean;
+  isTitle?: boolean;
+};
+
+const LightText = styled(Text)<LightTextProps>`
   font-family: Raleway;
   font-weight: 300;
-  margin-right: 20px;
+  margin-right: ${(props) => (props.isDate ? 20 : 0)}px;
+  text-align: ${(props) => (props.isTitle ? "right" : "inherit")};
 `;
 
 const Filter = styled.input`
@@ -33,7 +39,6 @@ const Filter = styled.input`
   padding: 5px;
   font-family: Futura;
   font-weight: 700;
-  max-width: 420px;
   width: 100%;
 
   &:focus {
@@ -43,7 +48,7 @@ const Filter = styled.input`
 
 const Close = styled.div`
   position: absolute;
-  right: 50px;
+  right: 10px;
   top: 0;
   cursor: pointer;
   &:after {
@@ -122,25 +127,32 @@ const Home: NextPage<Props> = ({ meetings, bibliography }) => {
       {nextMeeting ? (
         <MeetingCard raised current {...(nextMeeting || {})} />
       ) : null}
-      <Text>Planned Meetings</Text>
-      {futureMeetings.map((m) => (
-        <Row key={m.date}>
-          <LightText>{formatMeetingDate(m.date)}</LightText>
-          <LightText>{m.name}</LightText>
-        </Row>
-      ))}
-      <Text>Previous Meetings ({filteredPastMeetings.length})</Text>
-      <FilterContainer>
-        <Filter
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-          placeholder="Search for a meeting"
-        />
-        {term ? <Close onClick={() => setTerm("")} /> : null}
-      </FilterContainer>
+      <div>
+        <Text>Planned Meetings</Text>
+        {futureMeetings.map((m) => (
+          <Row key={m.date}>
+            <LightText isDate>{formatMeetingDate(m.date)}</LightText>
+            <LightText isTitle>{m.name}</LightText>
+          </Row>
+        ))}
+        <Text>Previous Meetings ({filteredPastMeetings.length})</Text>
+        <FilterContainer>
+          <Filter
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Search for a meeting"
+          />
+          {term ? <Close onClick={() => setTerm("")} /> : null}
+        </FilterContainer>
+      </div>
       {filteredPastMeetings.map((m) => (
         <MeetingCard key={m.date} {...m} setSearch={setTerm} />
       ))}
+      {!filteredPastMeetings.length ? (
+        <div>
+          <LightText>Sorry, no meetings matched your search terms.</LightText>
+        </div>
+      ) : null}
     </PageWrapper>
   );
 };

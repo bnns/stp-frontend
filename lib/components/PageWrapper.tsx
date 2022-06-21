@@ -14,7 +14,9 @@ const Wrapper = styled.div`
 const CenterPiece = styled.div`
   display: flex;
   flex-direction: column;
+  align-items: center;
   height: 100%;
+  min-height: 1500px;
   @media (min-width: 1450px) {
     max-width: 40%;
   }

@@ -1,7 +1,6 @@
 import React from "react";
 import styled from "@emotion/styled";
 import { Meeting } from "../types";
-import Clickable from "./Clickable";
 import Image from "next/image";
 import { getStrapiMedia } from "../media";
 import { formatDate } from "../dates";
@@ -16,7 +15,7 @@ type CardProps = {
 const Card = styled.div<CardProps>`
   padding: 40px;
   background: #fff;
-  max-width: 360px;
+  width: 360px;
   border-radius: 10px;
   box-shadow: ${(props) => (props.raised ? shadow : "inherit;")}
   transition: box-shadow 240ms ease-out;
@@ -24,6 +23,10 @@ const Card = styled.div<CardProps>`
 
   &:hover {
     box-shadow: ${shadow}
+  }
+
+  @media (max-width: 450px) {
+    width: inherit;
   }
 `;
 
@@ -114,39 +117,39 @@ export default function MeetingCard({
   setSearch?: (val: string) => void;
 }) {
   return (
-    <Clickable link={current && link ? link : undefined}>
-      <Card raised={raised}>
-        <Title>{name}</Title>
-        <Description>{formatDate(date)}</Description>
-        <Description>{description}</Description>
-        {materials?.length ? <Subtitle>Meeting Materials</Subtitle> : null}
-        {materials?.map((attributes) => {
-          return (
-            <a
-              key={attributes.name}
-              href={getStrapiMedia(attributes)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Text>{attributes.name}</Text>
-            </a>
-          );
-        })}
-        <Row>
-          {tags?.length
-            ? tags.map(({ Name }) => (
-                <Tag
-                  key={Name}
-                  onClick={() => {
-                    setSearch?.(Name);
-                  }}
-                >
-                  <p>{Name}</p>
-                </Tag>
-              ))
-            : null}
-          {current && link ? (
-            <RightItem>
+    <Card raised={raised}>
+      <Title>{name}</Title>
+      <Description>{formatDate(date)}</Description>
+      <Description>{description}</Description>
+      {materials?.length ? <Subtitle>Meeting Materials</Subtitle> : null}
+      {materials?.map((attributes) => {
+        return (
+          <a
+            key={attributes.name}
+            href={getStrapiMedia(attributes)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Text>{attributes.name}</Text>
+          </a>
+        );
+      })}
+      <Row>
+        {tags?.length
+          ? tags.map(({ Name }) => (
+              <Tag
+                key={Name}
+                onClick={() => {
+                  setSearch?.(Name);
+                }}
+              >
+                <p>{Name}</p>
+              </Tag>
+            ))
+          : null}
+        {current && link ? (
+          <RightItem>
+            <a href={link} target="_blank" rel="noopener noreferrer">
               <Icon
                 name="/zoomus-icon.svg"
                 tooltip="Click to join the meeting."
@@ -154,23 +157,23 @@ export default function MeetingCard({
                 width={32}
                 alt="Zoom link"
               />
-            </RightItem>
-          ) : null}
-          {recording ? (
-            <RightItem>
-              <a href={recording} target="_blank" rel="noopener noreferrer">
-                <Icon
-                  name="/yt_icon_rgb.png"
-                  tooltip="Click to view the recording."
-                  height={25}
-                  width={35}
-                  alt="YouTube recording"
-                />
-              </a>
-            </RightItem>
-          ) : null}
-        </Row>
-      </Card>
-    </Clickable>
+            </a>
+          </RightItem>
+        ) : null}
+        {recording ? (
+          <RightItem>
+            <a href={recording} target="_blank" rel="noopener noreferrer">
+              <Icon
+                name="/yt_icon_rgb.png"
+                tooltip="Click to view the recording."
+                height={25}
+                width={35}
+                alt="YouTube recording"
+              />
+            </a>
+          </RightItem>
+        ) : null}
+      </Row>
+    </Card>
   );
 }
