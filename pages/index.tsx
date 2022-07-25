@@ -9,6 +9,7 @@ import {
   sortByMeetingDate,
   findNextMeeting,
   formatMeetingDate,
+  formatDate,
 } from "../lib/dates";
 import { Meeting } from "../lib/types";
 import MeetingCard from "../lib/components/MeetingCard";
@@ -29,6 +30,7 @@ const LightText = styled(Text)<LightTextProps>`
   font-weight: 300;
   margin-right: ${(props) => (props.isDate ? 20 : 0)}px;
   text-align: ${(props) => (props.isTitle ? "right" : "inherit")};
+  min-width: ${(props) => (props.isDate ? "150px" : "inherit")};
 `;
 
 const Filter = styled.input`
@@ -131,7 +133,7 @@ const Home: NextPage<Props> = ({ meetings, bibliography }) => {
         <Text>Planned Meetings</Text>
         {futureMeetings.map((m) => (
           <Row key={m.date}>
-            <LightText isDate>{formatMeetingDate(m.date)}</LightText>
+            <LightText isDate>{formatDate(m.date)}</LightText>
             <LightText isTitle>{m.name}</LightText>
           </Row>
         ))}
