@@ -3,7 +3,7 @@ import styled from "@emotion/styled";
 import { Meeting } from "../types";
 import Image from "next/image";
 import { getStrapiMedia } from "../media";
-import { formatDate } from "../dates";
+import { formatDate, DateMode } from "../dates";
 
 const shadow =
   "0 5px 10px rgba(154, 160, 185, 0.05), 0 15px 40px rgba(166, 173, 201, 0.2);";
@@ -49,10 +49,11 @@ const Tag = styled.div`
   }
 `;
 
-const Title = styled.h3`
+const Title = styled.div`
   font-family: Futura;
   font-weight: 700;
   font-size: 18px;
+flex: 3;
 `;
 
 const Subtitle = styled.h4`
@@ -75,12 +76,23 @@ const Description = styled.div`
   margin: 20px 0;
 `;
 
-const Row = styled.div`
+const Row = styled.div<{center?: boolean}>`
   margin-top: 20px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: ${props => props.center ? 'center' : 'flex-start'};
 `;
+
+const Date = styled.div`
+  font-weight: 700;
+  font-size: 24px;
+  border: 2px solid #444;
+  text-align: center;
+  padding: 10px 25px;
+  flex: 1;
+  margin-right: 20px;
+  height: 70px;
+`
 
 const Icon = ({
   name,
@@ -118,8 +130,10 @@ export default function MeetingCard({
 }) {
   return (
     <Card raised={raised}>
-      <Title>{name}</Title>
-      <Description>{formatDate(date)}</Description>
+      <Row center>
+        <Date>{formatDate(date, DateMode.CARD)}</Date>
+        <Title>{name}</Title>
+      </Row>
       <Description>{description}</Description>
       {materials?.length ? <Subtitle>Meeting Materials</Subtitle> : null}
       {materials?.map((attributes) => {
@@ -137,15 +151,15 @@ export default function MeetingCard({
       <Row>
         {tags?.length
           ? tags.map(({ Name }) => (
-              <Tag
-                key={Name}
-                onClick={() => {
-                  setSearch?.(Name);
-                }}
-              >
-                <p>{Name}</p>
-              </Tag>
-            ))
+            <Tag
+              key={Name}
+              onClick={() => {
+                setSearch?.(Name);
+              }}
+            >
+              <p>{Name}</p>
+            </Tag>
+          ))
           : null}
         {current && link ? (
           <RightItem>

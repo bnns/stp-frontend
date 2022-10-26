@@ -8,23 +8,31 @@ dayjs.extend(isSameOrAfter)
 dayjs.extend(isSameOrBefore)
 
 type WithDate = {
-    date: string;
+  date: string;
 }
 
-export function formatDate(date: string | Date) {
-    return dayjs(date).format('DD MMMM YYYY')
+export enum DateMode {
+  CARD,
+  TEXT
+}
+
+export function formatDate(date: string | Date, mode: DateMode = DateMode.TEXT) {
+  if (mode === DateMode.CARD) {
+    return dayjs(date).format('DD MMM')
+  }
+  return dayjs(date).format('DD MMMM YYYY')
 }
 
 export function sortByMeetingDate(m1: WithDate, m2: WithDate) {
-    // earlier dates go first
-    return (new Date(m1.date)).getTime() - (new Date(m2.date)).getTime();
+  // earlier dates go first
+  return (new Date(m1.date)).getTime() - (new Date(m2.date)).getTime();
 }
 
 export function findNextMeeting(m: WithDate) {
-    return dayjs().isSameOrBefore(dayjs(m.date), 'day')
+  return dayjs().isSameOrBefore(dayjs(m.date), 'day')
 }
 
 export function formatMeetingDate(date: string) {
-    if (!date) { return '' }
-    return dayjs(date).calendar(dayjs())
+  if (!date) { return '' }
+  return dayjs(date).calendar(dayjs())
 }
