@@ -53,7 +53,7 @@ const Title = styled.div`
   font-family: Futura;
   font-weight: 700;
   font-size: 18px;
-flex: 3;
+  flex: 4;
 `;
 
 const Subtitle = styled.h4`
@@ -76,7 +76,7 @@ const Description = styled.div`
   margin: 20px 0;
 `;
 
-const Row = styled.div<{center?: boolean}>`
+const Row = styled.div<{ center?: boolean }>`
   margin-top: 20px;
   display: flex;
   justify-content: space-between;
@@ -85,13 +85,16 @@ const Row = styled.div<{center?: boolean}>`
 
 const Date = styled.div`
   font-weight: 700;
-  font-size: 24px;
+  font-size: 16px;
   border: 2px solid #444;
   text-align: center;
-  padding: 10px 25px;
+  justify-content: center;
+  padding: 10px 15px;
   flex: 1;
   margin-right: 20px;
-  height: 70px;
+  height: 40px;
+  display: flex;
+  align-items: center;
 `
 
 const Icon = ({
@@ -130,10 +133,17 @@ export default function MeetingCard({
 }) {
   return (
     <Card raised={raised}>
-      <Row center>
-        <Date>{formatDate(date, DateMode.CARD)}</Date>
-        <Title>{name}</Title>
-      </Row>
+      {current ?
+        <Row center>
+          <Date>{formatDate(date, DateMode.CARD)}</Date>
+          <Title>{name}</Title>
+        </Row>
+        : <><Row center>
+          <Title>{name}</Title>
+        </Row>
+          <Description>{formatDate(date, DateMode.TEXT)}</Description>
+        </>
+      }
       <Description>{description}</Description>
       {materials?.length ? <Subtitle>Meeting Materials</Subtitle> : null}
       {materials?.map((attributes) => {
