@@ -3,8 +3,8 @@ import { fetchAPI } from "../lib/api";
 import { format as formatMeetings } from "./api/meetings";
 import { format as formatBibliographies } from "./api/bibliography";
 import React from "react";
-import Image from "next/image";
 import styled from "@emotion/styled";
+import { cx } from "@emotion/css";
 import {
   sortByMeetingDate,
   findNextMeeting,
@@ -16,8 +16,13 @@ import MeetingCard from "../lib/components/MeetingCard";
 import { NavProps } from "../lib/components/Nav";
 import PageWrapper, { Row } from "../lib/components/PageWrapper";
 
-const Text = styled.p`
+type TextProps = {
+  center?: boolean;
+};
+
+const Text = styled.p <TextProps>`
   font-size: 14px;
+  text-align: ${props => props.center ? 'center' : 'inherit'};
 `;
 
 type LightTextProps = {
@@ -46,12 +51,17 @@ const Filter = styled.input`
   &:focus {
     outline: none;
   }
+  &.active {
+    background-color: #444;
+    color: #fff;
+  }
 `;
 
 const Close = styled.div`
+  color: #fff;
   position: absolute;
-  right: 10px;
-  top: 0;
+  right: 5px;
+  top: 2px;
   cursor: pointer;
   &:after {
     display: inline-block;
@@ -61,7 +71,7 @@ const Close = styled.div`
 
 const FilterContainer = styled.div`
   position: relative;
- width: 100%;
+  width: 100%;
 `;
 
 interface Props extends NavProps {
@@ -130,8 +140,8 @@ const Home: NextPage<Props> = ({ meetings, bibliography }) => {
       {nextMeeting ? (
         <MeetingCard raised current {...(nextMeeting || {})} />
       ) : null}
-      {futureMeetings.length ? <Row>
-        <Text>Planned Meetings</Text>
+      {futureMeetings.length ? <Row verticalChildren>
+        <Text center>Planned Meetings</Text>
         {futureMeetings.map((m) => (
           <Row key={m.date}>
             <LightText isDate>{formatDate(m.date)}</LightText>
@@ -141,10 +151,10 @@ const Home: NextPage<Props> = ({ meetings, bibliography }) => {
       </Row> : null}
       <Row>
         <Text>Previous Meetings ({filteredPastMeetings.length})</Text>
-
       </Row>
       <FilterContainer>
         <Filter
+          className={cx({ active: !!term })}
           value={term}
           onChange={(e) => setTerm(e.target.value)}
           placeholder="Search for a meeting"

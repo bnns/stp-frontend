@@ -22,10 +22,15 @@ const CenterPiece = styled.div`
   }
 `;
 
-export const Row = styled.div`
+type RowProps = {
+  verticalChildren?: boolean;
+}
+
+export const Row = styled.div <RowProps> `
   display: flex;
   justify-content: space-between;
   max-width: 540px;
+  flex-direction: ${props => props.verticalChildren ? 'column' : 'row'}
 `;
 
 const Title = styled.h1`
