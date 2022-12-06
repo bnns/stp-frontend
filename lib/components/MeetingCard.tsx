@@ -80,7 +80,7 @@ const Row = styled.div<{ center?: boolean }>`
   margin-top: 20px;
   display: flex;
   justify-content: space-between;
-  align-items: ${props => props.center ? 'center' : 'flex-start'};
+  align-items: ${(props) => (props.center ? "center" : "flex-start")};
 `;
 
 const Date = styled.div`
@@ -95,7 +95,7 @@ const Date = styled.div`
   height: 40px;
   display: flex;
   align-items: center;
-`
+`;
 
 const Icon = ({
   name,
@@ -133,17 +133,19 @@ export default function MeetingCard({
 }) {
   return (
     <Card raised={raised}>
-      {current ?
+      {current ? (
         <Row center>
           <Date>{formatDate(date, DateMode.CARD)}</Date>
           <Title>{name}</Title>
         </Row>
-        : <><Row center>
-          <Title>{name}</Title>
-        </Row>
+      ) : (
+        <>
+          <Row center>
+            <Title>{name}</Title>
+          </Row>
           <Description>{formatDate(date, DateMode.TEXT)}</Description>
         </>
-      }
+      )}
       <Description>{description}</Description>
       {materials?.length ? <Subtitle>Meeting Materials</Subtitle> : null}
       {materials?.map((attributes) => {
@@ -161,15 +163,15 @@ export default function MeetingCard({
       <Row>
         {tags?.length
           ? tags.map(({ Name }) => (
-            <Tag
-              key={Name}
-              onClick={() => {
-                setSearch?.(Name);
-              }}
-            >
-              <p>{Name}</p>
-            </Tag>
-          ))
+              <Tag
+                key={Name}
+                onClick={() => {
+                  setSearch?.(Name);
+                }}
+              >
+                <p>{Name}</p>
+              </Tag>
+            ))
           : null}
         {current && link ? (
           <RightItem>

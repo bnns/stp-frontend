@@ -24,13 +24,13 @@ const CenterPiece = styled.div`
 
 type RowProps = {
   verticalChildren?: boolean;
-}
+};
 
-export const Row = styled.div <RowProps> `
+export const Row = styled.div<RowProps>`
   display: flex;
   justify-content: space-between;
   max-width: 540px;
-  flex-direction: ${props => props.verticalChildren ? 'column' : 'row'}
+  flex-direction: ${(props) => (props.verticalChildren ? "column" : "row")};
 `;
 
 const Title = styled.h1`
@@ -60,6 +60,7 @@ export default function PageWrapper({
             <Title>Subset of Theoretical Practice</Title>
           </Row>
           <Nav {...(navProps as NavProps)} />
+          <Title>{title}</Title>
           {children}
         </CenterPiece>
       </Wrapper>

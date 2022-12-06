@@ -32,6 +32,7 @@ export default function Nav({ bibliography }: NavProps) {
     <Box>
       <Title>Pages</Title>
       <Link href="/">Home</Link>
+      <Link href="/blog">Blog</Link>
       <Link href="/about">About STP</Link>
       <Link href="/contact">Contact Us</Link>
       <Link href="/badiou">Badiou Reading Group</Link>

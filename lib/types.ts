@@ -12,6 +12,18 @@ export type Meeting = {
   tags?: Tag[];
 };
 
+export type Article = {
+  id: number;
+  title: string;
+  author: string;
+  content: string;
+  slug: string;
+  tags?: Tag[];
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string;
+};
+
 export type Bibliography = {
   id: number;
   name: string;
