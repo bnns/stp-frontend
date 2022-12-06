@@ -17,11 +17,17 @@ interface Props extends NavProps {
   articles: Article[];
 }
 
+const Wrapper = styled.div`
+  margin: 20px 0;
+`;
+
 const Blog: NextPage<Props> = ({ articles, bibliography }: Props) => {
   return (
     <PageWrapper title="Blog" bibliography={bibliography}>
       {articles.map((a: Article) => (
-        <Post key={a.title} {...a} preview />
+        <Wrapper key={a.title}>
+          <Post {...a} preview />
+        </Wrapper>
       ))}
     </PageWrapper>
   );

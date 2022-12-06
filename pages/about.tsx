@@ -3,7 +3,7 @@ import type { NextPage } from "next";
 import { format as formatBibliographies } from "./api/bibliography";
 import PageWrapper, { Row } from "../lib/components/PageWrapper";
 import { fetchAPI } from "../lib/api";
-import ReactMarkdown from "react-markdown";
+import Markdown from "marked-react";
 import { NavProps } from "../lib/components/Nav";
 
 interface Props extends NavProps {
@@ -26,7 +26,7 @@ const About: NextPage<Props> = ({ markdown, bibliography }: Props) => {
           title="Welcome"
         />
       </div>
-      <ReactMarkdown>{markdown}</ReactMarkdown>
+      <Markdown>{markdown}</Markdown>
     </PageWrapper>
   );
 };

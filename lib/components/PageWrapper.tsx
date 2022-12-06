@@ -38,6 +38,11 @@ const Title = styled.h1`
   font-weight: 300;
 `;
 
+const PageTitle = styled.h2`
+  font-size: 24px;
+  font-weight: 500;
+`;
+
 interface PageWrapperProps extends NavProps {
   children: React.ReactNode;
   title?: string;
@@ -60,7 +65,7 @@ export default function PageWrapper({
             <Title>Subset of Theoretical Practice</Title>
           </Row>
           <Nav {...(navProps as NavProps)} />
-          <Title>{title}</Title>
+          <PageTitle>{title}</PageTitle>
           {children}
         </CenterPiece>
       </Wrapper>
