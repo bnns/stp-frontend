@@ -15,11 +15,11 @@ enum Event {
 const zulipMessage = (
   event: string,
   model: string,
-  entry: Record<string, unknown>,
-  media: Record<string, unknown>
+  entry?: Record<string, unknown>,
+  media?: Record<string, unknown>
 ): string => {
   let message = "";
-  let displayName = entry?.name || entry?.Name || media.name; // TODO: annoying
+  let displayName = entry?.name || entry?.Name || entry?.title || media?.name; // TODO: annoying
   switch (event) {
     case Event.CREATE:
       message = `Someone created a new ${model} "${displayName}"`;
