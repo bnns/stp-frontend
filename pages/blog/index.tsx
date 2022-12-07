@@ -24,6 +24,7 @@ const Wrapper = styled.div`
 const Blog: NextPage<Props> = ({ articles, bibliography }: Props) => {
   return (
     <PageWrapper title="Blog" bibliography={bibliography}>
+      {!articles.length ? <p>There are no posts yet.</p> : null}
       {articles.map((a: Article) => (
         <Wrapper key={a.title}>
           <Post {...a} preview />
