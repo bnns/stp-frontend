@@ -26,6 +26,7 @@ const DateText = styled.div<{ align: "left" | "right" | "center" }>`
   font-weight: 300;
   font-size: 14px;
   text-align: ${(props) => props.align};
+  align-self: center;
 `;
 
 export default function Post({

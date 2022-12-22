@@ -1,4 +1,5 @@
 import React from "react";
+import styled from "@emotion/styled";
 import type { NextPage } from "next";
 import { format as formatBibliographies } from "./api/bibliography";
 import PageWrapper, { Row } from "../lib/components/PageWrapper";
@@ -9,6 +10,11 @@ import { NavProps } from "../lib/components/Nav";
 interface Props extends NavProps {
   markdown: string;
 }
+
+const Content = styled.div`
+  font-family: Raleway;
+  font-weight: 500;
+`;
 
 const STP_INTRO = "SyixzsrWCAI";
 
@@ -26,7 +32,9 @@ const About: NextPage<Props> = ({ markdown, bibliography }: Props) => {
           title="Welcome"
         />
       </div>
-      <Markdown>{markdown}</Markdown>
+      <Content>
+        <Markdown>{markdown}</Markdown>
+      </Content>
     </PageWrapper>
   );
 };

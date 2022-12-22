@@ -1,4 +1,5 @@
 import React from "react";
+import styled from "@emotion/styled";
 import { NavProps } from "../lib/components/Nav";
 import { format as formatBibliographies } from "./api/bibliography";
 import { fetchAPI } from "../lib/api";
@@ -7,10 +8,15 @@ import PageWrapper, { Row } from "../lib/components/PageWrapper";
 
 interface Props extends NavProps {}
 
+const Content = styled.p`
+  font-family: Raleway;
+  font-weight: 500;
+`;
+
 const Contact: NextPage<Props> = ({ bibliography }) => {
   return (
     <PageWrapper title="Contact STP" bibliography={bibliography}>
-      <p>
+      <Content>
         <a
           style={{ display: "inline" }}
           href="mailto:SubsetOfTheoreticalPractice@gmail.com"
@@ -19,7 +25,7 @@ const Contact: NextPage<Props> = ({ bibliography }) => {
         </a>{" "}
         if you&apos;re interested in working together or would like to subscribe
         to new developments in the group.
-      </p>
+      </Content>
     </PageWrapper>
   );
 };

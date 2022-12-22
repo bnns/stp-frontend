@@ -37,6 +37,8 @@ export const Row = styled.div<RowProps>`
 const Title = styled.h1`
   font-size: 35px;
   font-weight: 300;
+  text-align: center;
+  width: 100%;
 `;
 
 const PageTitle = styled.h2`
