@@ -17,6 +17,7 @@ export type Article = {
   title: string;
   author: string;
   content: string;
+  summary: string;
   slug: string;
   tags?: Tag[];
   createdAt: string;

@@ -9,8 +9,11 @@ import { formatDate } from "../dates";
 
 const getPreview = (md: string) => md.split(" ").slice(0, 100).join(" ");
 
-const Content = styled.div`
+const Content = styled(Row)`
   font-family: Raleway;
+  flex-direction: column;
+  margin-top: 1em;
+  font-style: italic;
 `;
 
 const Item = styled.div`
@@ -32,6 +35,7 @@ export default function Post({
   tags,
   preview,
   slug,
+  summary,
   publishedAt,
 }: Article & { preview?: boolean }) {
   if (preview) {
@@ -44,7 +48,8 @@ export default function Post({
           <DateText align="right">{formatDate(publishedAt)}</DateText>
         </Row>
         <Content>
-          <Markdown openLinksInNewTab>{getPreview(content)}</Markdown>
+          {/* <Markdown openLinksInNewTab>{getPreview(content)}</Markdown> */}
+          {summary}
         </Content>
       </div>
     );

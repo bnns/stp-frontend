@@ -27,6 +27,7 @@ type RowProps = {
 };
 
 export const Row = styled.div<RowProps>`
+  width: 100%;
   display: flex;
   justify-content: space-between;
   max-width: 540px;
