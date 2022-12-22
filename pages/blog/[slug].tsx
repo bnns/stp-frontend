@@ -38,7 +38,7 @@ export async function getStaticPaths() {
     paths: formattedArticles.map((a: Article) => ({
       params: { slug: a.slug },
     })),
-    fallback: false, // can also be true or 'blocking'
+    fallback: "blocking",
   };
 }
 
