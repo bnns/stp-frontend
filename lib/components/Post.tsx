@@ -14,6 +14,10 @@ const Content = styled(Row)`
   flex-direction: column;
   margin-top: 1em;
   font-style: italic;
+  img {
+    width: 100%;
+  }
+  margin-bottom: 2em;
 `;
 
 const Item = styled.div`

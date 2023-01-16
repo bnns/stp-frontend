@@ -1,5 +1,6 @@
 // GET /api/blogs?filters\[Slug\][$eq] = ...
 import type { NextPage } from "next";
+import Script from "next/script";
 import { useRouter } from "next/router";
 import { ParsedUrlQuery } from "querystring";
 
@@ -22,6 +23,8 @@ const ExpandedPost: NextPage<Props> = ({ article, bibliography }: Props) => {
     return (
       <PageWrapper title={article.title} bibliography={bibliography}>
         <Post {...article} />
+        <Script src="https://cdn.commento.io/js/commento.js" />
+        <div id="commento" />
       </PageWrapper>
     );
   }
