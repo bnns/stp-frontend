@@ -25,9 +25,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const meetingData = await fetchAPI(
-    "meetings?populate=*&pagination[limit]=200"
-  );
+  const meetingData = await fetchAPI("meetings?populate=*");
   const { data, ...others } = meetingData;
   const responseData = { meetings: data?.map(format) ?? [], ...others };
 

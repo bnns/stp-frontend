@@ -20,9 +20,9 @@ type TextProps = {
   center?: boolean;
 };
 
-const Text = styled.p <TextProps>`
+const Text = styled.p<TextProps>`
   font-size: 14px;
-  text-align: ${props => props.center ? 'center' : 'inherit'};
+  text-align: ${(props) => (props.center ? "center" : "inherit")};
 `;
 
 type LightTextProps = {
@@ -30,7 +30,7 @@ type LightTextProps = {
   isTitle?: boolean;
 };
 
-const LightText = styled(Text) <LightTextProps>`
+const LightText = styled(Text)<LightTextProps>`
   font-family: Raleway;
   font-weight: 300;
   margin-right: ${(props) => (props.isDate ? 20 : 0)}px;
@@ -122,9 +122,9 @@ const Home: NextPage<Props> = ({ meetings, bibliography }) => {
     () =>
       sortedMeetings
         ? sortedMeetings
-          .slice(0, idx > -1 ? idx : sortedMeetings.length)
-          .filter(filterMeetings)
-          .reverse()
+            .slice(0, idx > -1 ? idx : sortedMeetings.length)
+            .filter(filterMeetings)
+            .reverse()
         : [],
     [sortedMeetings, filterMeetings, idx]
   );
@@ -140,15 +140,17 @@ const Home: NextPage<Props> = ({ meetings, bibliography }) => {
       {nextMeeting ? (
         <MeetingCard raised current {...(nextMeeting || {})} />
       ) : null}
-      {futureMeetings.length ? <Row verticalChildren>
-        <Text center>Planned Meetings</Text>
-        {futureMeetings.map((m) => (
-          <Row key={m.date}>
-            <LightText isDate>{formatDate(m.date)}</LightText>
-            <LightText isTitle>{m.name}</LightText>
-          </Row>
-        ))}
-      </Row> : null}
+      {futureMeetings.length ? (
+        <Row verticalChildren>
+          <Text center>Planned Meetings</Text>
+          {futureMeetings.map((m) => (
+            <Row key={m.date}>
+              <LightText isDate>{formatDate(m.date)}</LightText>
+              <LightText isTitle>{m.name}</LightText>
+            </Row>
+          ))}
+        </Row>
+      ) : null}
       <Row>
         <Text>Previous Meetings ({filteredPastMeetings.length})</Text>
       </Row>
