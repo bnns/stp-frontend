@@ -13,7 +13,6 @@ const Content = styled(Row)`
   font-family: Raleway;
   flex-direction: column;
   margin-top: 1em;
-  font-style: italic;
   img {
     width: 100%;
   }
