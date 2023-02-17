@@ -1,38 +1,57 @@
-import dayjs from 'dayjs'
-import calendar from 'dayjs/plugin/calendar'
-import isSameOrAfter from 'dayjs/plugin/isSameOrAfter'
-import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
+import dayjs from "dayjs";
+import calendar from "dayjs/plugin/calendar";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 
-dayjs.extend(calendar)
-dayjs.extend(isSameOrAfter)
-dayjs.extend(isSameOrBefore)
+dayjs.extend(calendar);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
 type WithDate = {
   date: string;
-}
+};
+
+type WithPublishedDate = {
+  publishedAt: string;
+};
 
 export enum DateMode {
   CARD,
-  TEXT
+  TEXT,
 }
 
-export function formatDate(date: string | Date, mode: DateMode = DateMode.TEXT) {
+export function formatDate(
+  date: string | Date,
+  mode: DateMode = DateMode.TEXT
+) {
   if (mode === DateMode.CARD) {
-    return dayjs(date).format('DD MMM')
+    return dayjs(date).format("DD MMM");
   }
-  return dayjs(date).format('DD MMMM YYYY')
+  return dayjs(date).format("DD MMMM YYYY");
 }
 
 export function sortByMeetingDate(m1: WithDate, m2: WithDate) {
   // earlier dates go first
-  return (new Date(m1.date)).getTime() - (new Date(m2.date)).getTime();
+  return new Date(m1.date).getTime() - new Date(m2.date).getTime();
+}
+
+export function sortByPublishedDate(
+  a1: WithPublishedDate,
+  a2: WithPublishedDate
+) {
+  // earlier dates go first
+  return (
+    new Date(a2.publishedAt).getTime() - new Date(a1.publishedAt).getTime()
+  );
 }
 
 export function findNextMeeting(m: WithDate) {
-  return dayjs().isSameOrBefore(dayjs(m.date), 'day')
+  return dayjs().isSameOrBefore(dayjs(m.date), "day");
 }
 
 export function formatMeetingDate(date: string) {
-  if (!date) { return '' }
-  return dayjs(date).calendar(dayjs())
+  if (!date) {
+    return "";
+  }
+  return dayjs(date).calendar(dayjs());
 }

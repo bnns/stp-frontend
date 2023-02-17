@@ -8,6 +8,7 @@ import PageWrapper, { Row } from "../../lib/components/PageWrapper";
 import Post from "../../lib/components/Post";
 import { Article } from "../../lib/types";
 import { NavProps } from "../../lib/components/Nav";
+import { sortByPublishedDate } from "../../lib/dates";
 
 import React from "react";
 import styled from "@emotion/styled";
@@ -39,9 +40,11 @@ export default Blog;
 export async function getStaticProps() {
   const bibliography = await fetchAPI("bibliographies");
   const articles = await fetchAPI("articles?populate=*&pagination[limit]=200");
+  console.log(articles?.data?.map(formatArticles).sort(sortByPublishedDate));
   return {
     props: {
-      articles: articles?.data?.map(formatArticles) || [],
+      articles:
+        articles?.data?.map(formatArticles).sort(sortByPublishedDate) || [],
       bibliography: bibliography?.data?.map(formatBibliographies) || [],
     },
     revalidate: 60,
