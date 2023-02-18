@@ -40,7 +40,6 @@ export default Blog;
 export async function getStaticProps() {
   const bibliography = await fetchAPI("bibliographies");
   const articles = await fetchAPI("articles?populate=*&pagination[limit]=200");
-  console.log(articles?.data?.map(formatArticles).sort(sortByPublishedDate));
   return {
     props: {
       articles:
