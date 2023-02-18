@@ -1,11 +1,14 @@
 import React from "react";
-import Markdown from "marked-react";
+import MarkdownIt from "markdown-it";
+import MarkdownItFootnote from "markdown-it-footnote";
 import styled from "@emotion/styled";
 import Link from "next/link";
 
 import { Article } from "../types";
 import { Row } from "../../lib/components/PageWrapper";
 import { formatDate } from "../dates";
+
+const md = new MarkdownIt().use(MarkdownItFootnote);
 
 const getPreview = (md: string) => md.split(" ").slice(0, 100).join(" ");
 
@@ -17,6 +20,9 @@ const Content = styled(Row)`
     width: 100%;
   }
   margin-bottom: 2em;
+  .footnote-item {
+    font-size: 12px;
+  }
 `;
 
 const Item = styled.div`
@@ -62,7 +68,7 @@ export default function Post({
   return (
     <Content>
       <DateText align="center">{formatDate(publishedAt)}</DateText>
-      <Markdown openLinksInNewTab>{content}</Markdown>
+      <div dangerouslySetInnerHTML={{ __html: md.render(content) }} />
     </Content>
   );
 }

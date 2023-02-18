@@ -4,8 +4,10 @@ import type { NextPage } from "next";
 import { format as formatBibliographies } from "./api/bibliography";
 import PageWrapper, { Row } from "../lib/components/PageWrapper";
 import { fetchAPI } from "../lib/api";
-import Markdown from "marked-react";
+import MarkdownIt from "markdown-it";
 import { NavProps } from "../lib/components/Nav";
+
+const md = new MarkdownIt();
 
 interface Props extends NavProps {
   markdown: string;
@@ -33,7 +35,7 @@ const About: NextPage<Props> = ({ markdown, bibliography }: Props) => {
         />
       </div>
       <Content>
-        <Markdown>{markdown}</Markdown>
+        <div dangerouslySetInnerHTML={{ __html: md.render(markdown) }} />
       </Content>
     </PageWrapper>
   );
