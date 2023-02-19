@@ -1,11 +1,17 @@
 import dayjs from "dayjs";
 import calendar from "dayjs/plugin/calendar";
+import timezone from "dayjs/plugin/timezone";
+import advancedFormat from "dayjs/plugin/advancedFormat";
+import utc from "dayjs/plugin/utc";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 
 dayjs.extend(calendar);
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
+dayjs.extend(timezone);
+dayjs.extend(utc);
+dayjs.extend(advancedFormat);
 
 type WithDate = {
   date: string;
@@ -53,5 +59,13 @@ export function formatMeetingDate(date: string) {
   if (!date) {
     return "";
   }
-  return dayjs(date).calendar(dayjs());
+
+  return dayjs.utc(date).tz().calendar(dayjs(), {
+    sameDay: "[Today at] h:mm A z", // ( Today at 2:30 AM CST)
+    nextDay: "[Tomorrow at] h:mm A z", // ( Tomorrow at 2:30 AM CST)
+    nextWeek: "dddd [at] h:mm A z", // ( Sunday at 2:30 AM CST)
+    lastDay: "[Yesterday at] h:mm A z", // ( Yesterday at 2:30 AM CST)
+    lastWeek: "[Last] dddd [at] h:mm A z", // ( Last Monday at 2:30 AM CST)
+    sameElse: "DD/MM/YYYY h:mm A z", // ( 17/10/2011 2:30 AM CST)
+  });
 }
