@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@emotion/css": "^11.10.5",
+    "@types/katex": "^0.16.0",
     "@types/markdown-it": "^12.2.3",
     "@types/markdown-it-footnote": "^3.0.0",
     "@types/node": "17.0.8",
