@@ -4,6 +4,7 @@ import MarkdownItSub from "markdown-it-sub";
 import MarkdownItSup from "markdown-it-sup";
 import MarkdownItTexmath from "markdown-it-texmath";
 import MarkdownItFootnote from "markdown-it-footnote";
+import MarkdownItLinkAttrs from "markdown-it-link-attributes";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import styled from "@emotion/styled";
@@ -14,6 +15,12 @@ import { Row } from "../../lib/components/PageWrapper";
 import { formatDate } from "../dates";
 
 const md = new MarkdownIt()
+  .use(MarkdownItLinkAttrs, {
+    attrs: {
+      target: "_blank",
+      rel: "noopener",
+    },
+  })
   .use(MarkdownItFootnote)
   .use(MarkdownItSub)
   .use(MarkdownItSup)
