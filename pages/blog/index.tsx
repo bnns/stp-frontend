@@ -20,6 +20,7 @@ interface Props extends NavProps {
 
 const Wrapper = styled.div`
   margin: 20px 0;
+  width: 100%;
 `;
 
 const Blog: NextPage<Props> = ({ articles, bibliography }: Props) => {

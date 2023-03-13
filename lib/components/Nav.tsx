@@ -33,9 +33,9 @@ export default function Nav({ bibliography }: NavProps) {
       <Title>Pages</Title>
       <Link href="/">Home</Link>
       <Link href="/blog">Blog</Link>
+      <Link href="/links">Links</Link>
       <Link href="/about">About STP</Link>
       <Link href="/contact">Contact Us</Link>
-      <Link href="/badiou">Badiou Reading Group</Link>
       {bibliography ? <Title>Our Work</Title> : null}
       {bibliography?.map(({ link, name }: { link: string; name: string }) => (
         <Link key={name} href={link} target="_blank" rel="noopener noreferrer">

@@ -15,28 +15,7 @@ import { Meeting } from "../lib/types";
 import MeetingCard from "../lib/components/MeetingCard";
 import { NavProps } from "../lib/components/Nav";
 import PageWrapper, { Row } from "../lib/components/PageWrapper";
-
-type TextProps = {
-  center?: boolean;
-};
-
-const Text = styled.p<TextProps>`
-  font-size: 14px;
-  text-align: ${(props) => (props.center ? "center" : "inherit")};
-`;
-
-type LightTextProps = {
-  isDate?: boolean;
-  isTitle?: boolean;
-};
-
-const LightText = styled(Text)<LightTextProps>`
-  font-family: Raleway;
-  font-weight: 300;
-  margin-right: ${(props) => (props.isDate ? 20 : 0)}px;
-  text-align: ${(props) => (props.isTitle ? "right" : "inherit")};
-  min-width: ${(props) => (props.isDate ? "150px" : "inherit")};
-`;
+import { Text, LightText } from "../lib/components";
 
 const Filter = styled.input`
   font-size: 12px;
@@ -131,7 +110,7 @@ const Home: NextPage<Props> = ({ meetings, bibliography }) => {
 
   return (
     <PageWrapper bibliography={bibliography}>
-      <Text>
+      <Text center>
         Next Meeting:{" "}
         {nextMeeting
           ? formatMeetingDate(nextMeeting?.date || "")
@@ -151,9 +130,7 @@ const Home: NextPage<Props> = ({ meetings, bibliography }) => {
           ))}
         </Row>
       ) : null}
-      <Row>
-        <Text>Previous Meetings ({filteredPastMeetings.length})</Text>
-      </Row>
+      <Text center>Previous Meetings ({filteredPastMeetings.length})</Text>
       <FilterContainer>
         <Filter
           className={cx({ active: !!term })}

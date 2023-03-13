@@ -4,6 +4,7 @@ import { Meeting } from "../types";
 import Image from "next/image";
 import { getStrapiMedia } from "../media";
 import { formatDate, DateMode } from "../dates";
+import { Tag } from ".";
 
 const shadow =
   "0 5px 10px rgba(154, 160, 185, 0.05), 0 15px 40px rgba(166, 173, 201, 0.2);";
@@ -32,21 +33,6 @@ const Card = styled.div<CardProps>`
 
 const RightItem = styled.div`
   margin-left: auto;
-`;
-
-const Tag = styled.div`
-  padding: 5px 10px 10px;
-  height: 20px;
-  border-radius: 5px;
-  background-color: #eee;
-  font-family: Futura;
-  display: flex;
-  align-content: center;
-  align-self: flex-start;
-  cursor: pointer;
-  p {
-    margin: 0;
-  }
 `;
 
 const Title = styled.div`

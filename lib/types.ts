@@ -42,3 +42,10 @@ export type MeetingMaterial = {
   name: string;
   url: string;
 };
+
+export type ExternalLink = {
+  name: string;
+  link: string;
+  description?: string;
+  tags?: Tag[];
+};

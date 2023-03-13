@@ -24,14 +24,17 @@ const CenterPiece = styled.div`
 
 type RowProps = {
   verticalChildren?: boolean;
+  flexWrap?: boolean;
+  around?: boolean;
 };
 
 export const Row = styled.div<RowProps>`
   width: 100%;
   display: flex;
-  justify-content: space-between;
+  justify-content: ${(props) => (props.around ? "space-around" : "start")};
   max-width: 540px;
   flex-direction: ${(props) => (props.verticalChildren ? "column" : "row")};
+  flex-wrap: ${(props) => (props.flexWrap ? "wrap" : "inherit")};
 `;
 
 const Title = styled.h1`

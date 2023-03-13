@@ -11,7 +11,6 @@
   "dependencies": {
     "@emotion/react": "^11.7.1",
     "@emotion/styled": "^11.6.0",
-    "axios": "^0.24.0",
     "dayjs": "^1.10.7",
     "katex": "^0.16.4",
     "markdown-it": "^13.0.1",
@@ -20,9 +19,9 @@
     "markdown-it-sub": "^1.0.0",
     "markdown-it-sup": "^1.0.0",
     "markdown-it-texmath": "^1.0.0",
-    "next": "12.0.7",
-    "react": "17.0.2",
-    "react-dom": "17.0.2",
+    "next": "13.2.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
     "react-window": "^1.8.7",
     "zulip-js": "^2.0.9"
   },
@@ -31,10 +30,10 @@
     "@types/katex": "^0.16.0",
     "@types/markdown-it": "^12.2.3",
     "@types/markdown-it-footnote": "^3.0.0",
-    "@types/node": "17.0.8",
-    "@types/react": "17.0.38",
-    "eslint": "8.6.0",
-    "eslint-config-next": "12.0.7",
-    "typescript": "4.5.4"
+    "@types/node": "^18.15.0",
+    "@types/react": "^18.0.28",
+    "eslint": "8.36",
+    "eslint-config-next": "13.2.4",
+    "typescript": "4.9.5"
   }
 }
