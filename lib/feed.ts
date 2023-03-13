@@ -4,6 +4,7 @@ import { Feed } from "feed";
 import { fetchAPI } from "./api";
 import { sortByPublishedDate } from "./dates";
 import { format as formatArticles } from "../pages/api/articles";
+import { Article } from "./types";
 import md from "./markdown";
 
 export default async function generateRSS() {
@@ -40,13 +41,13 @@ export default async function generateRSS() {
   articles?.data
     ?.map(formatArticles)
     .sort(sortByPublishedDate)
-    .forEach((article) => {
+    .forEach((article: Article) => {
       const url = `${siteURL}/blog/${article.slug}`;
       feed.addItem({
         title: article.title,
         id: url,
         link: url,
-        description: article.excerpt,
+        description: article.summary,
         content: md.render(article.content),
         author: [author],
         contributor: [author],
