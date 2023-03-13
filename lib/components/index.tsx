@@ -1,6 +1,10 @@
 import styled from "@emotion/styled";
 
-export const Tag = styled.div`
+type TagProps = {
+  dark?: boolean;
+};
+
+export const Tag = styled.div<TagProps>`
   padding: 5px 10px 10px;
   height: 20px;
   border-radius: 5px;

@@ -1,4 +1,5 @@
 import React from "react";
+import { MdRssFeed } from "react-icons/md";
 import styled from "@emotion/styled";
 import { Bibliography } from "../types";
 
@@ -18,8 +19,12 @@ const Title = styled.div`
   margin-bottom: 15px;
 `;
 
-const Link = styled.a`
-  display: block;
+type LinkProps = {
+  inline?: boolean;
+};
+
+const Link = styled.a<LinkProps>`
+  display: ${(props) => (props.inline ? "inline" : "block")};
   margin-bottom: 14px;
 `;
 
@@ -42,6 +47,34 @@ export default function Nav({ bibliography }: NavProps) {
           {name}
         </Link>
       ))}
+      <Title>
+        Syndicate{" "}
+        <Link
+          inline
+          href="https://rss.com/blog/how-do-rss-feeds-work/"
+          rel="noreferrer"
+          target="_blank"
+        >
+          *
+        </Link>
+      </Title>
+      <Link
+        inline
+        href="http://theoreticalpractice.com/rss/feed.xml"
+        rel="noreferrer"
+        target="_blank"
+      >
+        RSS <MdRssFeed />
+      </Link>
+      /
+      <Link
+        inline
+        href="http://theoreticalpractice.com/rss/feed.atom"
+        rel="noreferrer"
+        target="_blank"
+      >
+        Atom <MdRssFeed />
+      </Link>
     </Box>
   );
 }

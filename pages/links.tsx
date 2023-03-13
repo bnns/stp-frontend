@@ -5,6 +5,7 @@ import PageWrapper, { Row } from "../lib/components/PageWrapper";
 import styled from "@emotion/styled";
 import { ExternalLink } from "../lib/types";
 import { Link, Tag, LightText } from "../lib/components";
+import { NavProps } from "../lib/components/Nav";
 import { fetchAPI } from "../lib/api";
 
 const LinkWrapper = styled.div`
