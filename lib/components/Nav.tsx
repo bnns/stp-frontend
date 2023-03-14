@@ -51,7 +51,7 @@ export default function Nav({ bibliography }: NavProps) {
         Syndicate{" "}
         <Link
           inline
-          href="https://rss.com/blog/how-do-rss-feeds-work/"
+          href="https://en.wikipedia.org/wiki/RSS"
           rel="noreferrer"
           target="_blank"
         >
