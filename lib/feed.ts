@@ -1,6 +1,6 @@
 import fs from "fs";
 import MarkdownIt from "markdown-it";
-import { Feed } from "feed";
+import { Feed, Item } from "feed";
 import { fetchAPI } from "./api";
 import { sortByPublishedDate, sortByMeetingDate } from "./dates";
 import { format as formatArticles } from "../pages/api/articles";
@@ -8,7 +8,7 @@ import { format as formatLinks } from "../pages/api/links";
 import { Article, Meeting, ExternalLink } from "./types";
 import md from "./markdown";
 
-const onlyRecorded = ({ recording }) => !!recording?.trim();
+const onlyRecorded = ({ recording }: Meeting) => !!recording?.trim();
 
 export default async function generateRSS() {
   const meetings = await fetchAPI("meetings?populate=*&pagination[limit]=200");
@@ -54,8 +54,9 @@ export default async function generateRSS() {
       author: [author],
       contributor: [author],
       date: new Date(link.publishedAt),
+
       updated: new Date(link.publishedAt),
-    });
+    } as unknown as Item);
   });
 
   meetings?.data
@@ -73,8 +74,9 @@ export default async function generateRSS() {
         author: [author],
         contributor: [author],
         date: new Date(meeting.date),
+
         updated: new Date(meeting.date),
-      });
+      } as unknown as Item);
     });
 
   articles?.data
@@ -91,8 +93,9 @@ export default async function generateRSS() {
         author: [author],
         contributor: [author],
         date: new Date(article.publishedAt),
+
         updated: new Date(article.publishedAt),
-      });
+      } as unknown as Item);
     });
 
   fs.mkdirSync("./public/rss", { recursive: true });

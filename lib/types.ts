@@ -48,4 +48,7 @@ export type ExternalLink = {
   link: string;
   description?: string;
   tags?: Tag[];
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string;
 };
