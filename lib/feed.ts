@@ -2,21 +2,25 @@ import fs from "fs";
 import MarkdownIt from "markdown-it";
 import { Feed } from "feed";
 import { fetchAPI } from "./api";
-import { sortByPublishedDate } from "./dates";
+import { sortByPublishedDate, sortByMeetingDate } from "./dates";
 import { format as formatArticles } from "../pages/api/articles";
-import { Article } from "./types";
+import { format as formatLinks } from "../pages/api/links";
+import { Article, Meeting, ExternalLink } from "./types";
 import md from "./markdown";
+
+const onlyRecorded = ({ recording }) => !!recording?.trim();
 
 export default async function generateRSS() {
   const meetings = await fetchAPI("meetings?populate=*&pagination[limit]=200");
   const articles = await fetchAPI("articles?populate=*&pagination[limit]=200");
+  const links = await fetchAPI("links?populate=*&pagination[limit]=200");
 
-  const siteURL = process.env.VERCEL_URL || "https://theoreticalpractice.com";
+  const siteURL = "https://theoreticalpractice.com";
   const date = new Date();
   const author = {
     name: "Subset of Theoretical Practice",
     email: "SubsetOfTheoreticalPractice@gmail.com",
-    link: "https://theoreticalpractice.com",
+    link: siteURL,
   };
 
   const feed = new Feed({
@@ -38,6 +42,41 @@ export default async function generateRSS() {
     author,
   });
 
+  links?.data?.map(formatLinks).forEach((link: ExternalLink) => {
+    feed.addItem({
+      title: link.name,
+      id: `${link.link}`,
+      link: link.link,
+      description: link.description,
+      content: `<p><a href="${link.link}">Link</a></p> <p>${
+        link.description ?? ""
+      }</p>`,
+      author: [author],
+      contributor: [author],
+      date: new Date(link.publishedAt),
+      updated: new Date(link.publishedAt),
+    });
+  });
+
+  meetings?.data
+    ?.map(formatArticles)
+    .filter(onlyRecorded)
+    .forEach((meeting: Meeting) => {
+      feed.addItem({
+        title: meeting.name,
+        id: `${meeting.id}`,
+        link: meeting.recording,
+        description: meeting.description,
+        content: `<p>The recording for the meeting can be found at <a href="${
+          meeting.recording
+        }">here</a>.</p> <p>${meeting.description ?? ""}</p>`,
+        author: [author],
+        contributor: [author],
+        date: new Date(meeting.date),
+        updated: new Date(meeting.date),
+      });
+    });
+
   articles?.data
     ?.map(formatArticles)
     .sort(sortByPublishedDate)
@@ -52,6 +91,7 @@ export default async function generateRSS() {
         author: [author],
         contributor: [author],
         date: new Date(article.publishedAt),
+        updated: new Date(article.publishedAt),
       });
     });
 
