@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 import MarkdownIt from "markdown-it";
 import { Feed, Item } from "feed";
 import { fetchAPI } from "./api";
@@ -98,8 +99,17 @@ export default async function generateRSS() {
       } as unknown as Item);
     });
 
-  fs.mkdirSync("./public/rss", { recursive: true });
-  fs.writeFileSync("./public/rss/feed.xml", feed.rss2());
-  fs.writeFileSync("./public/rss/feed.json", feed.json1());
-  fs.writeFileSync("./public/rss/feed.atom", feed.atom1());
+  fs.mkdirSync(path.join(process.cwd(), "public", "rss"), { recursive: true });
+  fs.writeFileSync(
+    path.join(process.cwd(), "public", "rss", "feed.xml"),
+    feed.rss2()
+  );
+  fs.writeFileSync(
+    path.join(process.cwd(), "public", "rss", "feed.json"),
+    feed.json1()
+  );
+  fs.writeFileSync(
+    path.join(process.cwd(), "public", "rss", "feed.atom"),
+    feed.atom1()
+  );
 }
