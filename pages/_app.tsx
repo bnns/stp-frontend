@@ -1,9 +1,8 @@
+import type { AppProps } from 'next/app'
+import { Analytics } from '@vercel/analytics/react'
 import Script from 'next/script'
 import Head from "next/head";
 import "../styles/global.css";
-
-
-type PageProps = {};
 
 const meta =
   "The Subset of Theoretical Practice is an open group that talks and writes about philosophy, science and politics.";
@@ -11,10 +10,7 @@ const meta =
 const MyApp = ({
   Component,
   pageProps,
-}: {
-  Component: React.ComponentClass<PageProps>;
-  pageProps: PageProps;
-}) => {
+}: AppProps) => {
   return (
     <>
       <Head>
@@ -26,6 +22,7 @@ const MyApp = ({
 
       <Script src="https://cdn.counter.dev/script.js" data-id="594404c5-6814-4476-a5af-d35ddc284e98" data-utcoffset="-5" />
       <Component {...pageProps} />
+      <Analytics />
 
     </>
   );

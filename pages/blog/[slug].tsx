@@ -1,11 +1,10 @@
 // GET /api/blogs?filters\[Slug\][$eq] = ...
 import type { NextPage } from "next";
 import Script from "next/script";
-import { useRouter } from "next/router";
 import { ParsedUrlQuery } from "querystring";
 
 import Post from "../../lib/components/Post";
-import PageWrapper, { Row } from "../../lib/components/PageWrapper";
+import PageWrapper from "../../lib/components/PageWrapper";
 import { fetchAPI } from "../../lib/api";
 import {
   format as formatArticles,
