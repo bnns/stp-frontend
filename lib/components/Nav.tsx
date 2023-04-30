@@ -58,21 +58,11 @@ export default function Nav({ bibliography }: NavProps) {
           *
         </Link>
       </Title>
-      <Link
-        inline
-        href="http://theoreticalpractice.com/rss/feed.xml"
-        rel="noreferrer"
-        target="_blank"
-      >
+      <Link inline href="/rss/rss2.xml" rel="noreferrer" target="_blank">
         RSS <MdRssFeed />
       </Link>
       /
-      <Link
-        inline
-        href="http://theoreticalpractice.com/rss/feed.atom"
-        rel="noreferrer"
-        target="_blank"
-      >
+      <Link inline href="/rss/atom1.xml" rel="noreferrer" target="_blank">
         Atom <MdRssFeed />
       </Link>
     </Box>

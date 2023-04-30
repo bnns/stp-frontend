@@ -1,3 +1,4 @@
+import type { IncomingMessage, ServerResponse } from "http";
 import fs from "fs";
 import path from "path";
 import MarkdownIt from "markdown-it";
@@ -11,7 +12,9 @@ import md from "./markdown";
 
 const onlyRecorded = ({ recording }: Meeting) => !!recording?.trim();
 
-export default async function generateRSS() {
+type FeedType = "atom" | "rss" | "json";
+
+export default async function generateRSS(feedType: FeedType) {
   const meetings = await fetchAPI("meetings?populate=*&pagination[limit]=200");
   const articles = await fetchAPI("articles?populate=*&pagination[limit]=200");
   const links = await fetchAPI("links?populate=*&pagination[limit]=200");
@@ -36,9 +39,8 @@ export default async function generateRSS() {
     updated: date, // today's date
     generator: "Feed for Node.js",
     feedLinks: {
-      rss2: `${siteURL}/rss/feed.xml`,
-      json: `${siteURL}/rss/feed.json`,
-      atom: `${siteURL}/rss/feed.atom`,
+      rss2: `${siteURL}/rss/rss2.xml`,
+      atom: `${siteURL}/rss/atom1.xml`,
     },
     author,
   });
@@ -99,17 +101,30 @@ export default async function generateRSS() {
       } as unknown as Item);
     });
 
-  fs.mkdirSync(path.join(process.cwd(), "public", "rss"), { recursive: true });
-  fs.writeFileSync(
-    path.join(process.cwd(), "public", "rss", "feed.xml"),
-    feed.rss2()
-  );
-  fs.writeFileSync(
-    path.join(process.cwd(), "public", "rss", "feed.json"),
-    feed.json1()
-  );
-  fs.writeFileSync(
-    path.join(process.cwd(), "public", "rss", "feed.atom"),
-    feed.atom1()
-  );
+  if (feedType === "atom") {
+    return feed.atom1();
+  }
+
+  if (feedType === "json") {
+    return feed.json1();
+  }
+
+  return feed.rss2();
 }
+
+export const setFeedHeaders = (
+  res: ServerResponse<IncomingMessage>,
+  feedType: FeedType
+) => {
+  res.setHeader(
+    "Content-Type",
+    `application/${feedType === "atom" ? "atom+xml" : "rss+xml"}`
+  );
+  res.setHeader("Content-Disposition", "inline");
+  const cacheMaxAgeUntilStaleSeconds = 60 * 60; // 1 minute
+  const cacheMaxAgeStaleDataReturnSeconds = 60 * 60 * 60; // 60 minutes
+  res.setHeader(
+    "Cache-Control",
+    `public, s-maxage=${cacheMaxAgeUntilStaleSeconds}, stale-while-revalidate=${cacheMaxAgeStaleDataReturnSeconds}`
+  );
+};

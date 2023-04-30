@@ -1,6 +1,5 @@
 import type { NextPage } from "next";
 import { fetchAPI } from "../lib/api";
-import generateRSS from "../lib/feed";
 import { format as formatMeetings } from "./api/meetings";
 import { format as formatBibliographies } from "./api/bibliography";
 import React from "react";
@@ -156,8 +155,6 @@ const Home: NextPage<Props> = ({ meetings, bibliography }) => {
 export async function getStaticProps() {
   const bibliography = await fetchAPI("bibliographies");
   const meetings = await fetchAPI("meetings?populate=*&pagination[limit]=200");
-
-  generateRSS();
 
   return {
     props: {
