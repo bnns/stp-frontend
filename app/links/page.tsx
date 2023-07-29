@@ -14,11 +14,13 @@ const LinkWrapper = styled.div`
   width: 450px;
 `;
 
-interface Props extends NavProps {
-  links: ExternalLink[];
-}
+const Links = async () => {
+  const bibliographyRes = await fetchAPI("bibliographies");
+  const linksRes = await fetchAPI("links");
 
-const Links: NextPage<Props> = ({ links, bibliography }: Props) => {
+  const links = linksRes?.data?.map(formatLinks) || [];
+  const bibliography = bibliographyRes?.data?.map(formatBibliographies) || [];
+
   return (
     <PageWrapper title="Links" bibliography={bibliography}>
       {!links.length ? <p>There are no links yet.</p> : null}
@@ -47,18 +49,5 @@ const Links: NextPage<Props> = ({ links, bibliography }: Props) => {
     </PageWrapper>
   );
 };
-
-export async function getStaticProps() {
-  const bibliography = await fetchAPI("bibliographies");
-  const links = await fetchAPI("links");
-
-  return {
-    props: {
-      links: links?.data?.map(formatLinks) || [],
-      bibliography: bibliography?.data?.map(formatBibliographies) || [],
-    },
-    revalidate: 60,
-  };
-}
 
 export default Links;

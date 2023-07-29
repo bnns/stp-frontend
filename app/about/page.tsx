@@ -5,13 +5,8 @@ import { format as formatBibliographies } from "./api/bibliography";
 import PageWrapper, { Row } from "../lib/components/PageWrapper";
 import { fetchAPI } from "../lib/api";
 import MarkdownIt from "markdown-it";
-import { NavProps } from "../lib/components/Nav";
 
 const md = new MarkdownIt();
-
-interface Props extends NavProps {
-  markdown: string;
-}
 
 const Content = styled.div`
   font-family: Raleway;
@@ -20,7 +15,12 @@ const Content = styled.div`
 
 const STP_INTRO = "SyixzsrWCAI";
 
-const About: NextPage<Props> = ({ markdown, bibliography }: Props) => {
+const About = async () => {
+  const bibliographyRes = await fetchAPI("bibliographies");
+  const aboutRes = await fetchAPI("about");
+  const markdown = aboutRes?.data?.attributes?.text || "";
+  const bibliography = bibliographyRes?.data?.map(formatBibliographies) || [];
+
   return (
     <PageWrapper title="About STP" bibliography={bibliography}>
       <div className="video-responsive">
@@ -40,17 +40,5 @@ const About: NextPage<Props> = ({ markdown, bibliography }: Props) => {
     </PageWrapper>
   );
 };
-
-export async function getStaticProps() {
-  const bibliography = await fetchAPI("bibliographies");
-  const about = await fetchAPI("about");
-  return {
-    props: {
-      markdown: about?.data?.attributes?.text || "",
-      bibliography: bibliography?.data?.map(formatBibliographies) || [],
-    },
-    revalidate: 60,
-  };
-}
 
 export default About;
