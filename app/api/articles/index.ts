@@ -19,15 +19,12 @@ export const format = ({
   };
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export async function GET() {
   const articleData = await fetchAPI(
     "articles?populate=*&pagination[limit]=200"
   );
   const { data, ...others } = articleData;
   const responseData = { articles: data?.map(format) ?? [], ...others };
 
-  res.status(200).json(responseData);
+  return new Response(responseData);
 }

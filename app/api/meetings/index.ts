@@ -21,13 +21,10 @@ export const format = ({
   };
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export async function GET() {
   const meetingData = await fetchAPI("meetings?populate=*");
   const { data, ...others } = meetingData;
   const responseData = { meetings: data?.map(format) ?? [], ...others };
 
-  res.status(200).json(responseData);
+  return new Response(responseData);
 }

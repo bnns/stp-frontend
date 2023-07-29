@@ -51,10 +51,7 @@ const zulipMessage = (
   return message;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export async function POST(req: Request) {
   if (req.headers.authorization?.trim() === process.env.WEBHOOK_TOKEN?.trim()) {
     const zulipClient = await zulipInit({
       username: process.env.ZULIP_USERNAME,
@@ -77,7 +74,8 @@ export default async function handler(
       content: message,
     });
     res.status(200).end();
-    return;
+    return new Response();
   }
-  res.status(401).end();
+
+  return new Response(null, { status: 401 });
 }

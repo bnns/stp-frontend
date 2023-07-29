@@ -1,5 +1,3 @@
-import type { NextPage } from "next";
-import { fetchAPI } from "../lib/api";
 import { format as formatMeetings } from "./api/meetings";
 import { format as formatBibliographies } from "./api/bibliography";
 import React from "react";
@@ -53,11 +51,14 @@ const FilterContainer = styled.div`
   width: 100%;
 `;
 
-interface Props extends NavProps {
-  meetings: Meeting[];
-}
+const Home = async () => {
+  const bibliographyRes = await fetchAPI("bibliographies");
+  const meetingsRes = await fetchAPI(
+    "meetings?populate=*&pagination[limit]=300"
+  );
+  const meetings = meetingsRes?.data?.map(formatMeetings) || [];
+  const bibliography = bibliographyRes?.data?.map(formatBibliographies) || [];
 
-const Home: NextPage<Props> = ({ meetings, bibliography }) => {
   const [term, setTerm] = React.useState<string>("");
   const sortedMeetings = React.useMemo<Meeting[]>(
     () => (meetings ? meetings.sort(sortByMeetingDate) : []),
@@ -151,18 +152,5 @@ const Home: NextPage<Props> = ({ meetings, bibliography }) => {
     </PageWrapper>
   );
 };
-
-export async function getStaticProps() {
-  const bibliography = await fetchAPI("bibliographies");
-  const meetings = await fetchAPI("meetings?populate=*&pagination[limit]=200");
-
-  return {
-    props: {
-      meetings: meetings?.data?.map(formatMeetings) || [],
-      bibliography: bibliography?.data?.map(formatBibliographies) || [],
-    },
-    revalidate: 60,
-  };
-}
 
 export default Home;

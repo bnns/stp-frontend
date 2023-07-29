@@ -12,18 +12,21 @@ import { sortByPublishedDate } from "../../lib/dates";
 
 import React from "react";
 import styled from "@emotion/styled";
-import { cx } from "@emotion/css";
-
-interface Props extends NavProps {
-  articles: Article[];
-}
 
 const Wrapper = styled.div`
   margin: 20px 0;
   width: 100%;
 `;
 
-const Blog: NextPage<Props> = ({ articles, bibliography }: Props) => {
+const Blog = async () => {
+  const bibliographyRes = await fetchAPI("bibliographies");
+  const articlesRes = await fetchAPI(
+    "articles?populate=*&pagination[limit]=200"
+  );
+  const articles =
+    articlesRes?.data?.map(formatarticles).sort(sortbypublisheddate) || [];
+  const bibliography = bibliographyRes?.data?.map(formatbibliographies) || [];
+
   return (
     <PageWrapper title="Blog" bibliography={bibliography}>
       {!articles.length ? <p>There are no posts yet.</p> : null}
@@ -37,16 +40,3 @@ const Blog: NextPage<Props> = ({ articles, bibliography }: Props) => {
 };
 
 export default Blog;
-
-export async function getStaticProps() {
-  const bibliography = await fetchAPI("bibliographies");
-  const articles = await fetchAPI("articles?populate=*&pagination[limit]=200");
-  return {
-    props: {
-      articles:
-        articles?.data?.map(formatArticles).sort(sortByPublishedDate) || [],
-      bibliography: bibliography?.data?.map(formatBibliographies) || [],
-    },
-    revalidate: 60,
-  };
-}

@@ -10,13 +10,10 @@ export const format = ({
   attributes: Record<string, unknown>;
 }) => ({ id, ...attributes });
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  const bibData = await fetchAPI("bibliographies");
+export async function GET() {
+  const bibData = await fetchAPI("links");
   const { data, ...others } = bibData;
-  const responseData = { bibliography: data?.map(format) ?? [], ...others };
+  const responseData = { links: data?.map(format) ?? [], ...others };
 
-  res.status(200).json(responseData);
+  return new Response(responseData);
 }
