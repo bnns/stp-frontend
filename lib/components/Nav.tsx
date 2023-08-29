@@ -10,7 +10,7 @@ const Box = styled.div`
   top: 50px;
   border: 3px solid #444;
   padding: 10px 15px;
-  @media (max-width: 1450px) {
+  @media (max-width: 1550px) {
     position: inherit;
   }
 `;
