@@ -1,12 +1,9 @@
-import type { IncomingMessage, ServerResponse } from "http";
-import fs from "fs";
-import path from "path";
-import MarkdownIt from "markdown-it";
+import { NextResponse } from "next/server";
 import { Feed, Item } from "feed";
 import { fetchAPI } from "./api";
-import { sortByPublishedDate, sortByMeetingDate } from "./dates";
-import { format as formatArticles } from "../pages/api/articles";
-import { format as formatLinks } from "../pages/api/links";
+import { sortByPublishedDate } from "./dates";
+import { format as formatArticles } from "../app/api/articles";
+import { format as formatLinks } from "../app/api/links";
 import { Article, Meeting, ExternalLink } from "./types";
 import md from "./markdown";
 
@@ -113,17 +110,17 @@ export default async function generateRSS(feedType: FeedType) {
 }
 
 export const setFeedHeaders = (
-  res: ServerResponse<IncomingMessage>,
+  res: NextResponse,
   feedType: FeedType
 ) => {
-  res.setHeader(
+  res.headers.set(
     "Content-Type",
     `application/${feedType === "atom" ? "atom+xml" : "rss+xml"}`
   );
-  res.setHeader("Content-Disposition", "inline");
+  res.headers.set("Content-Disposition", "inline");
   const cacheMaxAgeUntilStaleSeconds = 60 * 60; // 1 minute
   const cacheMaxAgeStaleDataReturnSeconds = 60 * 60 * 60; // 60 minutes
-  res.setHeader(
+  res.headers.set(
     "Cache-Control",
     `public, s-maxage=${cacheMaxAgeUntilStaleSeconds}, stale-while-revalidate=${cacheMaxAgeStaleDataReturnSeconds}`
   );

@@ -1,6 +1,6 @@
 import { fetchAPI } from "../lib/api";
 import { format as formatMeetings } from "./api/meetings";
-import { format as formatBibliographies } from "./api/bibliography";
+import { format as formatBibliography } from "./api/bibliography";
 import React from "react";
 import Home from "./home";
 
@@ -10,7 +10,7 @@ const Page = async () => {
     "meetings?populate=*&pagination[limit]=300"
   );
   const meetings = meetingsRes?.data?.map(formatMeetings) || [];
-  const bibliography = bibliographyRes?.data?.map(formatBibliographies) || [];
+  const bibliography = bibliographyRes?.data?.map(formatBibliography) || [];
 
   return <Home meetings={meetings} bibliography={bibliography} />;
 };

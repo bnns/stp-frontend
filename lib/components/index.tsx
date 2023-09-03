@@ -31,6 +31,7 @@ type TextProps = {
 };
 
 export const Text = styled.p<TextProps>`
+  font-family: Futura;
   font-size: 14px;
   text-align: ${(props) => (props.center ? "center" : "inherit")};
   width: 100%;
@@ -42,8 +43,8 @@ type LightTextProps = {
 };
 
 export const LightText = styled(Text)<LightTextProps>`
-  font-family: Raleway;
-  font-weight: 300;
+  font-family: var(--font-raleway);
+  font-weight: 400;
   margin-right: ${(props) => (props.isDate ? 20 : 0)}px;
   text-align: ${(props) => (props.isTitle ? "right" : "inherit")};
   width: ${(props) => (props.isDate ? "150px" : "inherit")};

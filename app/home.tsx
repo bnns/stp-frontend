@@ -9,9 +9,8 @@ import {
   formatMeetingDate,
   formatDate,
 } from "../lib/dates";
-import { Meeting } from "../lib/types";
+import { Bibliography, Meeting } from "../lib/types";
 import MeetingCard from "../lib/components/MeetingCard";
-import { NavProps } from "../lib/components/Nav";
 import PageWrapper, { Row } from "../lib/components/PageWrapper";
 import { Text, LightText } from "../lib/components";
 
@@ -51,7 +50,12 @@ const FilterContainer = styled.div`
   width: 100%;
 `;
 
-const Home = ({ bibliography, meetings }) => {
+type Props = {
+  bibliography: Bibliography[];
+  meetings: Meeting[];
+}
+
+const Home = ({ bibliography, meetings }: Props) => {
   const [term, setTerm] = React.useState<string>("");
   const sortedMeetings = React.useMemo<Meeting[]>(
     () => (meetings ? meetings.sort(sortByMeetingDate) : []),
