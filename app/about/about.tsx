@@ -3,7 +3,7 @@ import React from "react";
 import styled from "@emotion/styled";
 import PageWrapper  from "../../lib/components/PageWrapper";
 import MarkdownIt from "markdown-it";
-import {Bibliography}  from "../../lib/types";
+import {NavProps}  from "../../lib/components/Nav";
 
 const md = new MarkdownIt();
 
@@ -16,10 +16,9 @@ const STP_INTRO = "SyixzsrWCAI";
 
 type Props = {
     markdown: string;
-    bibliography: Bibliography[]
 }
 
-const About = ({markdown, bibliography}: Props) => {
+const About = ({markdown, bibliography}: Props & NavProps) => {
   return (
     <PageWrapper title="About STP" bibliography={bibliography}>
       <div className="video-responsive">

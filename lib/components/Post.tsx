@@ -1,3 +1,4 @@
+'use client'
 import React from "react";
 import styled from "@emotion/styled";
 import Link from "next/link";
@@ -7,7 +8,7 @@ import { Article } from "../types";
 import { Row } from "../../lib/components/PageWrapper";
 import { formatDate } from "../dates";
 
-const getPreview = (md: string) => md.split(" ").slice(0, 100).join(" ");
+// const getPreview = (md: string) => md.split(" ").slice(0, 100).join(" ");
 
 const Content = styled(Row)`
   font-family: var(--font-raleway);

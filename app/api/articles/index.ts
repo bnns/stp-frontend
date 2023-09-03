@@ -1,6 +1,4 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import type { NextApiRequest, NextApiResponse } from "next";
-import { getStrapiUrl, getBearerToken, fetchAPI } from "../../../lib/api";
+import { fetchAPI } from "../../../lib/api";
 
 type Formattable = {
   id: string;

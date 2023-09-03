@@ -9,7 +9,7 @@ const Content = styled.p`
   font-weight: 400;
 `;
 
-const Contact = async ({ bibliography }: NavProps) => {
+const Contact = ({ bibliography }: NavProps) => {
   return (
     <PageWrapper title="Contact STP" bibliography={bibliography}>
       <Content>

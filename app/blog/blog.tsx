@@ -15,7 +15,7 @@ type Props = {
     articles: Article[]
 }
 
-const Blog = async ({articles, bibliography}: NavProps & Props) => {
+const Blog = ({articles, bibliography}: NavProps & Props) => {
 
   return (
     <PageWrapper title="Blog" bibliography={bibliography}>

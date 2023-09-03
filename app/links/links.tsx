@@ -15,7 +15,7 @@ type Props = {
     bibliography: Bibliography[];
 }
 
-const Links = async ({ links, bibliography }: Props) => {
+const Links = ({ links, bibliography }: Props) => {
   return (
     <PageWrapper title="Links" bibliography={bibliography}>
       {!links.length ? <p>There are no links yet.</p> : null}
