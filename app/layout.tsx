@@ -2,6 +2,7 @@ import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
 import { Metadata } from "next";
 import "../styles/global.css";
+import { Raleway } from 'next/font/google'
 
 const description =
   "The Subset of Theoretical Practice is an open group that talks and writes about philosophy, science and politics.";
@@ -13,6 +14,8 @@ export const metadata: Metadata = {
   description,
 };
 
+const raleway = Raleway({ subsets: ['latin'] })
+
 export default function RootLayout({
   children,
 }: {
@@ -20,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body className={raleway.className}>
         {children}
         <Analytics />
         <Script

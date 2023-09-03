@@ -38,6 +38,7 @@ export const Row = styled.div<RowProps>`
 `;
 
 const Title = styled.h1`
+  font-family: Futura;
   font-size: 35px;
   font-weight: 300;
   text-align: center;
@@ -47,6 +48,7 @@ const Title = styled.h1`
 const PageTitle = styled.h2`
   font-size: 24px;
   font-weight: 500;
+  font-family: Futura;
 `;
 
 interface PageWrapperProps extends NavProps {

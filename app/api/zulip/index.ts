@@ -1,4 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest } from "next";
 import zulipInit from "zulip-js";
 
 enum Event {
@@ -51,7 +51,7 @@ const zulipMessage = (
   return message;
 };
 
-export async function POST(req: Request) {
+export async function POST(req: NextApiRequest) {
   if (req.headers.authorization?.trim() === process.env.WEBHOOK_TOKEN?.trim()) {
     const zulipClient = await zulipInit({
       username: process.env.ZULIP_USERNAME,
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       topic: "Automated Messages",
       content: message,
     });
-    res.status(200).end();
+
     return new Response();
   }
 

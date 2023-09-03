@@ -13,6 +13,7 @@ const Box = styled.div`
   @media (max-width: 1450px) {
     position: inherit;
   }
+  font-family: Futura;
 `;
 
 const Title = styled.div`

@@ -70,6 +70,7 @@ const Row = styled.div<{ center?: boolean }>`
 `;
 
 const Date = styled.div`
+  font-family: Futura;
   font-weight: 700;
   font-size: 16px;
   border: 2px solid #444;

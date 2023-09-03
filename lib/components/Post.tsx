@@ -10,7 +10,7 @@ import { formatDate } from "../dates";
 const getPreview = (md: string) => md.split(" ").slice(0, 100).join(" ");
 
 const Content = styled(Row)`
-  font-family: Raleway;
+  font-family: var(--font-raleway);
   flex-direction: column;
   margin-top: 1em;
   img {
@@ -23,13 +23,14 @@ const Content = styled(Row)`
 `;
 
 const Item = styled.div`
+  font-family: Futura;
   flex: 1;
 `;
 
 const DateText = styled.div<{ align: "left" | "right" | "center" }>`
   flex: 1;
-  font-family: Raleway;
-  font-weight: 300;
+  font-family: var(--font-raleway);
+  font-weight: 400;
   font-size: 14px;
   text-align: ${(props) => props.align};
   align-self: center;
