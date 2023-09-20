@@ -99,9 +99,9 @@ const Home = ({ bibliography, meetings }: Props) => {
     () =>
       sortedMeetings
         ? sortedMeetings
-            .slice(0, idx > -1 ? idx : sortedMeetings.length)
-            .filter(filterMeetings)
-            .reverse()
+          .slice(0, idx > -1 ? idx : sortedMeetings.length)
+          .filter(filterMeetings)
+          .reverse()
         : [],
     [sortedMeetings, filterMeetings, idx]
   );

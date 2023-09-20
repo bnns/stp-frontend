@@ -13,6 +13,7 @@ export function getBearerToken() {
 export async function fetchAPI(path: string) {
   const requestUrl = getStrapiUrl(path);
   const response = await fetch(requestUrl, {
+    next: { revalidate: 3600 },
     headers: {
       Authorization: `Bearer ${getBearerToken()}`,
     },
