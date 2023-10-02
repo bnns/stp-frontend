@@ -1,8 +1,4 @@
-import { fetchAPI } from "../../lib/api";
-import {
-  format as formatArticles,
-  format as formatBibliography,
-} from "../api/articles";
+import { format, fetchAPI } from "../../lib/api";
 import { sortByPublishedDate } from "../../lib/dates";
 import Blog from './blog'
 
@@ -14,8 +10,8 @@ const Page = async () => {
     "articles?populate=*&pagination[limit]=200"
   );
   const articles =
-    articlesRes?.data?.map(formatArticles).sort(sortByPublishedDate) || [];
-  const bibliography = bibliographyRes?.data?.map(formatBibliography) || [];
+    articlesRes?.data?.map(format).sort(sortByPublishedDate) || [];
+  const bibliography = bibliographyRes?.data?.map(format) || [];
 
   return (
     <Blog bibliography={bibliography} articles={articles} />

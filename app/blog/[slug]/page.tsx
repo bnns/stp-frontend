@@ -1,30 +1,26 @@
-import { fetchAPI } from "../../../lib/api";
-import {
-  format as formatArticles,
-  format as formatBibliography,
-} from "../../api/articles";
+import { fetchAPI, format } from "../../../lib/api";
 import { Article } from "../../../lib/types";
 import ExpandedPost from './expandedPost';
 
 export async function generateStaticParams() {
   const articles = await fetchAPI("articles?populate=*&pagination[limit]=200");
-  const formattedArticles = articles?.data?.map(formatArticles) || [];
+  const formattedArticles = articles?.data?.map(format) || [];
 
   return formattedArticles.map((a: Article) => ({
     slug: a.slug,
   }));
 }
 
-const Page = async ({ params: {slug} }: { params: { slug: string } }) => {
+const Page = async ({ params: { slug } }: { params: { slug: string } }) => {
   const bibliographyRes = await fetchAPI("bibliographies");
   const articlesRes = await fetchAPI(`articles?filters[slug][$eq]=${slug}`);
-  const formattedArticles = articlesRes?.data?.map(formatArticles) || [];
-  const bibliography = bibliographyRes?.data?.map(formatBibliography) || [];
+  const formattedArticles = articlesRes?.data?.map(format) || [];
+  const bibliography = bibliographyRes?.data?.map(format) || [];
   const article = formattedArticles.length ? formattedArticles[0] : null;
 
-    return (
-      <ExpandedPost article={article} bibliography={bibliography} />
-    );
+  return (
+    <ExpandedPost article={article} bibliography={bibliography} />
+  );
 };
 
 export default Page;

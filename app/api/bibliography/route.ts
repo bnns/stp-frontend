@@ -1,14 +1,5 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import type { NextApiRequest, NextApiResponse } from "next";
-import { getStrapiUrl, getBearerToken, fetchAPI } from "../../../lib/api";
-
-export const format = ({
-  id,
-  attributes,
-}: {
-  id: string;
-  attributes: Record<string, unknown>;
-}) => ({ id, ...attributes });
+import { format, fetchAPI } from "../../../lib/api";
 
 export async function GET() {
   const bibData = await fetchAPI("bibliographies");

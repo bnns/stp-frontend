@@ -1,4 +1,5 @@
-import type { NextApiRequest } from "next";
+import { NextRequest } from "next/server";
+import { headers } from "next/headers";
 import zulipInit from "zulip-js";
 
 enum Event {
@@ -51,15 +52,17 @@ const zulipMessage = (
   return message;
 };
 
-export async function POST(req: NextApiRequest) {
-  if (req.headers.authorization?.trim() === process.env.WEBHOOK_TOKEN?.trim()) {
+export async function POST(req: NextRequest) {
+  const headersList = headers();
+  const authorization = headersList.get("authorization");
+  if (authorization?.trim() === process.env.WEBHOOK_TOKEN?.trim()) {
     const zulipClient = await zulipInit({
       username: process.env.ZULIP_USERNAME,
       apiKey: process.env.ZULIP_API_KEY,
       realm: process.env.ZULIP_REALM,
     });
-    const { event, model, entry, media } = req.body;
-    console.log(req.body);
+    const { event, model, entry, media } = await req.json();
+    console.log(event, model, entry, media);
     let message = "";
     if (model === "about") {
       message = "Someone changed the about page";

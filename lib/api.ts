@@ -21,3 +21,23 @@ export async function fetchAPI(path: string) {
   const data = await response.json();
   return data;
 }
+
+type Formattable = {
+  id: string;
+  attributes: Record<string, unknown>;
+};
+
+type ExpandableAttribute = { data: Formattable[] };
+
+export const format = ({
+  id,
+  attributes,
+}: Formattable): Record<string, unknown> => {
+  return {
+    id,
+    ...attributes,
+    materials:
+      (attributes?.materials as ExpandableAttribute)?.data?.map(format) ?? [],
+    tags: (attributes?.tags as ExpandableAttribute)?.data?.map(format) ?? [],
+  };
+};

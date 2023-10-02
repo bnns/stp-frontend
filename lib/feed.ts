@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { Feed, Item } from "feed";
-import { fetchAPI } from "./api";
+import { format, fetchAPI } from "./api";
 import { sortByPublishedDate } from "./dates";
-import { format as formatArticles } from "../app/api/articles";
-import { format as formatLinks } from "../app/api/links";
 import { Article, Meeting, ExternalLink } from "./types";
 import md from "./markdown";
 
@@ -42,15 +40,14 @@ export default async function generateRSS(feedType: FeedType) {
     author,
   });
 
-  links?.data?.map(formatLinks).forEach((link: ExternalLink) => {
+  links?.data?.map(format).forEach((link: ExternalLink) => {
     feed.addItem({
       title: link.name,
       id: `${link.link}`,
       link: link.link,
       description: link.description,
-      content: `<p><a href="${link.link}">Link</a></p> <p>${
-        link.description ?? ""
-      }</p>`,
+      content: `<p><a href="${link.link}">Link</a></p> <p>${link.description ?? ""
+        }</p>`,
       author: [author],
       contributor: [author],
       date: new Date(link.publishedAt),
@@ -60,7 +57,7 @@ export default async function generateRSS(feedType: FeedType) {
   });
 
   meetings?.data
-    ?.map(formatArticles)
+    ?.map(format)
     .filter(onlyRecorded)
     .forEach((meeting: Meeting) => {
       feed.addItem({
@@ -68,9 +65,8 @@ export default async function generateRSS(feedType: FeedType) {
         id: `${meeting.id}`,
         link: meeting.recording,
         description: meeting.description,
-        content: `<p>The recording for the meeting can be found at <a href="${
-          meeting.recording
-        }">here</a>.</p> <p>${meeting.description ?? ""}</p>`,
+        content: `<p>The recording for the meeting can be found at <a href="${meeting.recording
+          }">here</a>.</p> <p>${meeting.description ?? ""}</p>`,
         author: [author],
         contributor: [author],
         date: new Date(meeting.date),
@@ -80,7 +76,7 @@ export default async function generateRSS(feedType: FeedType) {
     });
 
   articles?.data
-    ?.map(formatArticles)
+    ?.map(format)
     .sort(sortByPublishedDate)
     .forEach((article: Article) => {
       const url = `${siteURL}/blog/${article.slug}`;
