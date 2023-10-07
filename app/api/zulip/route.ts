@@ -1,10 +1,13 @@
 import { NextRequest } from "next/server";
 import { headers } from "next/headers";
-import { revalidateTag } from 'next/cache'
+import { revalidateTag, revalidatePath } from 'next/cache'
 import zulipInit from "zulip-js";
 
 enum Model {
-  ZOOM = 'zoom'
+  ZOOM = 'zoom',
+  ARTICLE = 'article',
+  MEETING = 'meeting',
+  ABOUT = 'about'
 }
 
 enum Event {
@@ -27,7 +30,17 @@ const zulipMessage = (
   let message = "";
   let displayName = entry?.name || entry?.Name || entry?.title || media?.name; // TODO: annoying
   if (model === Model.ZOOM) {
+    revalidatePath('/', 'page')
     return `Someone changed the zoom link.`
+  }
+  if (model === Model.ABOUT) {
+    revalidatePath('/about', 'page')
+  }
+  if (model === Model.ARTICLE) {
+    revalidatePath('/blog', 'page')
+  }
+  if (model === Model.MEETING) {
+    revalidatePath('/', 'page')
   }
   if (!displayName) {
     return `Someone changed the ${model}`
