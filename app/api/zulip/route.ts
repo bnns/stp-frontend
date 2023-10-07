@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { headers } from "next/headers";
+import { revalidateTag } from 'next/cache'
 import zulipInit from "zulip-js";
 
 enum Model {
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
   const headersList = headers();
   const authorization = headersList.get("authorization");
   if (authorization?.trim() === process.env.WEBHOOK_TOKEN?.trim()) {
+    revalidateTag('strapi')
     const zulipClient = await zulipInit({
       username: process.env.ZULIP_USERNAME,
       apiKey: process.env.ZULIP_API_KEY,
