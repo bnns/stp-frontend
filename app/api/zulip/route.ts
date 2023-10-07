@@ -2,6 +2,10 @@ import { NextRequest } from "next/server";
 import { headers } from "next/headers";
 import zulipInit from "zulip-js";
 
+enum Model {
+  ZOOM = 'zoom'
+}
+
 enum Event {
   CREATE = "entry.create",
   UPDATE = "entry.update",
@@ -21,6 +25,12 @@ const zulipMessage = (
 ): string => {
   let message = "";
   let displayName = entry?.name || entry?.Name || entry?.title || media?.name; // TODO: annoying
+  if (model === Model.ZOOM) {
+    return `Someone changed the zoom link.`
+  }
+  if (!displayName) {
+    return `Someone changed the ${model}`
+  }
   switch (event) {
     case Event.CREATE:
       message = `Someone created a new ${model} "${displayName}"`;
