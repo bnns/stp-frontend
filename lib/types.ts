@@ -9,6 +9,7 @@ export type Meeting = {
   name: string;
   link: string;
   materials?: MeetingMaterial[];
+  references?: MeetingReference[];
   tags?: Tag[];
 };
 
@@ -41,6 +42,11 @@ export type Tag = {
 export type MeetingMaterial = {
   name: string;
   url: string;
+};
+
+export type MeetingReference = {
+  name: string;
+  link: string;
 };
 
 export type ExternalLink = {

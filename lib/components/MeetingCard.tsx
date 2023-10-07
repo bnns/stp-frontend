@@ -106,17 +106,19 @@ export default function MeetingCard({
   name,
   description,
   recording,
-  link,
   raised,
   materials,
+  references,
   date,
   tags,
   setSearch,
   current = false,
+  zoom
 }: Meeting & {
   raised?: boolean;
   current?: boolean;
   setSearch?: (val: string) => void;
+  zoom?: { link: string }
 }) {
   return (
     <Card raised={raised}>
@@ -147,22 +149,35 @@ export default function MeetingCard({
           </a>
         );
       })}
+      {references?.length ? <Subtitle>Meeting References</Subtitle> : null}
+      {references?.map((attributes) => {
+        return (
+          <a
+            key={attributes.name}
+            href={attributes.link}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Text>{attributes.name}</Text>
+          </a>
+        );
+      })}
       <Row>
         {tags?.length
           ? tags.map(({ Name }) => (
-              <Tag
-                key={Name}
-                onClick={() => {
-                  setSearch?.(Name);
-                }}
-              >
-                <p>{Name}</p>
-              </Tag>
-            ))
+            <Tag
+              key={Name}
+              onClick={() => {
+                setSearch?.(Name);
+              }}
+            >
+              <p>{Name}</p>
+            </Tag>
+          ))
           : null}
-        {current && link ? (
+        {current && zoom ? (
           <RightItem>
-            <a href={link} target="_blank" rel="noopener noreferrer">
+            <a href={zoom.link} target="_blank" rel="noopener noreferrer">
               <Icon
                 name="/zoomus-icon.svg"
                 tooltip="Click to join the meeting."

@@ -53,9 +53,10 @@ const FilterContainer = styled.div`
 type Props = {
   bibliography: Bibliography[];
   meetings: Meeting[];
+  zoom: { link: string };
 }
 
-const Home = ({ bibliography, meetings }: Props) => {
+const Home = ({ bibliography, meetings, zoom }: Props) => {
   const [term, setTerm] = React.useState<string>("");
   const sortedMeetings = React.useMemo<Meeting[]>(
     () => (meetings ? meetings.sort(sortByMeetingDate) : []),
@@ -114,7 +115,7 @@ const Home = ({ bibliography, meetings }: Props) => {
           : "Not scheduled currently"}
       </Text>
       {nextMeeting ? (
-        <MeetingCard raised current {...(nextMeeting || {})} />
+        <MeetingCard raised current {...(nextMeeting || {})} zoom={zoom} />
       ) : null}
       {futureMeetings.length ? (
         <Row verticalChildren>
