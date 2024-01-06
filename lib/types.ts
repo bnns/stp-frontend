@@ -57,4 +57,5 @@ export type ExternalLink = {
   createdAt: string;
   updatedAt: string;
   publishedAt: string;
+  category: string;
 };
