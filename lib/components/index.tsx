@@ -43,6 +43,7 @@ type LightTextProps = {
 };
 
 export const LightText = styled(Text)<LightTextProps>`
+  margin-top: 0;
   font-family: var(--font-raleway);
   font-weight: 400;
   margin-right: ${(props) => (props.isDate ? 20 : 0)}px;

@@ -7,7 +7,13 @@ import { Bibliography, ExternalLink } from "../../lib/types";
 const LinkWrapper = styled.div`
   display: block;
   margin: 0 0 24px 0;
-  width: 450px;
+`;
+
+const ResponsiveRow = styled(Row)`
+  width: 100%;
+  @media (max-width: 600px) {
+    flex-direction: column;
+  }
 `;
 
 type Props = {
@@ -27,35 +33,46 @@ const Links = ({ links, bibliography }: Props) => {
     <PageWrapper title="Links" bibliography={bibliography}>
       {!links.length ? <p>There are no links yet.</p> : null}
       {Object.keys(grouped).map((category) => (
-        <Row key={category}>
-          <Row>
+        <ResponsiveRow key={category}>
+          <Row
+            style={{
+              marginRight: "2em",
+              minWidth: "150px",
+              maxWidth: "150px",
+              marginBottom: 14,
+            }}
+          >
             <strong>{category}</strong>
           </Row>
-          {grouped[category].map(
-            ({ name, link, description, tags, category }) => (
-              <LinkWrapper key={`${name}-wrapper`}>
-                <Link
-                  key={name}
-                  href={link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {name}
-                </Link>
-                <Row>
-                  <LightText>{description}</LightText>
-                </Row>
-                <Row flexWrap>
-                  {tags?.map(({ Name }) => (
-                    <Tag key={Name} dark>
-                      <p>{Name}</p>
-                    </Tag>
-                  ))}
-                </Row>
-              </LinkWrapper>
-            ),
-          )}
-        </Row>
+          <Row around verticalChildren>
+            {grouped[category].map(
+              ({ name, link, description, tags, category }) => (
+                <LinkWrapper key={`${name}-wrapper`}>
+                  <Link
+                    key={name}
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {name}
+                  </Link>
+                  {description && (
+                    <Row>
+                      <LightText>{description}</LightText>
+                    </Row>
+                  )}
+                  <Row flexWrap>
+                    {tags?.map(({ Name }) => (
+                      <Tag key={Name} dark>
+                        <p>{Name}</p>
+                      </Tag>
+                    ))}
+                  </Row>
+                </LinkWrapper>
+              ),
+            )}
+          </Row>
+        </ResponsiveRow>
       ))}
     </PageWrapper>
   );
