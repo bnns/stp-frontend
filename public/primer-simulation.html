@@ -207,6 +207,40 @@
   .tech-coeff .sym { font-weight: 600; }
   .tech-count { color: #6e7681; font-size: 11px; margin-left: auto; }
 
+  /* Collapsible sidebar sections */
+  .collapsible-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    padding: 2px 0;
+  }
+  .collapsible-header:hover .collapse-arrow { color: #e6edf3; }
+  .collapse-arrow {
+    font-size: 11px;
+    color: #6e7681;
+    transition: transform 0.2s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .collapsible-body {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    overflow: hidden;
+    transition: max-height 0.25s ease, opacity 0.2s ease;
+    max-height: 600px;
+    opacity: 1;
+  }
+  .section-collapsed .collapsible-body {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .section-collapsed .collapse-arrow {
+    transform: rotate(-90deg);
+  }
+
   /* Production recipe callout (shown on canvas) */
   .recipe-toast {
     position: absolute;
@@ -276,53 +310,77 @@
 
     <div class="divider"></div>
 
-    <div class="group">
-      <div class="group-label">Production (Stabilizer)</div>
-      <div class="btn-row">
-        <button id="btn-prod-off" onclick="setProd('off')">Off</button>
-        <button id="btn-prod-conservative" class="active" onclick="setProd('conservative')">On (Leontief)</button>
+    <!-- 1. Statistics (expanded by default) -->
+    <div class="group" id="section-stats">
+      <div class="collapsible-header" onclick="toggleSection('section-stats')">
+        <div class="group-label">Statistics &mdash; t = <span id="stat-tick">0</span></div>
+        <span class="collapse-arrow">&#x25BC;</span>
       </div>
-      <div class="desc" id="prod-desc">Value-conserving: U(outputs) = U(inputs). The stabilizer couples production to circulation so G is replenished. §9.12&ndash;9.14</div>
+      <div class="collapsible-body">
+        <div class="stat-row"><span>Commodities |G|</span><span class="stat-value" id="stat-G">0</span></div>
+        <div class="stat-row"><span>Total money M</span><span class="stat-value" id="stat-Mcirc">0</span></div>
+        <div class="stat-row"><span>Total value V</span><span class="stat-value" id="stat-Mtotal">0</span></div>
+        <div class="stat-row"><span>Exchanges</span><span class="stat-value" id="stat-exchanges">0</span></div>
+        <div class="stat-row"><span>Productions</span><span class="stat-value" id="stat-productions">0</span></div>
+        <div class="stat-row"><span>Surplus &delta;</span><span class="stat-value" id="stat-surplus">0</span></div>
+        <div class="stat-row"><span>Labor surplus s</span><span class="stat-value" id="stat-surplus-labor">0</span></div>
+      </div>
     </div>
 
     <div class="divider"></div>
 
-    <div class="group">
-      <div class="group-label">Labor</div>
-      <div class="btn-row">
-        <button id="btn-labor-implicit" class="active" onclick="setLabor('implicit')">Implicit (self)</button>
-        <button id="btn-labor-commodity" onclick="setLabor('commodity')">Commodity (t<sub>r</sub>)</button>
+    <!-- 2. Production (collapsed by default) -->
+    <div class="group section-collapsed" id="section-production">
+      <div class="collapsible-header" onclick="toggleSection('section-production')">
+        <div class="group-label">Production (Stabilizer)</div>
+        <span class="collapse-arrow">&#x25BC;</span>
       </div>
-      <div class="desc" id="labor-desc">Each producer adds their own labor. No money exchanged for labor.</div>
-      <div class="group" id="labor-slider-group" style="display:none;flex-direction:column;gap:4px;margin-top:6px;">
-        <div class="group-label" style="font-size:13px;">
-          t<sub>r</sub> / value-added &mdash; <span id="tr-pct">100</span>%
+      <div class="collapsible-body">
+        <div class="btn-row">
+          <button id="btn-prod-off" onclick="setProd('off')">Off</button>
+          <button id="btn-prod-conservative" class="active" onclick="setProd('conservative')">On (Leontief)</button>
         </div>
-        <input type="range" id="trSlider" min="50" max="100" value="100" step="5"
-               oninput="updateTrSlider()" style="width:100%;accent-color:#3fb950;" />
-        <div class="desc" id="tr-desc">Simple reproduction: t&#7523; = value-added, no surplus (s=0).</div>
+        <div class="desc" id="prod-desc">Value-conserving: U(outputs) = U(inputs). The stabilizer couples production to circulation so G is replenished. §9.12&ndash;9.14</div>
       </div>
     </div>
 
     <div class="divider"></div>
 
-    <div class="group">
-      <div class="group-label">Statistics &mdash; t = <span id="stat-tick">0</span></div>
-      <div class="stat-row"><span>Commodities |G|</span><span class="stat-value" id="stat-G">0</span></div>
-      <div class="stat-row"><span>Total money M</span><span class="stat-value" id="stat-Mcirc">0</span></div>
-      <div class="stat-row"><span>Total value V</span><span class="stat-value" id="stat-Mtotal">0</span></div>
-      <div class="stat-row"><span>Exchanges</span><span class="stat-value" id="stat-exchanges">0</span></div>
-      <div class="stat-row"><span>Productions</span><span class="stat-value" id="stat-productions">0</span></div>
-      <div class="stat-row"><span>Surplus &delta;</span><span class="stat-value" id="stat-surplus">0</span></div>
-      <div class="stat-row"><span>Labor surplus s</span><span class="stat-value" id="stat-surplus-labor">0</span></div>
+    <!-- 3. Labor (collapsed by default) -->
+    <div class="group section-collapsed" id="section-labor">
+      <div class="collapsible-header" onclick="toggleSection('section-labor')">
+        <div class="group-label">Labor</div>
+        <span class="collapse-arrow">&#x25BC;</span>
+      </div>
+      <div class="collapsible-body">
+        <div class="btn-row">
+          <button id="btn-labor-implicit" class="active" onclick="setLabor('implicit')">Implicit (self)</button>
+          <button id="btn-labor-commodity" onclick="setLabor('commodity')">Commodity (t<sub>r</sub>)</button>
+        </div>
+        <div class="desc" id="labor-desc">Each producer adds their own labor. No money exchanged for labor.</div>
+        <div class="group" id="labor-slider-group" style="display:none;flex-direction:column;gap:4px;margin-top:6px;">
+          <div class="group-label" style="font-size:13px;">
+            t<sub>r</sub> / value-added &mdash; <span id="tr-pct">100</span>%
+          </div>
+          <input type="range" id="trSlider" min="50" max="100" value="100" step="5"
+                 oninput="updateTrSlider()" style="width:100%;accent-color:#3fb950;" />
+          <div class="desc" id="tr-desc">Simple reproduction: t&#7523; = value-added, no surplus (s=0).</div>
+        </div>
+      </div>
     </div>
 
     <div class="divider"></div>
 
-    <div class="group">
-      <div class="group-label">Leontief Technology A</div>
-      <div class="desc">Fixed input coefficients per unit output.<br>Column sums &lt; 1 ⇒ productive economy.</div>
-      <div class="tech-matrix" id="techMatrix"></div>
+    <!-- 4. Leontief Technology A (collapsed by default) -->
+    <div class="group section-collapsed" id="section-leontief">
+      <div class="collapsible-header" onclick="toggleSection('section-leontief')">
+        <div class="group-label">Leontief Technology A</div>
+        <span class="collapse-arrow">&#x25BC;</span>
+      </div>
+      <div class="collapsible-body">
+        <div class="desc">Fixed input coefficients per unit output.<br>Column sums &lt; 1 ⇒ productive economy.</div>
+        <div class="tech-matrix" id="techMatrix"></div>
+      </div>
     </div>
   </div>
 
@@ -1228,6 +1286,10 @@ function setProd(p){
     conservative: 'Leontief stabilizer: feedback controller drives |G| \u2192 target. Recipes from A, weighted by x*=(I\u2212A)\u207B\u00B9d. U(out)=U(in)/0.8 — labor adds 0.2 value. §9.12\u20139.14',
   };
   document.getElementById('prod-desc').textContent = descs[p] || '';
+}
+
+function toggleSection(id){
+  document.getElementById(id).classList.toggle('section-collapsed');
 }
 
 function setLabor(m){
