@@ -594,7 +594,7 @@ function attemptBuy(buyer){
   exchangeCount++;
 
   addExchangeAnim(buyer,seller,c);
-  logEntry('exchange',`${buyer.label} buys ${c.type.sym}(v=${c.value}) from ${seller.label}`);
+  logEntry('exchange',`${seller.label} \u2194 ${buyer.label}: ${c.type.sym}(v=${c.value})`);
 }
 
 function attemptSell(seller){
@@ -614,7 +614,7 @@ function attemptSell(seller){
   exchangeCount++;
 
   addExchangeAnim(buyer,seller,c);
-  logEntry('exchange',`${seller.label} sells ${c.type.sym}(v=${c.value}) to ${buyer.label}`);
+  logEntry('exchange',`${seller.label} \u2194 ${buyer.label}: ${c.type.sym}(v=${c.value})`);
 }
 
 // ── Leontief production (always conservative: 2→2, value conserved) ──
@@ -644,13 +644,19 @@ function attemptLeontief(producer){
   const inputs = found.map(i=>producer.commodities.splice(i,1)[0]);
   const inputValue = inputs.reduce((s,c)=>s+c.value, 0);
 
-  // Conservative: U(out) = U(in), 2→2
-  const totalOutputValue = inputValue;
+  // Leontief value-added: col Σ = 0.8, so material inputs account for 80%
+  // of output value. The remaining 20% is new value created by labor.
+  // U(out) = U(in) / 0.8 = U(in) * 1.25
+  // This offsets the value destroyed by consumption, keeping total V stable.
+  const COL_SUM = 0.8; // from the A matrix
+  const totalOutputValue = Math.round(inputValue / COL_SUM);
+  const laborValue = totalOutputValue - inputValue; // the 0.2 contribution
+
   const outType = typeBySymbol(chosen.output);
   const secondType = TYPES[Math.floor(Math.random()*TYPES.length)];
 
-  const v1 = Math.max(1, Math.ceil(inputValue/2));
-  const v2 = Math.max(1, inputValue - v1);
+  const v1 = Math.max(1, Math.ceil(totalOutputValue/2));
+  const v2 = Math.max(1, totalOutputValue - v1);
   const out1 = new Commodity(outType, v1);
   const out2 = new Commodity(secondType, v2);
   producer.commodities.push(out1, out2);
@@ -660,17 +666,17 @@ function attemptLeontief(producer){
 
   // Green ring animation
   animations.push({type:'production', x:producer.x, y:producer.y, progress:0});
-  // Floating label: shows what was produced
+  // Floating label: shows what was produced + labor value-added
   animations.push({type:'produce_label', x:producer.x, y:producer.y, progress:0,
-    label:`\u2191 ${outType.sym}`, color:outType.color});
+    label:`\u2191 ${outType.sym} +${laborValue}`, color:outType.color});
 
   const inStr  = inputs.map(c=>`${c.type.sym}(${c.value})`).join('+');
   const outStr = `${outType.sym}(${v1})+${secondType.sym}(${v2})`;
-  logEntry('production',`${producer.label}: ${inStr} \u2192 ${outStr}  [${chosen.label}]`);
+  logEntry('production',`${producer.label}: ${inStr} \u2192 ${outStr}  +${laborValue} labor  [${chosen.label}]`);
 
   // Show recipe toast
   const toast = document.getElementById('recipeToast');
-  toast.textContent = `${producer.label}  ${chosen.label}   U=${inputValue}\u2192${totalOutputValue} (conserved)`;
+  toast.textContent = `${producer.label}  ${chosen.label}   U=${inputValue}\u2192${totalOutputValue} (+${laborValue} labor)`;
   toast.classList.add('visible');
   recipeTimer = 20;
 }
@@ -1162,7 +1168,7 @@ function setProd(p){
   document.getElementById('btn-prod-conservative').className = p==='conservative'?'active':'';
   const descs = {
     off: 'No production. Circulation depletes G \u2192 0. §9.10.4',
-    conservative: 'Leontief stabilizer: feedback controller drives |G| \u2192 target. Recipes from A, weighted by x*=(I\u2212A)\u207B\u00B9d. U(out)=U(in). §9.12\u20139.14',
+    conservative: 'Leontief stabilizer: feedback controller drives |G| \u2192 target. Recipes from A, weighted by x*=(I\u2212A)\u207B\u00B9d. U(out)=U(in)/0.8 — labor adds 0.2 value. §9.12\u20139.14',
   };
   document.getElementById('prod-desc').textContent = descs[p] || '';
 }
