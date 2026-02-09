@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circulation &amp; Production — Toy Model</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Georgia', serif;
+    background: #0d1117;
+    color: #e6edf3;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 12px 24px;
+    border-bottom: 1px solid #21262d;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 24px; color: #f0f6fc; font-weight: 600; }
+  header .subtitle { font-size: 15px; color: #b1bac4; }
+  .mode-badge {
+    margin-left: auto;
+    padding: 5px 16px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .mode-badge.cc  { background: #0d419d; color: #79c0ff; }
+  .mode-badge.capital { background: #5b0d5b; color: #d2a8ff; }
+
+  /* ── Main grid ── */
+  .main-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    grid-template-rows: 1fr;
+    overflow: hidden;
+  }
+
+  /* ── Left sidebar ── */
+  .sidebar {
+    padding: 16px;
+    border-right: 1px solid #21262d;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    font-size: 15px;
+  }
+  .group { display: flex; flex-direction: column; gap: 5px; }
+  .group-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #b1bac4;
+    font-weight: 600;
+  }
+  .group .desc { font-size: 14px; color: #8b949e; line-height: 1.4; }
+  .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  button {
+    padding: 8px 16px;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    background: #21262d;
+    color: #e6edf3;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  button:hover { background: #30363d; border-color: #484f58; }
+  button.primary { background: #238636; border-color: #2ea043; color: #fff; }
+  button.primary:hover { background: #2ea043; }
+  button.warn { background: #8b1538; border-color: #da3633; color:#fff; }
+  button.warn:hover { background: #b62324; }
+  button.active { background: #1f6feb; border-color: #388bfd; color: #fff; }
+  input[type="range"] { width: 100%; accent-color: #388bfd; }
+
+  .stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 3px 0; font-size: 15px;
+  }
+  .stat-value {
+    font-variant-numeric: tabular-nums;
+    color: #f0f6fc; font-weight: 700;
+    font-family: 'SF Mono','Consolas',monospace;
+    font-size: 15px;
+  }
+  .divider { border-top: 1px solid #21262d; margin: 4px 0; }
+
+  /* ── Right: canvas + chart ── */
+  .canvas-col {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Circulation canvas takes ~65% */
+  .circ-wrap {
+    flex: 7;
+    position: relative;
+    min-height: 0;
+  }
+  #world { display: block; width: 100%; height: 100%; }
+
+  /* Chart strip at bottom ~25% */
+  .chart-strip {
+    flex: 3;
+    min-height: 120px;
+    border-top: 1px solid #21262d;
+    position: relative;
+    background: #0d1117;
+  }
+  #chart { display: block; width: 100%; height: 100%; }
+
+  /* Legend bar between them */
+  .legend-bar {
+    display: flex;
+    gap: 20px;
+    padding: 6px 20px;
+    border-top: 1px solid #21262d;
+    font-size: 14px;
+    color: #b1bac4;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    background: #0d1117;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Floating log overlay */
+  .log-overlay {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 320px;
+    max-height: 45%;
+    background: #0d1117ee;
+    border: 1px solid #21262d;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-size: 12px;
+    z-index: 10;
+  }
+  .log-overlay.collapsed .log-entries { display: none; }
+  .log-hdr {
+    padding: 6px 12px;
+    border-bottom: 1px solid #21262d;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #b1bac4;
+    cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    user-select: none;
+  }
+  .log-entries {
+    overflow-y: auto;
+    padding: 4px 10px;
+    font-family: 'SF Mono','Consolas',monospace;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .log-entry { padding: 2px 0; border-bottom: 1px solid #161b2288; }
+  .log-entry .time { color: #6e7681; margin-right: 4px; }
+  .log-entry.exchange { color: #79c0ff; }
+  .log-entry.production { color: #56d364; }
+  .log-entry.depletion { color: #f0883e; }
+  .log-entry.capital { color: #d2a8ff; }
+  .log-entry.system  { color: #b1bac4; }
+
+  /* Technology matrix */
+  .tech-matrix {
+    font-family: 'SF Mono','Consolas',monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .tech-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 2px 0;
+    border-bottom: 1px solid #161b2244;
+  }
+  .tech-out {
+    font-weight: 700;
+    min-width: 32px;
+  }
+  .tech-arrow { color: #6e7681; }
+  .tech-coeff {
+    color: #b1bac4;
+  }
+  .tech-coeff .sym { font-weight: 600; }
+  .tech-count { color: #6e7681; font-size: 11px; margin-left: auto; }
+
+  /* Production recipe callout (shown on canvas) */
+  .recipe-toast {
+    position: absolute;
+    left: 50%; bottom: 12px;
+    transform: translateX(-50%);
+    background: #0a3d1cdd;
+    border: 1px solid #3fb950;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 16px;
+    color: #56d364;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 5;
+    white-space: nowrap;
+    font-family: 'SF Mono','Consolas',monospace;
+  }
+  .recipe-toast.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Circulation &amp; Production</h1>
+  <span class="subtitle">Toy model — Primer §9-11</span>
+  <div class="mode-badge cc" id="modeBadge">CC — Simple Circulation</div>
+</header>
+
+<div class="main-grid">
+  <!-- ── Sidebar ── -->
+  <div class="sidebar">
+    <div class="group">
+      <div class="group-label">Mode</div>
+      <div class="btn-row">
+        <button id="btn-mode-cc" class="active" onclick="setMode('cc')">CC (Simple)</button>
+        <button id="btn-mode-capital" onclick="setMode('capital')">Capital</button>
+      </div>
+      <div class="desc" id="mode-desc">Stabilized commodity region: circulation + value-conserving production. §9.14</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="group">
+      <div class="group-label">Simulation</div>
+      <div class="btn-row">
+        <button class="primary" id="btn-play" onclick="togglePlay()">&#x25B6; Play</button>
+        <button onclick="stepOnce()">Step</button>
+        <button class="warn" onclick="resetSim()">Reset</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Speed</div>
+      <input type="range" id="speed" min="1" max="20" value="5">
+    </div>
+
+    <div class="group">
+      <div class="group-label">Proprietors &mdash; <span id="prop-count">6</span></div>
+      <input type="range" id="numProprietors" min="3" max="12" value="6" oninput="document.getElementById('prop-count').textContent=this.value" onchange="resetSim()">
+    </div>
+
+    <div class="group">
+      <div class="group-label">Init. goods each &mdash; <span id="comm-count">3</span></div>
+      <input type="range" id="initCommodities" min="1" max="8" value="3" oninput="document.getElementById('comm-count').textContent=this.value" onchange="resetSim()">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="group">
+      <div class="group-label">Production (Stabilizer)</div>
+      <div class="btn-row">
+        <button id="btn-prod-off" onclick="setProd('off')">Off</button>
+        <button id="btn-prod-conservative" class="active" onclick="setProd('conservative')">On (Leontief)</button>
+      </div>
+      <div class="desc" id="prod-desc">Value-conserving: U(outputs) = U(inputs). The stabilizer couples production to circulation so G is replenished. §9.12&ndash;9.14</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="group">
+      <div class="group-label">Statistics &mdash; t = <span id="stat-tick">0</span></div>
+      <div class="stat-row"><span>Commodities |G|</span><span class="stat-value" id="stat-G">0</span></div>
+      <div class="stat-row"><span>Total money M</span><span class="stat-value" id="stat-Mcirc">0</span></div>
+      <div class="stat-row"><span>Total value V</span><span class="stat-value" id="stat-Mtotal">0</span></div>
+      <div class="stat-row"><span>Exchanges</span><span class="stat-value" id="stat-exchanges">0</span></div>
+      <div class="stat-row"><span>Productions</span><span class="stat-value" id="stat-productions">0</span></div>
+      <div class="stat-row"><span>Surplus &delta;</span><span class="stat-value" id="stat-surplus">0</span></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="group">
+      <div class="group-label">Leontief Technology A</div>
+      <div class="desc">Fixed input coefficients per unit output.<br>Column sums &lt; 1 ⇒ productive economy.</div>
+      <div class="tech-matrix" id="techMatrix"></div>
+    </div>
+  </div>
+
+  <!-- ── Canvas column ── -->
+  <div class="canvas-col">
+
+    <div class="circ-wrap">
+      <canvas id="world"></canvas>
+      <!-- Floating log -->
+      <div class="log-overlay" id="logOverlay">
+        <div class="log-hdr" onclick="toggleLog()">
+          <span>Transaction Log</span>
+          <span id="logToggle">&#x25BC;</span>
+        </div>
+        <div class="log-entries" id="log"></div>
+      </div>
+      <!-- Recipe toast -->
+      <div class="recipe-toast" id="recipeToast"></div>
+    </div>
+
+    <div class="legend-bar">
+      <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> Money</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f0883e"></div> Commodity</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div> Production</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#d2a8ff"></div> Capital &gamma;</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#da3633"></div> Consumption</div>
+      <div class="legend-item" style="margin-left:auto;color:#6e7681">
+        Stabilizer P: production replenishes what circulation consumes (§9.14)
+      </div>
+    </div>
+
+    <div class="chart-strip">
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// TOY MODEL: CC, Depletion, Stabilizer, Capital
+// ============================================================
+
+const canvas = document.getElementById('world');
+const ctx = canvas.getContext('2d');
+const chartCanvas = document.getElementById('chart');
+const chartCtx = chartCanvas.getContext('2d');
+const DPR = window.devicePixelRatio || 1;
+
+// ── State ──
+let mode = 'cc';
+let prodMode = 'conservative';
+let playing = false;
+let tick = 0;
+let exchangeCount = 0;
+let productionCount = 0;
+let surplusAccumulated = 0;
+let proprietors = [];
+let animations = [];
+let gHistory = [];
+let vHistory = [];
+let mHistory = [];
+let recipeTimer = 0;
+let targetG = 0; // Leontief equilibrium target for |G|
+
+// ── Commodity types (sectors) ──
+const TYPES = [
+  { name:'wheat', color:'#f0883e', sym:'W' },
+  { name:'cloth', color:'#e06c75', sym:'Cl'},
+  { name:'iron',  color:'#9ea5b0', sym:'Fe'},
+  { name:'wine',  color:'#bc8cff', sym:'Vi'},
+  { name:'wood',  color:'#a67c52', sym:'Wd'},
+  { name:'salt',  color:'#d0d0d0', sym:'Sa'},
+  { name:'fish',  color:'#56d4dd', sym:'Fi'},
+  { name:'bread', color:'#d4a76a', sym:'Br'},
+];
+const N_SECTORS = TYPES.length;
+
+// ═══════════════════════════════════════════════════════════════
+// LEONTIEF INPUT–OUTPUT SYSTEM
+// One canonical recipe per sector. Each takes 2 inputs → 1 output.
+// The economy is fully circular: every good is both produced and consumed.
+// ═══════════════════════════════════════════════════════════════
+const LEONTIEF_RECIPES = [
+  { output:'W',  inputs:['Br','Fi'], label:'Br+Fi → W',  desc:'harvest: bread for labor, fish meal for soil' },
+  { output:'Cl', inputs:['Fe','Wd'], label:'Fe+Wd → Cl', desc:'weave: iron spindle + wood loom' },
+  { output:'Fe', inputs:['Wd','Sa'], label:'Wd+Sa → Fe', desc:'smelt: charcoal + flux salt' },
+  { output:'Vi', inputs:['W','Wd'],  label:'W+Wd → Vi',  desc:'ferment: wheat mash + wood barrel' },
+  { output:'Wd', inputs:['Br','Fe'], label:'Br+Fe → Wd', desc:'lumber: bread for workers + iron axe' },
+  { output:'Sa', inputs:['Cl','Vi'], label:'Cl+Vi → Sa',  desc:'extract: cloth filter + wine solvent' },
+  { output:'Fi', inputs:['Wd','W'],  label:'Wd+W → Fi',  desc:'catch: wood boat + wheat bait' },
+  { output:'Br', inputs:['W','Sa'],  label:'W+Sa → Br',   desc:'bake: wheat flour + salt' },
+];
+
+// Technology matrix A[i][j] = input coefficient of good i per unit of good j produced.
+// Coefficient 0.4 per input ⇒ column sums = 0.8 (productive economy).
+// The gap 1 − 0.8 = 0.2 is value-added (labor), not tracked as a commodity.
+const LEONTIEF_A = (() => {
+  const A = Array.from({length:N_SECTORS}, ()=>Array(N_SECTORS).fill(0));
+  for (const r of LEONTIEF_RECIPES){
+    const j = TYPES.findIndex(t=>t.sym===r.output);
+    for (const inp of r.inputs){
+      const i = TYPES.findIndex(t=>t.sym===inp);
+      A[i][j] = 0.4;
+    }
+  }
+  return A;
+})();
+
+// Compute (I−A)⁻¹ via Gauss-Jordan elimination
+function invertIminusA(A){
+  const n=A.length;
+  const aug=A.map((row,i)=>{
+    const r=row.map((v,j)=>(i===j?1:0)-v);
+    return [...r,...Array(n).fill(0).map((_,j)=>i===j?1:0)];
+  });
+  for(let c=0;c<n;c++){
+    let mx=c;
+    for(let r=c+1;r<n;r++) if(Math.abs(aug[r][c])>Math.abs(aug[mx][c])) mx=r;
+    [aug[c],aug[mx]]=[aug[mx],aug[c]];
+    const piv=aug[c][c];
+    for(let j=0;j<2*n;j++) aug[c][j]/=piv;
+    for(let r=0;r<n;r++){
+      if(r===c)continue;
+      const f=aug[r][c];
+      for(let j=0;j<2*n;j++) aug[r][j]-=f*aug[c][j];
+    }
+  }
+  return aug.map(row=>row.slice(n));
+}
+
+const LEONTIEF_INV = invertIminusA(LEONTIEF_A);
+
+// Equilibrium gross output for uniform final demand d = [1,…,1]:
+//   x* = (I−A)⁻¹ d
+// This tells us how much of each good the economy must produce to sustain
+// one unit of final consumption of every good.
+const LEONTIEF_D = Array(N_SECTORS).fill(1);
+const LEONTIEF_X_STAR = LEONTIEF_INV.map(row=>row.reduce((s,v,j)=>s+v*LEONTIEF_D[j],0));
+const X_STAR_SUM = LEONTIEF_X_STAR.reduce((s,v)=>s+v,0);
+// Normalized production weights: probability of choosing each sector for production
+const PROD_WEIGHTS = LEONTIEF_X_STAR.map(v=>v/X_STAR_SUM);
+
+function typeBySymbol(s) { return TYPES.find(t => t.sym === s); }
+
+class Commodity {
+  constructor(type, value) {
+    this.type = type;
+    this.value = value;
+    this.id = Math.random().toString(36).substr(2,6);
+  }
+}
+
+class Proprietor {
+  constructor(id, x, y) {
+    this.id = id;
+    this.name = `O\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089`[id+1] ? `O${String.fromCharCode(0x2080+id+1)}` : `O${id+1}`;
+    this.label = `O${id+1}`;
+    this.x = x; this.y = y;
+    this.money = 0;
+    this.commodities = [];
+    this.role = 'idle';
+    this.roleTimer = 0;
+    this.isCapitalist = false;
+    this.capitalSurplus = 0;
+  }
+  totalValue() {
+    return this.money + this.commodities.reduce((s,c)=>s+c.value, 0);
+  }
+}
+
+// ── Init ──
+function init() {
+  const n = +document.getElementById('numProprietors').value;
+  const initC = +document.getElementById('initCommodities').value;
+  proprietors = []; animations = [];
+  tick=0; exchangeCount=0; productionCount=0; surplusAccumulated=0;
+  gHistory=[]; vHistory=[]; mHistory=[];
+
+  const cx = canvas.width/(2*DPR);
+  const cy = canvas.height/(2*DPR);
+  const radius = Math.min(cx,cy)*0.73;
+
+  for (let i=0;i<n;i++){
+    const a = 2*Math.PI*i/n - Math.PI/2;
+    const p = new Proprietor(i, cx+radius*Math.cos(a), cy+radius*Math.sin(a));
+    if (i%2===0) p.money = 12+Math.floor(Math.random()*8);
+    for (let j=0;j<initC;j++){
+      p.commodities.push(new Commodity(TYPES[Math.floor(Math.random()*TYPES.length)], 3+Math.floor(Math.random()*5)));
+    }
+    if (mode==='capital' && i===0){ p.isCapitalist=true; p.money=40; }
+    proprietors.push(p);
+  }
+
+  // Set Leontief target: |G| should stay at this level in conservative mode
+  targetG = proprietors.reduce((s,p)=>s+p.commodities.length, 0);
+
+  logEntry('system',`Init ${n} proprietors, mode=${mode}, prod=${prodMode}, target |G|=${targetG}`);
+  updateStats();
+}
+
+// ── Simulation step ──
+function step(){
+  // Check depletion — halt if G=0
+  const Gpre = proprietors.reduce((s,p)=>s+p.commodities.length,0);
+  if (Gpre===0){
+    if (playing){
+      playing=false;
+      document.getElementById('btn-play').innerHTML='\u25B6 Play';
+      document.getElementById('btn-play').className='primary';
+      logEntry('system','\u26A0 G=0 — circulation halted (depletion). §9.10.4');
+    }
+    return;
+  }
+
+  tick++;
+  const shuffled = [...proprietors].sort(()=>Math.random()-0.5);
+
+  // ═══════════════════════════════════════════════════════════
+  // MODE-DEPENDENT PRODUCTION & CONSUMPTION
+  // ═══════════════════════════════════════════════════════════
+  if (prodMode==='off'){
+    // No production. Pure consumption depletes G → 0. §9.10.4
+    consumeGoods(proprietors, 0.07);
+
+  } else {
+    // ── LEONTIEF STABILIZER (§9.12–9.14) ──
+    // Proportional feedback controller: drives |G| → targetG.
+    //   drift > 0 ⇒ too many goods: boost consumption, suppress production
+    //   drift < 0 ⇒ too few goods: boost production, suppress consumption
+    //   drift = 0 ⇒ balanced
+    const drift = Gpre - targetG;
+    const consRate = Math.min(0.12, Math.max(0, 0.055 + drift*0.015));
+    const prodRate = Math.min(0.12, Math.max(0, 0.055 - drift*0.015));
+
+    // Production: pick a recipe weighted by x*, execute if inputs available
+    for (const p of shuffled){
+      if (p.commodities.length>=2 && Math.random()<prodRate)
+        attemptLeontief(p);
+    }
+    // Consumption
+    consumeGoods(proprietors, consRate);
+  }
+
+  // ── Exchanges (always) ──
+  for (const p of shuffled){
+    p.roleTimer = Math.max(0, p.roleTimer-1);
+    if (p.roleTimer>0) continue;
+    if (mode==='capital' && p.isCapitalist){ attemptCapital(p); continue; }
+    if (p.money>0 && Math.random()<0.5) attemptBuy(p);
+    else if (p.commodities.length>0 && Math.random()<0.4) attemptSell(p);
+  }
+
+  // Record
+  gHistory.push(proprietors.reduce((s,p)=>s+p.commodities.length,0));
+  const V = proprietors.reduce((s,p)=>s+p.totalValue(),0);
+  vHistory.push(V);
+  mHistory.push(proprietors.reduce((s,p)=>s+p.money,0));
+  recipeTimer = Math.max(0, recipeTimer-1);
+  if (recipeTimer===0) document.getElementById('recipeToast').classList.remove('visible');
+  updateStats();
+}
+
+// ── Consumption helper ──
+function consumeGoods(props, rate){
+  for (const p of props){
+    if (p.commodities.length>0 && Math.random()<rate){
+      const i = Math.floor(Math.random()*p.commodities.length);
+      const c = p.commodities.splice(i,1)[0];
+      animations.push({type:'consume', x:p.x, y:p.y, progress:0, color:c.type.color});
+      logEntry('depletion',`${p.label} consumed ${c.type.sym} (v=${c.value})`);
+    }
+  }
+}
+
+function attemptBuy(buyer){
+  const sellers = proprietors.filter(p=>p!==buyer && p.commodities.length>0);
+  if (!sellers.length) return;
+  const seller = sellers[Math.floor(Math.random()*sellers.length)];
+  const ci = Math.floor(Math.random()*seller.commodities.length);
+  const c = seller.commodities[ci];
+  if (buyer.money<c.value) return;
+
+  buyer.money -= c.value;
+  seller.money += c.value;
+  seller.commodities.splice(ci,1);
+  buyer.commodities.push(c);
+  buyer.role='buyer'; buyer.roleTimer=6;
+  seller.role='seller'; seller.roleTimer=6;
+  exchangeCount++;
+
+  addExchangeAnim(buyer,seller,c);
+  logEntry('exchange',`${buyer.label} buys ${c.type.sym}(v=${c.value}) from ${seller.label}`);
+}
+
+function attemptSell(seller){
+  const buyers = proprietors.filter(p=>p!==seller && p.money>0);
+  if (!buyers.length) return;
+  const buyer = buyers[Math.floor(Math.random()*buyers.length)];
+  const ci = Math.floor(Math.random()*seller.commodities.length);
+  const c = seller.commodities[ci];
+  if (buyer.money<c.value) return;
+
+  buyer.money -= c.value;
+  seller.money += c.value;
+  seller.commodities.splice(ci,1);
+  buyer.commodities.push(c);
+  buyer.role='buyer'; buyer.roleTimer=6;
+  seller.role='seller'; seller.roleTimer=6;
+  exchangeCount++;
+
+  addExchangeAnim(buyer,seller,c);
+  logEntry('exchange',`${seller.label} sells ${c.type.sym}(v=${c.value}) to ${buyer.label}`);
+}
+
+// ── Leontief production (always conservative: 2→2, value conserved) ──
+// Pick a recipe weighted by equilibrium x*, find inputs, execute.
+function attemptLeontief(producer){
+  if (producer.commodities.length<2) return;
+  const syms = producer.commodities.map(c=>c.type.sym);
+
+  // Pick recipe weighted by PROD_WEIGHTS (Leontief equilibrium)
+  const r = Math.random();
+  let cum = 0, chosen = LEONTIEF_RECIPES[0];
+  for (let k=0;k<N_SECTORS;k++){
+    cum += PROD_WEIGHTS[k];
+    if (r<cum){ chosen=LEONTIEF_RECIPES[k]; break; }
+  }
+
+  // Check if producer has both required inputs
+  const found = [];
+  for (const inp of chosen.inputs){
+    const idx = syms.findIndex((s,i)=>s===inp && !found.includes(i));
+    if (idx===-1) return; // can't do this recipe
+    found.push(idx);
+  }
+
+  // Consume inputs (highest index first to preserve indices)
+  found.sort((a,b)=>b-a);
+  const inputs = found.map(i=>producer.commodities.splice(i,1)[0]);
+  const inputValue = inputs.reduce((s,c)=>s+c.value, 0);
+
+  // Conservative: U(out) = U(in), 2→2
+  const totalOutputValue = inputValue;
+  const outType = typeBySymbol(chosen.output);
+  const secondType = TYPES[Math.floor(Math.random()*TYPES.length)];
+
+  const v1 = Math.max(1, Math.ceil(inputValue/2));
+  const v2 = Math.max(1, inputValue - v1);
+  const out1 = new Commodity(outType, v1);
+  const out2 = new Commodity(secondType, v2);
+  producer.commodities.push(out1, out2);
+
+  producer.role='producer'; producer.roleTimer=8;
+  productionCount++;
+
+  // Green ring animation
+  animations.push({type:'production', x:producer.x, y:producer.y, progress:0});
+  // Floating label: shows what was produced
+  animations.push({type:'produce_label', x:producer.x, y:producer.y, progress:0,
+    label:`\u2191 ${outType.sym}`, color:outType.color});
+
+  const inStr  = inputs.map(c=>`${c.type.sym}(${c.value})`).join('+');
+  const outStr = `${outType.sym}(${v1})+${secondType.sym}(${v2})`;
+  logEntry('production',`${producer.label}: ${inStr} \u2192 ${outStr}  [${chosen.label}]`);
+
+  // Show recipe toast
+  const toast = document.getElementById('recipeToast');
+  toast.textContent = `${producer.label}  ${chosen.label}   U=${inputValue}\u2192${totalOutputValue} (conserved)`;
+  toast.classList.add('visible');
+  recipeTimer = 20;
+}
+
+function attemptCapital(cap){
+  if (cap.money<5) return;
+
+  // M→C: buy commodity from seller at price m1
+  const sellers = proprietors.filter(p=>p!==cap && p.commodities.length>0);
+  if (!sellers.length) return;
+  const seller = sellers[Math.floor(Math.random()*sellers.length)];
+  const ci = Math.floor(Math.random()*seller.commodities.length);
+  const c = seller.commodities[ci];
+  if (cap.money<c.value) return;
+  const m1 = c.value;
+
+  // C→M': find a buyer willing to pay markup (layer-divergent operation §11.3)
+  const markup = Math.max(1, Math.ceil(m1*0.2));
+  const m2 = m1 + markup;
+  const buyers = proprietors.filter(p=>p!==cap && p!==seller && p.money>=m2);
+  if (!buyers.length) return; // no buyer at markup → no capital circuit
+
+  const buyer = buyers[Math.floor(Math.random()*buyers.length)];
+
+  // Execute M→C→M': commodity passes through, money redistributed
+  cap.money -= m1;            // capitalist pays seller
+  seller.money += m1;
+  seller.commodities.splice(ci,1);
+  buyer.money -= m2;           // buyer pays capitalist at markup
+  cap.money += m2;
+  buyer.commodities.push(c);  // commodity reaches final buyer (stays in G!)
+
+  const surplus = m2 - m1;    // δ = M' − M
+  cap.capitalSurplus += surplus;
+  surplusAccumulated += surplus;
+
+  cap.role='capitalist'; cap.roleTimer=12;
+  seller.role='seller'; seller.roleTimer=6;
+  buyer.role='buyer'; buyer.roleTimer=6;
+  exchangeCount += 2; // two exchanges in the circuit
+
+  // Animations: seller → cap → buyer
+  animations.push({type:'capital', from:{x:seller.x,y:seller.y}, to:{x:cap.x,y:cap.y}, progress:0});
+  animations.push({type:'capital', from:{x:cap.x,y:cap.y}, to:{x:buyer.x,y:buyer.y}, progress:0});
+  logEntry('capital',`${cap.label}: M(${m1})→C(${c.type.sym})→M'(${m2}), δ=${surplus}  [${seller.label}→${cap.label}→${buyer.label}]`);
+}
+
+// ── Animations ──
+function addExchangeAnim(buyer,seller,comm){
+  // Money arrow: buyer → seller
+  animations.push({type:'exchange_arrow', from:{x:buyer.x,y:buyer.y}, to:{x:seller.x,y:seller.y}, progress:0,
+    color:'#58a6ff', label:`m=${comm.value}`});
+  // Commodity arrow: seller → buyer
+  animations.push({type:'exchange_arrow', from:{x:seller.x,y:seller.y}, to:{x:buyer.x,y:buyer.y}, progress:0,
+    color:comm.type.color, label:comm.type.sym});
+}
+
+// ── Render ──
+function resize(){
+  const cw = canvas.parentElement;
+  canvas.width  = cw.clientWidth * DPR;
+  canvas.height = cw.clientHeight * DPR;
+  canvas.style.width  = cw.clientWidth + 'px';
+  canvas.style.height = cw.clientHeight + 'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+
+  const cc = chartCanvas.parentElement;
+  chartCanvas.width  = cc.clientWidth * DPR;
+  chartCanvas.height = cc.clientHeight * DPR;
+  chartCanvas.style.width  = cc.clientWidth + 'px';
+  chartCanvas.style.height = cc.clientHeight + 'px';
+  chartCtx.setTransform(DPR,0,0,DPR,0,0);
+
+  if (proprietors.length){
+    const cx = canvas.width/(2*DPR);
+    const cy = canvas.height/(2*DPR);
+    const r  = Math.min(cx,cy)*0.73;
+    const n  = proprietors.length;
+    for (let i=0;i<n;i++){
+      const a = 2*Math.PI*i/n - Math.PI/2;
+      proprietors[i].x = cx+r*Math.cos(a);
+      proprietors[i].y = cy+r*Math.sin(a);
+    }
+  }
+}
+
+function draw(){
+  const W = canvas.width/DPR, H = canvas.height/DPR;
+  ctx.clearRect(0,0,W,H);
+  const cx = W/2, cy = H/2;
+  const radius = Math.min(cx,cy)*0.73;
+
+  // Circulation ring
+  ctx.beginPath(); ctx.arc(cx,cy,radius,0,2*Math.PI);
+  ctx.strokeStyle='#30363d'; ctx.lineWidth=2; ctx.stroke();
+
+  // Center label
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  if (mode==='cc'){
+    ctx.font='26px Georgia'; ctx.fillStyle='#c6cdd5';
+    ctx.fillText('CC \u2014 Stabilized Commodity Region', cx, cy-20);
+    ctx.font='italic 33px Georgia'; ctx.fillStyle='#8b949eaa';
+    ctx.fillText('C \u2192 M \u2192 C\u2032', cx, cy+20);
+  } else {
+    ctx.font='26px Georgia'; ctx.fillStyle='#bfa0d4';
+    ctx.fillText('Capital Circuit', cx, cy-20);
+    ctx.font='italic 33px Georgia'; ctx.fillStyle='#bfa0d4aa';
+    ctx.fillText('M \u2192 C \u2192 \u2026 \u2192 M\u2032', cx, cy+20);
+  }
+
+  // Animations
+  for (let i=animations.length-1;i>=0;i--){
+    const a=animations[i];
+    // Speed: exchange arrows fade over ~0.5s at 60fps → progress ~0.033/frame
+    const spd = (a.type==='produce_label') ? 0.015
+              : (a.type==='exchange_arrow') ? 0.033
+              : 0.025;
+    a.progress += spd;
+    if (a.progress>=1){ animations.splice(i,1); continue; }
+    const t=a.progress;
+    const fade = Math.floor((1-t)*255).toString(16).padStart(2,'0');
+
+    if (a.type==='exchange_arrow'){
+      // Draw a transparent arrow with white border from source → target
+      const nodeR = Math.min(52, radius*0.34);
+      const dx=a.to.x-a.from.x, dy=a.to.y-a.from.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if (dist<1) continue;
+      const ux=dx/dist, uy=dy/dist; // unit vector
+      // Start/end inset from node edges
+      const sx=a.from.x+ux*(nodeR+14), sy=a.from.y+uy*(nodeR+14);
+      const ex=a.to.x-ux*(nodeR+14),   ey=a.to.y-uy*(nodeR+14);
+      // Arrowhead
+      const headLen=14, headW=7;
+      const ax1=ex-ux*headLen+uy*headW, ay1=ey-uy*headLen-ux*headW;
+      const ax2=ex-ux*headLen-uy*headW, ay2=ey-uy*headLen+ux*headW;
+
+      const alpha = (1-t)*0.7; // fades to transparent
+
+      // Shaft: white-bordered transparent line
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      // Outer stroke (white border)
+      ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex-ux*headLen*0.5, ey-uy*headLen*0.5);
+      ctx.strokeStyle='#ffffff'; ctx.lineWidth=4; ctx.stroke();
+      // Inner stroke (colored, thinner)
+      ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex-ux*headLen*0.5, ey-uy*headLen*0.5);
+      ctx.strokeStyle=a.color; ctx.lineWidth=2; ctx.stroke();
+      // Arrowhead
+      ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(ax1,ay1); ctx.lineTo(ax2,ay2); ctx.closePath();
+      ctx.fillStyle='#ffffff'; ctx.fill();
+      ctx.fillStyle=a.color; ctx.globalAlpha=alpha*0.6; ctx.fill();
+      ctx.restore();
+
+      // Label at midpoint
+      if (a.label){
+        const mx=(sx+ex)/2 - uy*16, my=(sy+ey)/2 + ux*16; // offset perpendicular
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.font='bold 18px "SF Mono",Consolas,monospace';
+        ctx.fillStyle='#ffffff';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(a.label, mx, my);
+        ctx.restore();
+      }
+    } else if (a.type==='production'){
+      const s=35*(1-t);
+      ctx.beginPath(); ctx.arc(a.x,a.y,s,0,2*Math.PI);
+      ctx.strokeStyle='#3fb950'+fade; ctx.lineWidth=2.5; ctx.stroke();
+      // Inner glow
+      ctx.beginPath(); ctx.arc(a.x,a.y,s*0.5,0,2*Math.PI);
+      ctx.strokeStyle='#3fb95044'; ctx.lineWidth=1; ctx.stroke();
+    } else if (a.type==='consume'){
+      const s=20*t;
+      ctx.beginPath(); ctx.arc(a.x,a.y+s*2,4*(1-t),0,2*Math.PI);
+      ctx.fillStyle=(a.color||'#da3633')+fade; ctx.fill();
+      // Downward arrow
+      ctx.font='21px Georgia'; ctx.fillStyle='#e8585a'+fade;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('\u2193', a.x, a.y+s*3);
+    } else if (a.type==='capital'){
+      const dx=a.to.x-a.from.x, dy=a.to.y-a.from.y;
+      const bx=(a.from.x+a.to.x)/2 + (-dy*0.2);
+      const by=(a.from.y+a.to.y)/2 + (dx*0.2);
+      const px=(1-t)*(1-t)*a.from.x + 2*(1-t)*t*bx + t*t*a.to.x;
+      const py=(1-t)*(1-t)*a.from.y + 2*(1-t)*t*by + t*t*a.to.y;
+      ctx.beginPath(); ctx.arc(px,py,6,0,2*Math.PI);
+      ctx.fillStyle='#d2a8ff'+fade; ctx.fill();
+      for (let j=1;j<4;j++){
+        const tt=Math.max(0,t-j*0.04);
+        const tx=(1-tt)*(1-tt)*a.from.x+2*(1-tt)*tt*bx+tt*tt*a.to.x;
+        const ty=(1-tt)*(1-tt)*a.from.y+2*(1-tt)*tt*by+tt*tt*a.to.y;
+        ctx.beginPath(); ctx.arc(tx,ty,3,0,2*Math.PI);
+        ctx.fillStyle='#d2a8ff44'; ctx.fill();
+      }
+    } else if (a.type==='produce_label'){
+      // Floating upward label showing what was produced
+      const rise = 70 * t;
+      const nodeR = Math.min(52, radius*0.34);
+      const startY = a.y - nodeR - 16;
+      ctx.font='bold 24px "SF Mono",Consolas,monospace';
+      ctx.fillStyle = a.color + fade;
+      ctx.textAlign='center'; ctx.textBaseline='bottom';
+      ctx.fillText(a.label, a.x, startY - rise);
+    }
+  }
+
+  // Proprietors
+  for (const p of proprietors){
+    const R = Math.min(52, radius*0.34);
+
+    let bg='#161b22', border='#30363d';
+    if (p.role==='buyer')     {border='#58a6ff'; bg='#0d2240';}
+    if (p.role==='seller')    {border='#f0883e'; bg='#3d1f00';}
+    if (p.role==='producer')  {border='#3fb950'; bg='#0a3d1c';}
+    if (p.role==='capitalist'){border='#d2a8ff'; bg='#2d1a4e';}
+    if (p.isCapitalist&&mode==='capital'){border='#d2a8ff'; bg='#2d1a4e';}
+
+    ctx.beginPath(); ctx.arc(p.x,p.y,R,0,2*Math.PI);
+    ctx.fillStyle=bg; ctx.fill();
+    ctx.strokeStyle=border; ctx.lineWidth=2.5; ctx.stroke();
+
+    // Name
+    ctx.font=`bold ${Math.max(22,R*0.58)}px Georgia`;
+    ctx.fillStyle='#f8fafc'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(p.label, p.x, p.y-R*0.22);
+
+    // Money (smaller, below name with more separation)
+    ctx.font=`${Math.max(14,R*0.38)}px "SF Mono",Consolas,monospace`;
+    ctx.fillStyle='#9dd3ff';
+    ctx.fillText(`m=${p.money}`, p.x, p.y+R*0.22);
+
+    // Commodity dots
+    const nc = p.commodities.length;
+    const maxDots = Math.min(nc, 12);
+    for (let i=0;i<maxDots;i++){
+      const a = 2*Math.PI*i/maxDots - Math.PI/2;
+      const dr = R+11;
+      ctx.beginPath(); ctx.arc(p.x+dr*Math.cos(a), p.y+dr*Math.sin(a), 5, 0, 2*Math.PI);
+      ctx.fillStyle = p.commodities[i].type.color; ctx.fill();
+    }
+
+    // Count below
+    if (nc>0){
+      ctx.font=`${Math.max(20,R*0.42)}px Georgia`;
+      ctx.fillStyle='#f5a76ecc'; ctx.textBaseline='top';
+      ctx.fillText(`${nc}`, p.x, p.y+R+13);
+    }
+
+    // Capital δ
+    if (p.isCapitalist && p.capitalSurplus>0){
+      ctx.font=`bold ${Math.max(22,R*0.48)}px "SF Mono",Consolas,monospace`;
+      ctx.fillStyle='#e0bfff'; ctx.textBaseline='bottom';
+      ctx.fillText(`\u03B4=${p.capitalSurplus}`, p.x, p.y-R-8);
+    }
+  }
+
+  // ── Node anatomy legend (top-left) ──
+  drawNodeLegend(ctx);
+
+  // Depletion warning
+  const G = proprietors.reduce((s,p)=>s+p.commodities.length,0);
+  if (G===0){
+    ctx.font='bold 36px Georgia'; ctx.fillStyle='#ff6b6b';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('\u26A0  G = 0 \u2014 Commodity depletion', cx, cy+56);
+    ctx.font='24px Georgia'; ctx.fillStyle='#f5a76e';
+    ctx.fillText('Circulation halted. Enable production to stabilize. \u00A79.10', cx, cy+92);
+  }
+
+  drawChart();
+}
+
+function drawNodeLegend(ctx){
+  const lx = 18, ly = 16; // top-left origin
+  const R = 44; // legend node radius (2x)
+  const nodeCx = lx + R + 16, nodeCy = ly + R + 48; // extra top margin below title
+
+  // Background panel
+  const pw = 420, ph = 280;
+  ctx.fillStyle = '#0d1117dd';
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(lx, ly, pw, ph, 10);
+  ctx.fill(); ctx.stroke();
+
+  // Title
+  ctx.font = '16px Georgia';
+  ctx.fillStyle = '#b1bac4';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('NODE ANATOMY', lx + 14, ly + 10);
+
+  // Draw example node
+  ctx.beginPath(); ctx.arc(nodeCx, nodeCy, R, 0, 2*Math.PI);
+  ctx.fillStyle = '#161b22'; ctx.fill();
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 2.5; ctx.stroke();
+
+  // Name in node
+  ctx.font = 'bold 24px Georgia';
+  ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('O₁', nodeCx, nodeCy - 10);
+
+  // Money in node
+  ctx.font = '20px "SF Mono",Consolas,monospace';
+  ctx.fillStyle = '#9dd3ff';
+  ctx.fillText('m=13', nodeCx, nodeCy + 16);
+
+  // Commodity dots around node
+  const dotColors = ['#f0883e','#e06c75','#9ea5b0','#bc8cff','#a67c52'];
+  for (let i = 0; i < 5; i++){
+    const a = 2*Math.PI*i/5 - Math.PI/2;
+    const dr = R + 12;
+    ctx.beginPath(); ctx.arc(nodeCx + dr*Math.cos(a), nodeCy + dr*Math.sin(a), 6, 0, 2*Math.PI);
+    ctx.fillStyle = dotColors[i]; ctx.fill();
+  }
+
+  // Commodity count below
+  ctx.font = '18px Georgia'; ctx.fillStyle = '#f5a76ecc';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('5', nodeCx, nodeCy + R + 14);
+
+  // Callout lines and labels
+  const labelX = lx + 195;
+  const callouts = [
+    { label: 'proprietor name',  sx: nodeCx + 10, sy: nodeCy - 10, ex: labelX, ey: nodeCy - 36, lineColor: '#e0e6ef', textColor: '#f0f6fc' },
+    { label: 'money holdings',   sx: nodeCx + 14, sy: nodeCy + 16, ex: labelX, ey: nodeCy + 4,  lineColor: '#7bbfef', textColor: '#9dd3ff' },
+    { label: 'commodity dots (owned goods)', sx: nodeCx + R + 12, sy: nodeCy - R + 8, ex: labelX, ey: nodeCy + 42, lineColor: '#d09060', textColor: '#f5a76e' },
+    { label: 'commodity count',  sx: nodeCx, sy: nodeCy + R + 20, ex: labelX, ey: nodeCy + 78, lineColor: '#c08050', textColor: '#f5a76e' },
+  ];
+
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  for (const c of callouts){
+    // Leader line — bright, visible stroke
+    ctx.beginPath();
+    ctx.moveTo(c.sx, c.sy);
+    ctx.lineTo(c.ex - 4, c.ey);
+    ctx.strokeStyle = c.lineColor; ctx.lineWidth = 1.5; ctx.stroke();
+    // Dot at source
+    ctx.beginPath(); ctx.arc(c.sx, c.sy, 3, 0, 2*Math.PI);
+    ctx.fillStyle = c.lineColor; ctx.fill();
+    // Dot at label end
+    ctx.beginPath(); ctx.arc(c.ex - 4, c.ey, 2, 0, 2*Math.PI);
+    ctx.fillStyle = c.lineColor; ctx.fill();
+    // Label
+    ctx.font = '17px Georgia';
+    ctx.fillStyle = c.textColor;
+    ctx.fillText(c.label, c.ex, c.ey);
+  }
+}
+
+function drawChart(){
+  const W = chartCanvas.width/DPR, H = chartCanvas.height/DPR;
+  chartCtx.clearRect(0,0,W,H);
+  if (gHistory.length<2) return;
+
+  const pad = {l:60, r:16, t:18, b:30};
+  const cw = W-pad.l-pad.r, ch = H-pad.t-pad.b;
+
+  // Axes
+  chartCtx.strokeStyle='#21262d'; chartCtx.lineWidth=1;
+  chartCtx.beginPath();
+  chartCtx.moveTo(pad.l, pad.t);
+  chartCtx.lineTo(pad.l, pad.t+ch);
+  chartCtx.lineTo(pad.l+cw, pad.t+ch);
+  chartCtx.stroke();
+
+  // Helper to draw a line series
+  function drawLine(data, color, lw){
+    if (data.length<2) return;
+    const max = Math.max(...data,1);
+    const pts = data.slice(-Math.floor(cw));
+    const step = cw/Math.max(pts.length-1,1);
+    chartCtx.beginPath();
+    for (let i=0;i<pts.length;i++){
+      const x = pad.l + i*step;
+      const y = pad.t + ch - (pts[i]/max)*ch;
+      i===0 ? chartCtx.moveTo(x,y) : chartCtx.lineTo(x,y);
+    }
+    chartCtx.strokeStyle=color; chartCtx.lineWidth=lw; chartCtx.stroke();
+    // Current value
+    const last = pts[pts.length-1];
+    chartCtx.font='21px "SF Mono",Consolas,monospace';
+    chartCtx.fillStyle=color; chartCtx.textAlign='right'; chartCtx.textBaseline='bottom';
+    const ly = pad.t + ch - (last/max)*ch;
+    chartCtx.fillText(last, pad.l-6, ly+5);
+  }
+
+  // |G| — commodity count
+  drawLine(gHistory, '#f0883e', 2.5);
+
+  // Total value V
+  drawLine(vHistory, '#79c0ff66', 1.5);
+
+  // M total money
+  drawLine(mHistory, '#388bfd55', 1);
+
+  // Labels
+  chartCtx.font='22px Georgia'; chartCtx.textAlign='left'; chartCtx.textBaseline='top';
+  chartCtx.fillStyle='#f5a76e'; chartCtx.fillText('|G| commodities', pad.l+8, pad.t+2);
+  chartCtx.fillStyle='#9dd3ffbb'; chartCtx.fillText('V total value', pad.l+220, pad.t+2);
+  chartCtx.fillStyle='#6ea8f0aa'; chartCtx.fillText('M money', pad.l+420, pad.t+2);
+
+  // Time axis
+  chartCtx.font='20px "SF Mono",Consolas,monospace'; chartCtx.fillStyle='#8b949e';
+  chartCtx.textAlign='center'; chartCtx.textBaseline='top';
+  chartCtx.fillText(`t=${tick}`, pad.l+cw, pad.t+ch+6);
+  chartCtx.fillText('0', pad.l, pad.t+ch+6);
+}
+
+// ── Stats ──
+function updateStats(){
+  const G = proprietors.reduce((s,p)=>s+p.commodities.length,0);
+  const M = proprietors.reduce((s,p)=>s+p.money,0);
+  const V = proprietors.reduce((s,p)=>s+p.totalValue(),0);
+  document.getElementById('stat-tick').textContent = tick;
+  document.getElementById('stat-G').textContent = G;
+  document.getElementById('stat-Mcirc').textContent = M;
+  document.getElementById('stat-Mtotal').textContent = V;
+  document.getElementById('stat-exchanges').textContent = exchangeCount;
+  document.getElementById('stat-productions').textContent = productionCount;
+  document.getElementById('stat-surplus').textContent = surplusAccumulated;
+  updateTechMatrix();
+}
+
+// ── Fixed Leontief technology matrix display ──
+function updateTechMatrix(){
+  const el = document.getElementById('techMatrix');
+  let html = '';
+  for (let j=0;j<N_SECTORS;j++){
+    const r = LEONTIEF_RECIPES[j];
+    const outT = TYPES[j];
+    // Input coefficients from column j of A
+    const coeffs = r.inputs.map(inp=>{
+      const i = TYPES.findIndex(t=>t.sym===inp);
+      const tc = TYPES[i];
+      return `<span class="sym" style="color:${tc.color}">${LEONTIEF_A[i][j]}${inp}</span>`;
+    }).join(' + ');
+    // Equilibrium weight
+    const xw = (PROD_WEIGHTS[j]*100).toFixed(0);
+    html += `<div class="tech-row">
+      <span class="tech-out" style="color:${outT.color}">${outT.sym}</span>
+      <span class="tech-arrow">&larr;</span>
+      <span class="tech-coeff">${coeffs}</span>
+      <span class="tech-count" title="equilibrium weight">x*${xw}%</span>
+    </div>`;
+  }
+  // Column sum (value-added)
+  html += `<div class="tech-row" style="border-top:1px solid #30363d;margin-top:4px;padding-top:4px;">
+    <span style="color:#6e7681;font-size:11px;">col Σ = 0.8 → 0.2 value-added (labor)</span>
+  </div>`;
+  el.innerHTML = html;
+}
+
+// ── Log ──
+function logEntry(type, msg){
+  const log = document.getElementById('log');
+  const e = document.createElement('div');
+  e.className=`log-entry ${type}`;
+  e.innerHTML=`<span class="time">t=${tick}</span>${msg}`;
+  log.prepend(e);
+  while (log.children.length>150) log.removeChild(log.lastChild);
+}
+function toggleLog(){
+  const o = document.getElementById('logOverlay');
+  o.classList.toggle('collapsed');
+  document.getElementById('logToggle').textContent = o.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
+}
+
+// ── Controls ──
+function setMode(m){
+  mode=m;
+  document.getElementById('btn-mode-cc').className = m==='cc'?'active':'';
+  document.getElementById('btn-mode-capital').className = m==='capital'?'active':'';
+  const badge = document.getElementById('modeBadge');
+  if (m==='cc'){ badge.className='mode-badge cc'; badge.textContent='CC \u2014 Simple Circulation'; }
+  else { badge.className='mode-badge capital'; badge.textContent='Capital \u2014 M\u2192C\u2192M\u2032'; }
+  document.getElementById('mode-desc').textContent = m==='cc'
+    ? 'Stabilized commodity region: circulation + value-conserving production. §9.14'
+    : 'Capital circuit: M \u2192 C \u2192 ... \u2192 M\u2032 with surplus extraction. §11.1';
+  if (m==='capital') setProd('conservative');
+  resetSim();
+}
+
+function setProd(p){
+  prodMode=p;
+  document.getElementById('btn-prod-off').className = p==='off'?'active':'';
+  document.getElementById('btn-prod-conservative').className = p==='conservative'?'active':'';
+  const descs = {
+    off: 'No production. Circulation depletes G \u2192 0. §9.10.4',
+    conservative: 'Leontief stabilizer: feedback controller drives |G| \u2192 target. Recipes from A, weighted by x*=(I\u2212A)\u207B\u00B9d. U(out)=U(in). §9.12\u20139.14',
+  };
+  document.getElementById('prod-desc').textContent = descs[p] || '';
+}
+
+function togglePlay(){
+  playing=!playing;
+  document.getElementById('btn-play').innerHTML = playing ? '\u23F8 Pause' : '\u25B6 Play';
+  document.getElementById('btn-play').className = playing ? 'warn' : 'primary';
+}
+function stepOnce(){
+  const G = proprietors.reduce((s,p)=>s+p.commodities.length,0);
+  if (G===0){ logEntry('system','\u26A0 G=0 — cannot step, circulation halted.'); return; }
+  step();
+}
+function resetSim(){
+  playing=false;
+  document.getElementById('btn-play').innerHTML='\u25B6 Play';
+  document.getElementById('btn-play').className='primary';
+  document.getElementById('log').innerHTML='';
+  resize(); init();
+}
+
+// ── Loop ──
+let lastStep=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  const spd = +document.getElementById('speed').value;
+  if (playing && ts-lastStep > 1000/spd){ step(); lastStep=ts; }
+  draw();
+}
+
+window.addEventListener('resize', ()=>{ resize(); });
+resize(); init();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
