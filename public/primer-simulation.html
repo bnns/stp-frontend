@@ -288,6 +288,25 @@
     <div class="divider"></div>
 
     <div class="group">
+      <div class="group-label">Labor</div>
+      <div class="btn-row">
+        <button id="btn-labor-implicit" class="active" onclick="setLabor('implicit')">Implicit (self)</button>
+        <button id="btn-labor-commodity" onclick="setLabor('commodity')">Commodity (t<sub>r</sub>)</button>
+      </div>
+      <div class="desc" id="labor-desc">Each producer adds their own labor. No money exchanged for labor.</div>
+      <div class="group" id="labor-slider-group" style="display:none;flex-direction:column;gap:4px;margin-top:6px;">
+        <div class="group-label" style="font-size:13px;">
+          t<sub>r</sub> / value-added &mdash; <span id="tr-pct">100</span>%
+        </div>
+        <input type="range" id="trSlider" min="50" max="100" value="100" step="5"
+               oninput="updateTrSlider()" style="width:100%;accent-color:#3fb950;" />
+        <div class="desc" id="tr-desc">Simple reproduction: t&#7523; = value-added, no surplus (s=0).</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="group">
       <div class="group-label">Statistics &mdash; t = <span id="stat-tick">0</span></div>
       <div class="stat-row"><span>Commodities |G|</span><span class="stat-value" id="stat-G">0</span></div>
       <div class="stat-row"><span>Total money M</span><span class="stat-value" id="stat-Mcirc">0</span></div>
@@ -295,6 +314,7 @@
       <div class="stat-row"><span>Exchanges</span><span class="stat-value" id="stat-exchanges">0</span></div>
       <div class="stat-row"><span>Productions</span><span class="stat-value" id="stat-productions">0</span></div>
       <div class="stat-row"><span>Surplus &delta;</span><span class="stat-value" id="stat-surplus">0</span></div>
+      <div class="stat-row"><span>Labor surplus s</span><span class="stat-value" id="stat-surplus-labor">0</span></div>
     </div>
 
     <div class="divider"></div>
@@ -366,6 +386,9 @@ let vHistory = [];
 let mHistory = [];
 let recipeTimer = 0;
 let targetG = 0; // Leontief equilibrium target for |G|
+let laborMode = 'implicit'; // 'implicit' | 'commodity'
+let trRatio = 1.0;          // t_r / value_added, from slider (0.1 to 1.0)
+let surplusLabor = 0;       // cumulative surplus s from production
 
 // ── Commodity types (sectors) ──
 const TYPES = [
@@ -478,7 +501,7 @@ function init() {
   const n = +document.getElementById('numProprietors').value;
   const initC = +document.getElementById('initCommodities').value;
   proprietors = []; animations = [];
-  tick=0; exchangeCount=0; productionCount=0; surplusAccumulated=0;
+  tick=0; exchangeCount=0; productionCount=0; surplusAccumulated=0; surplusLabor=0;
   gHistory=[]; vHistory=[]; mHistory=[];
 
   const cx = canvas.width/(2*DPR);
@@ -652,6 +675,28 @@ function attemptLeontief(producer){
   const totalOutputValue = Math.round(inputValue / COL_SUM);
   const laborValue = totalOutputValue - inputValue; // the 0.2 contribution
 
+  // ── Labor value split ──
+  const fullLaborValue = laborValue; // the 0.2 contribution
+  let tr = 0, surplus = 0, laborer = null;
+  if (laborMode === 'commodity' && fullLaborValue > 0) {
+    tr = Math.max(1, Math.round(fullLaborValue * trRatio));
+    surplus = fullLaborValue - tr;
+    if (producer.money < tr) {
+      // Can't afford labor — put inputs back and abort
+      producer.commodities.push(...inputs);
+      return;
+    }
+    const laborers = proprietors.filter(p => p !== producer);
+    laborer = laborers[Math.floor(Math.random() * laborers.length)];
+    producer.money -= tr;
+    laborer.money += tr;
+    surplusLabor += surplus;
+    // Green wage-arrow animation: producer → laborer
+    animations.push({type:'exchange_arrow', progress:0,
+      sx:producer.x, sy:producer.y, tx:laborer.x, ty:laborer.y,
+      label:`t\u1D63=${tr}`, color:'#3fb950'});
+  }
+
   const outType = typeBySymbol(chosen.output);
   const secondType = TYPES[Math.floor(Math.random()*TYPES.length)];
 
@@ -667,16 +712,25 @@ function attemptLeontief(producer){
   // Green ring animation
   animations.push({type:'production', x:producer.x, y:producer.y, progress:0});
   // Floating label: shows what was produced + labor value-added
+  const labelExtra = laborMode==='commodity' && laborer
+    ? `+${fullLaborValue} (t\u1D63=${tr}, s=${surplus})`
+    : `+${fullLaborValue}`;
   animations.push({type:'produce_label', x:producer.x, y:producer.y, progress:0,
-    label:`\u2191 ${outType.sym} +${laborValue}`, color:outType.color});
+    label:`\u2191 ${outType.sym} ${labelExtra}`, color:outType.color});
 
   const inStr  = inputs.map(c=>`${c.type.sym}(${c.value})`).join('+');
   const outStr = `${outType.sym}(${v1})+${secondType.sym}(${v2})`;
-  logEntry('production',`${producer.label}: ${inStr} \u2192 ${outStr}  +${laborValue} labor  [${chosen.label}]`);
+  const laborStr = laborMode==='commodity' && laborer
+    ? `+${fullLaborValue} labor (${laborer.label} t\u1D63=${tr}, s=${surplus})`
+    : `+${fullLaborValue} labor`;
+  logEntry('production',`${producer.label}: ${inStr} \u2192 ${outStr}  ${laborStr}  [${chosen.label}]`);
 
   // Show recipe toast
   const toast = document.getElementById('recipeToast');
-  toast.textContent = `${producer.label}  ${chosen.label}   U=${inputValue}\u2192${totalOutputValue} (+${laborValue} labor)`;
+  const toastLabor = laborMode==='commodity' && laborer
+    ? `+${fullLaborValue} labor (${laborer.label} t\u1D63=${tr}, s=${surplus})`
+    : `+${fullLaborValue} labor`;
+  toast.textContent = `${producer.label}  ${chosen.label}   U=${inputValue}\u2192${totalOutputValue} (${toastLabor})`;
   toast.classList.add('visible');
   recipeTimer = 20;
 }
@@ -1100,6 +1154,7 @@ function updateStats(){
   document.getElementById('stat-exchanges').textContent = exchangeCount;
   document.getElementById('stat-productions').textContent = productionCount;
   document.getElementById('stat-surplus').textContent = surplusAccumulated;
+  document.getElementById('stat-surplus-labor').textContent = surplusLabor;
   updateTechMatrix();
 }
 
@@ -1159,6 +1214,8 @@ function setMode(m){
     ? 'Stabilized commodity region: circulation + value-conserving production. §9.14'
     : 'Capital circuit: M \u2192 C \u2192 ... \u2192 M\u2032 with surplus extraction. §11.1';
   if (m==='capital') setProd('conservative');
+  // Clamp t_r slider bounds by mode
+  if (laborMode==='commodity') updateTrSlider();
   resetSim();
 }
 
@@ -1171,6 +1228,32 @@ function setProd(p){
     conservative: 'Leontief stabilizer: feedback controller drives |G| \u2192 target. Recipes from A, weighted by x*=(I\u2212A)\u207B\u00B9d. U(out)=U(in)/0.8 — labor adds 0.2 value. §9.12\u20139.14',
   };
   document.getElementById('prod-desc').textContent = descs[p] || '';
+}
+
+function setLabor(m){
+  laborMode = m;
+  document.getElementById('btn-labor-implicit').className = m==='implicit'?'active':'';
+  document.getElementById('btn-labor-commodity').className = m==='commodity'?'active':'';
+  document.getElementById('labor-slider-group').style.display = m==='commodity'?'flex':'none';
+  document.getElementById('labor-desc').textContent = m==='implicit'
+    ? 'Each producer adds their own labor. No money exchanged for labor.'
+    : 'Labor is a commodity: producers pay t\u1D63 to hire a laborer. Surplus s = value-added \u2212 t\u1D63 retained by producer.';
+  updateTrSlider();
+}
+
+function updateTrSlider(){
+  const slider = document.getElementById('trSlider');
+  // Clamp bounds by mode
+  const minVal = mode==='capital' ? 10 : 50;
+  slider.min = minVal;
+  if (+slider.value < minVal) slider.value = minVal;
+  trRatio = +slider.value / 100;
+  document.getElementById('tr-pct').textContent = slider.value;
+  // Update description
+  const pct = +slider.value;
+  const desc = document.getElementById('tr-desc');
+  if (pct >= 100) desc.textContent = 'Simple reproduction: t\u1D63 = value-added, no surplus (s=0).';
+  else desc.textContent = `t\u1D63 = ${pct}% of value-added. Surplus s = ${100-pct}% retained by producer.`;
 }
 
 function togglePlay(){
