@@ -548,9 +548,17 @@ class Proprietor {
     this.roleTimer = 0;
     this.isCapitalist = false;
     this.capitalSurplus = 0;
+    this.dead = false;
   }
   totalValue() {
     return this.money + this.commodities.reduce((s,c)=>s+c.value, 0);
+  }
+  checkDeath() {
+    if (!this.dead && this.money <= 0 && this.commodities.length === 0) {
+      this.dead = true;
+      this.role = 'dead';
+      logEntry('system',`💀 ${this.label} eliminated — no money, no commodities.`);
+    }
   }
 }
 
@@ -599,14 +607,15 @@ function step(){
   }
 
   tick++;
-  const shuffled = [...proprietors].sort(()=>Math.random()-0.5);
+  const alive = proprietors.filter(p=>!p.dead);
+  const shuffled = [...alive].sort(()=>Math.random()-0.5);
 
   // ═══════════════════════════════════════════════════════════
   // MODE-DEPENDENT PRODUCTION & CONSUMPTION
   // ═══════════════════════════════════════════════════════════
   if (prodMode==='off'){
     // No production. Pure consumption depletes G → 0. §9.10.4
-    consumeGoods(proprietors, 0.07);
+    consumeGoods(alive, 0.07);
 
   } else {
     // ── LEONTIEF STABILIZER (§9.12–9.14) ──
@@ -624,7 +633,7 @@ function step(){
         attemptLeontief(p);
     }
     // Consumption
-    consumeGoods(proprietors, consRate);
+    consumeGoods(alive, consRate);
   }
 
   // ── Exchanges (always) ──
@@ -635,6 +644,9 @@ function step(){
     if (p.money>0 && Math.random()<0.5) attemptBuy(p);
     else if (p.commodities.length>0 && Math.random()<0.4) attemptSell(p);
   }
+
+  // ── Death check ──
+  for (const p of alive) p.checkDeath();
 
   // Record
   gHistory.push(proprietors.reduce((s,p)=>s+p.commodities.length,0));
@@ -659,7 +671,8 @@ function consumeGoods(props, rate){
 }
 
 function attemptBuy(buyer){
-  const sellers = proprietors.filter(p=>p!==buyer && p.commodities.length>0);
+  if (buyer.dead) return;
+  const sellers = proprietors.filter(p=>p!==buyer && !p.dead && p.commodities.length>0);
   if (!sellers.length) return;
   const seller = sellers[Math.floor(Math.random()*sellers.length)];
   const ci = Math.floor(Math.random()*seller.commodities.length);
@@ -679,7 +692,8 @@ function attemptBuy(buyer){
 }
 
 function attemptSell(seller){
-  const buyers = proprietors.filter(p=>p!==seller && p.money>0);
+  if (seller.dead) return;
+  const buyers = proprietors.filter(p=>p!==seller && !p.dead && p.money>0);
   if (!buyers.length) return;
   const buyer = buyers[Math.floor(Math.random()*buyers.length)];
   const ci = Math.floor(Math.random()*seller.commodities.length);
@@ -701,6 +715,7 @@ function attemptSell(seller){
 // ── Leontief production (always conservative: 2→2, value conserved) ──
 // Pick a recipe weighted by equilibrium x*, find inputs, execute.
 function attemptLeontief(producer){
+  if (producer.dead) return;
   if (producer.commodities.length<2) return;
   const syms = producer.commodities.map(c=>c.type.sym);
 
@@ -744,7 +759,7 @@ function attemptLeontief(producer){
       producer.commodities.push(...inputs);
       return;
     }
-    const laborers = proprietors.filter(p => p !== producer);
+    const laborers = proprietors.filter(p => p !== producer && !p.dead);
     laborer = laborers[Math.floor(Math.random() * laborers.length)];
     producer.money -= tr;
     laborer.money += tr;
@@ -794,10 +809,11 @@ function attemptLeontief(producer){
 }
 
 function attemptCapital(cap){
+  if (cap.dead) return;
   if (cap.money<5) return;
 
   // M→C: buy commodity from seller at price m1
-  const sellers = proprietors.filter(p=>p!==cap && p.commodities.length>0);
+  const sellers = proprietors.filter(p=>p!==cap && !p.dead && p.commodities.length>0);
   if (!sellers.length) return;
   const seller = sellers[Math.floor(Math.random()*sellers.length)];
   const ci = Math.floor(Math.random()*seller.commodities.length);
@@ -808,7 +824,7 @@ function attemptCapital(cap){
   // C→M': find a buyer willing to pay markup (layer-divergent operation §11.3)
   const markup = Math.max(1, Math.ceil(m1*0.2));
   const m2 = m1 + markup;
-  const buyers = proprietors.filter(p=>p!==cap && p!==seller && p.money>=m2);
+  const buyers = proprietors.filter(p=>p!==cap && p!==seller && !p.dead && p.money>=m2);
   if (!buyers.length) return; // no buyer at markup → no capital circuit
 
   const buyer = buyers[Math.floor(Math.random()*buyers.length)];
@@ -1001,48 +1017,59 @@ function draw(){
     const R = Math.min(52, radius*0.34);
 
     let bg='#161b22', border='#30363d';
-    if (p.role==='buyer')     {border='#58a6ff'; bg='#0d2240';}
-    if (p.role==='seller')    {border='#f0883e'; bg='#3d1f00';}
-    if (p.role==='producer')  {border='#3fb950'; bg='#0a3d1c';}
-    if (p.role==='capitalist'){border='#d2a8ff'; bg='#2d1a4e';}
-    if (p.isCapitalist&&mode==='capital'){border='#d2a8ff'; bg='#2d1a4e';}
+    if (p.dead) { bg='#0d0d0d'; border='#4a2020'; }
+    else if (p.role==='buyer')     {border='#58a6ff'; bg='#0d2240';}
+    else if (p.role==='seller')    {border='#f0883e'; bg='#3d1f00';}
+    else if (p.role==='producer')  {border='#3fb950'; bg='#0a3d1c';}
+    else if (p.role==='capitalist'){border='#d2a8ff'; bg='#2d1a4e';}
+    if (!p.dead && p.isCapitalist&&mode==='capital'){border='#d2a8ff'; bg='#2d1a4e';}
 
     ctx.beginPath(); ctx.arc(p.x,p.y,R,0,2*Math.PI);
     ctx.fillStyle=bg; ctx.fill();
-    ctx.strokeStyle=border; ctx.lineWidth=2.5; ctx.stroke();
+    ctx.strokeStyle=border; ctx.lineWidth=p.dead?1.5:2.5; ctx.stroke();
 
-    // Name
-    ctx.font=`bold ${Math.max(22,R*0.58)}px Georgia`;
-    ctx.fillStyle='#f8fafc'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(p.label, p.x, p.y-R*0.22);
+    if (p.dead) {
+      // Skull emoji + label
+      ctx.font=`${Math.max(28,R*0.7)}px sans-serif`;
+      ctx.fillStyle='#ffffff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('\uD83D\uDC80', p.x, p.y-R*0.1);
+      ctx.font=`bold ${Math.max(14,R*0.36)}px Georgia`;
+      ctx.fillStyle='#6e4444';
+      ctx.fillText(p.label, p.x, p.y+R*0.5);
+    } else {
+      // Name
+      ctx.font=`bold ${Math.max(22,R*0.58)}px Georgia`;
+      ctx.fillStyle='#f8fafc'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(p.label, p.x, p.y-R*0.22);
 
-    // Money (smaller, below name with more separation)
-    ctx.font=`${Math.max(14,R*0.38)}px "SF Mono",Consolas,monospace`;
-    ctx.fillStyle='#9dd3ff';
-    ctx.fillText(`m=${p.money}`, p.x, p.y+R*0.22);
+      // Money (smaller, below name with more separation)
+      ctx.font=`${Math.max(14,R*0.38)}px "SF Mono",Consolas,monospace`;
+      ctx.fillStyle='#9dd3ff';
+      ctx.fillText(`m=${p.money}`, p.x, p.y+R*0.22);
 
-    // Commodity dots
-    const nc = p.commodities.length;
-    const maxDots = Math.min(nc, 12);
-    for (let i=0;i<maxDots;i++){
-      const a = 2*Math.PI*i/maxDots - Math.PI/2;
-      const dr = R+11;
-      ctx.beginPath(); ctx.arc(p.x+dr*Math.cos(a), p.y+dr*Math.sin(a), 5, 0, 2*Math.PI);
-      ctx.fillStyle = p.commodities[i].type.color; ctx.fill();
-    }
+      // Commodity dots
+      const nc = p.commodities.length;
+      const maxDots = Math.min(nc, 12);
+      for (let i=0;i<maxDots;i++){
+        const a = 2*Math.PI*i/maxDots - Math.PI/2;
+        const dr = R+11;
+        ctx.beginPath(); ctx.arc(p.x+dr*Math.cos(a), p.y+dr*Math.sin(a), 5, 0, 2*Math.PI);
+        ctx.fillStyle = p.commodities[i].type.color; ctx.fill();
+      }
 
-    // Count below
-    if (nc>0){
-      ctx.font=`${Math.max(20,R*0.42)}px Georgia`;
-      ctx.fillStyle='#f5a76ecc'; ctx.textBaseline='top';
-      ctx.fillText(`${nc}`, p.x, p.y+R+13);
-    }
+      // Count below
+      if (nc>0){
+        ctx.font=`${Math.max(20,R*0.42)}px Georgia`;
+        ctx.fillStyle='#f5a76ecc'; ctx.textBaseline='top';
+        ctx.fillText(`${nc}`, p.x, p.y+R+13);
+      }
 
-    // Capital δ
-    if (p.isCapitalist && p.capitalSurplus>0){
-      ctx.font=`bold ${Math.max(22,R*0.48)}px "SF Mono",Consolas,monospace`;
-      ctx.fillStyle='#e0bfff'; ctx.textBaseline='bottom';
-      ctx.fillText(`\u03B4=${p.capitalSurplus}`, p.x, p.y-R-8);
+      // Capital δ
+      if (p.isCapitalist && p.capitalSurplus>0){
+        ctx.font=`bold ${Math.max(22,R*0.48)}px "SF Mono",Consolas,monospace`;
+        ctx.fillStyle='#e0bfff'; ctx.textBaseline='bottom';
+        ctx.fillText(`\u03B4=${p.capitalSurplus}`, p.x, p.y-R-8);
+      }
     }
   }
 
