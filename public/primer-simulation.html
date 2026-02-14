@@ -114,10 +114,10 @@
   }
   #world { display: block; width: 100%; height: 100%; }
 
-  /* Chart strip at bottom ~25% */
+  /* Chart strip at bottom */
   .chart-strip {
-    flex: 3;
-    min-height: 120px;
+    flex: 5;
+    min-height: 220px;
     border-top: 1px solid #21262d;
     position: relative;
     background: #0d1117;
@@ -569,6 +569,9 @@ let animations = [];
 let gHistory = [];
 let vHistory = [];
 let mHistory = [];
+let exchPerTickHistory = [];
+let prodPerTickHistory = [];
+let consPerTickHistory = [];
 let recipeTimer = 0;
 let targetG = 0; // Leontief equilibrium target for |G|
 let laborMode = 'implicit'; // 'implicit' | 'commodity'
@@ -739,6 +742,7 @@ function init() {
   proprietors = []; animations = [];
   tick=0; exchangeCount=0; productionCount=0; surplusAccumulated=0; surplusLabor=0;
   gHistory=[]; vHistory=[]; mHistory=[];
+  exchPerTickHistory=[]; prodPerTickHistory=[]; consPerTickHistory=[];
 
   const cx = canvas.width/(2*DPR);
   const cy = canvas.height/(2*DPR);
@@ -794,6 +798,8 @@ function step(){
 
   tick++;
   stepConsumedQty = 0;
+  const exchBefore = exchangeCount;
+  const prodBefore = productionCount;
   const alive = proprietors.filter(p=>!p.dead);
   const shuffled = [...alive].sort(()=>Math.random()-0.5);
 
@@ -855,6 +861,9 @@ function step(){
   const V = proprietors.reduce((s,p)=>s+p.totalValue(),0);
   vHistory.push(V);
   mHistory.push(proprietors.reduce((s,p)=>s+p.money,0));
+  exchPerTickHistory.push(exchangeCount - exchBefore);
+  prodPerTickHistory.push(productionCount - prodBefore);
+  consPerTickHistory.push(stepConsumedQty);
   recipeTimer = Math.max(0, recipeTimer-1);
   if (recipeTimer===0) document.getElementById('recipeToast').classList.remove('visible');
   updateStats();
@@ -875,6 +884,7 @@ function consumeGoods(props, rate){
       const ctype = typeBySymbol(sym);
       animations.push({type:'consume', x:p.x, y:p.y, progress:0, color:ctype?.color||'#da3633'});
       logEntry('depletion',`${p.label} consumed ${qty.toFixed(2)} ${sym}`);
+      stepConsumedQty += qty;
     }
   }
 }
@@ -1477,58 +1487,85 @@ function drawChart(){
   chartCtx.clearRect(0,0,W,H);
   if (gHistory.length<2) return;
 
-  const pad = {l:60, r:16, t:18, b:30};
-  const cw = W-pad.l-pad.r, ch = H-pad.t-pad.b;
+  const pad = {l:50, r:12, t:2, b:16};
+  const gap = 1;
+  const cw = W - pad.l - pad.r;
 
-  // Axes
-  chartCtx.strokeStyle='#21262d'; chartCtx.lineWidth=1;
-  chartCtx.beginPath();
-  chartCtx.moveTo(pad.l, pad.t);
-  chartCtx.lineTo(pad.l, pad.t+ch);
-  chartCtx.lineTo(pad.l+cw, pad.t+ch);
-  chartCtx.stroke();
+  const series = [
+    { data: gHistory,           color: '#f0883e', label: '|G| goods' },
+    { data: vHistory,           color: '#79c0ff', label: 'V value' },
+    { data: mHistory,           color: '#588bdd', label: 'M money' },
+    { data: exchPerTickHistory, color: '#58a6ff', label: 'Exchanges/t' },
+    { data: prodPerTickHistory, color: '#3fb950', label: 'Production/t' },
+    { data: consPerTickHistory, color: '#da3633', label: 'Consumption/t' },
+  ];
+  const numRows = series.length;
+  const totalH = H - pad.t - pad.b;
+  const rowH = (totalH - gap * (numRows - 1)) / numRows;
 
-  // Helper to draw a line series
-  function drawLine(data, color, lw){
-    if (data.length<2) return;
-    const max = Math.max(...data,1);
-    const pts = data.slice(-Math.floor(cw));
-    const step = cw/Math.max(pts.length-1,1);
-    chartCtx.beginPath();
-    for (let i=0;i<pts.length;i++){
-      const x = pad.l + i*step;
-      const y = pad.t + ch - (pts[i]/max)*ch;
-      i===0 ? chartCtx.moveTo(x,y) : chartCtx.lineTo(x,y);
+  for (let s = 0; s < numRows; s++){
+    const {data, color, label} = series[s];
+    if (data.length < 2) continue;
+    const top = pad.t + s * (rowH + gap);
+
+    // Alternating subtle background
+    if (s % 2 === 1){
+      chartCtx.fillStyle = '#161b2233';
+      chartCtx.fillRect(pad.l, top, cw, rowH);
     }
-    chartCtx.strokeStyle=color; chartCtx.lineWidth=lw; chartCtx.stroke();
-    // Current value
-    const last = pts[pts.length-1];
-    chartCtx.font='21px "SF Mono",Consolas,monospace';
-    chartCtx.fillStyle=color; chartCtx.textAlign='right'; chartCtx.textBaseline='bottom';
-    const ly = pad.t + ch - (last/max)*ch;
-    chartCtx.fillText(last.toFixed(1), pad.l-6, ly+5);
+
+    // Separator line at bottom of each row
+    chartCtx.strokeStyle = '#21262d'; chartCtx.lineWidth = 1;
+    chartCtx.beginPath();
+    chartCtx.moveTo(pad.l, top + rowH);
+    chartCtx.lineTo(pad.l + cw, top + rowH);
+    chartCtx.stroke();
+
+    // Left axis
+    chartCtx.beginPath();
+    chartCtx.moveTo(pad.l, top);
+    chartCtx.lineTo(pad.l, top + rowH);
+    chartCtx.stroke();
+
+    // Data line — 0-based y-axis (no min-max rescaling artifacts)
+    const max = Math.max(...data, 0.1);
+    const margin = rowH * 0.12;
+    const plotH = rowH - 2 * margin;
+    const pts = data.slice(-Math.floor(cw));
+    const step = cw / Math.max(pts.length - 1, 1);
+
+    chartCtx.beginPath();
+    for (let i = 0; i < pts.length; i++){
+      const x = pad.l + i * step;
+      const y = top + margin + plotH - (pts[i] / max) * plotH;
+      i === 0 ? chartCtx.moveTo(x, y) : chartCtx.lineTo(x, y);
+    }
+    chartCtx.strokeStyle = color; chartCtx.lineWidth = 1.8; chartCtx.stroke();
+
+    // Current value — left of axis
+    const last = pts[pts.length - 1];
+    const lastY = top + margin + plotH - (last / max) * plotH;
+    chartCtx.font = '12px "SF Mono",Consolas,monospace';
+    chartCtx.fillStyle = color;
+    chartCtx.textAlign = 'right'; chartCtx.textBaseline = 'middle';
+    const clampedY = Math.max(top + 7, Math.min(top + rowH - 5, lastY));
+    // Format: integers for counts, 1 decimal for quantities
+    const valStr = (s >= 3) ? String(Math.round(last)) : last.toFixed(1);
+    chartCtx.fillText(valStr, pad.l - 3, clampedY);
+
+    // Label — top-left inside chart area
+    chartCtx.font = '12px Georgia';
+    chartCtx.fillStyle = color;
+    chartCtx.textAlign = 'left'; chartCtx.textBaseline = 'top';
+    chartCtx.fillText(label, pad.l + 4, top + 1);
   }
 
-  // |G| — goods quantity
-  drawLine(gHistory, '#f0883e', 2.5);
-
-  // Total value V
-  drawLine(vHistory, '#79c0ff66', 1.5);
-
-  // M total money
-  drawLine(mHistory, '#388bfd55', 1);
-
-  // Labels
-  chartCtx.font='22px Georgia'; chartCtx.textAlign='left'; chartCtx.textBaseline='top';
-  chartCtx.fillStyle='#f5a76e'; chartCtx.fillText('|G| goods', pad.l+8, pad.t+2);
-  chartCtx.fillStyle='#9dd3ffbb'; chartCtx.fillText('V total value', pad.l+180, pad.t+2);
-  chartCtx.fillStyle='#6ea8f0aa'; chartCtx.fillText('M money', pad.l+380, pad.t+2);
-
-  // Time axis
-  chartCtx.font='20px "SF Mono",Consolas,monospace'; chartCtx.fillStyle='#8b949e';
-  chartCtx.textAlign='center'; chartCtx.textBaseline='top';
-  chartCtx.fillText(`t=${tick}`, pad.l+cw, pad.t+ch+6);
-  chartCtx.fillText('0', pad.l, pad.t+ch+6);
+  // Shared time axis at bottom
+  chartCtx.font = '12px "SF Mono",Consolas,monospace'; chartCtx.fillStyle = '#8b949e';
+  chartCtx.textAlign = 'center'; chartCtx.textBaseline = 'top';
+  const btm = pad.t + numRows * rowH + (numRows - 1) * gap;
+  chartCtx.fillText(`t=${tick}`, pad.l + cw, btm + 1);
+  chartCtx.fillText('0', pad.l, btm + 1);
 }
 
 // ── Stats ──
