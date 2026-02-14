@@ -207,6 +207,102 @@
   .tech-coeff .sym { font-weight: 600; }
   .tech-count { color: #6e7681; font-size: 11px; margin-left: auto; }
 
+  /* Editable technology matrix */
+  .tech-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 0;
+    border-bottom: 1px solid #161b2244;
+    flex-wrap: wrap;
+  }
+  .tech-edit-row select, .tech-edit-row input[type="number"] {
+    background: #161b22;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    border-radius: 4px;
+    padding: 2px 3px;
+    font-family: 'SF Mono','Consolas',monospace;
+    font-size: 11px;
+  }
+  .tech-edit-row select { width: 100px; }
+  .tech-edit-row input[type="number"] { width: 88px; }
+  .tech-edit-row .btn-remove {
+    background: none;
+    border: none;
+    color: #da3633;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0 3px;
+    line-height: 1;
+  }
+  .tech-edit-row .btn-remove:hover { color: #ff6b6b; }
+  .tech-edit-row .btn-remove:disabled { color: #30363d; cursor: default; }
+  .btn-add-commodity {
+    margin-top: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  .tech-edit-sym {
+    font-weight: 700;
+    min-width: 24px;
+    text-align: center;
+  }
+  .tech-edit-arrow {
+    color: #6e7681;
+    font-size: 11px;
+  }
+  .tech-edit-plus {
+    color: #6e7681;
+    font-size: 10px;
+  }
+  .tech-col-sum-warn {
+    color: #da3633;
+    font-weight: 700;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 560px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .modal-header h2 {
+    font-size: 18px;
+    color: #f0f6fc;
+    font-weight: 600;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: #8b949e;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .modal-close:hover { color: #f0f6fc; }
+
   /* Collapsible sidebar sections */
   .collapsible-header {
     display: flex;
@@ -346,6 +442,18 @@
 
     <div class="divider"></div>
 
+    <!-- 2b. Exchange-Consumption Coupling -->
+    <div class="group" id="section-coupling">
+      <div class="group-label">Exchange &harr; Consumption</div>
+      <div class="btn-row">
+        <button id="btn-couple-on" class="active" onclick="setCoupling(true)">Coupled</button>
+        <button id="btn-couple-off" onclick="setCoupling(false)">Independent</button>
+      </div>
+      <div class="desc" id="coupling-desc">Each exchange triggers consumption: buying drives using.</div>
+    </div>
+
+    <div class="divider"></div>
+
     <!-- 3. Labor (collapsed by default) -->
     <div class="group section-collapsed" id="section-labor">
       <div class="collapsible-header" onclick="toggleSection('section-labor')">
@@ -371,16 +479,11 @@
 
     <div class="divider"></div>
 
-    <!-- 4. Leontief Technology A (collapsed by default) -->
-    <div class="group section-collapsed" id="section-leontief">
-      <div class="collapsible-header" onclick="toggleSection('section-leontief')">
-        <div class="group-label">Leontief Technology A</div>
-        <span class="collapse-arrow">&#x25BC;</span>
-      </div>
-      <div class="collapsible-body">
-        <div class="desc">Fixed input coefficients per unit output.<br>Column sums &lt; 1 ⇒ productive economy.</div>
-        <div class="tech-matrix" id="techMatrix"></div>
-      </div>
+    <!-- 4. Leontief Technology A -->
+    <div class="group">
+      <div class="group-label">Leontief Technology A</div>
+      <div class="desc" id="leontief-summary"></div>
+      <button onclick="openLeontiefEditor()">Edit Matrix</button>
     </div>
   </div>
 
@@ -418,6 +521,20 @@
   </div>
 </div>
 
+<!-- Leontief Editor Modal -->
+<div class="modal-overlay hidden" id="leontiefModal" onclick="if(event.target===this)closeLeontiefEditor()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Leontief Technology Matrix</h2>
+      <button class="modal-close" onclick="closeLeontiefEditor()">&times;</button>
+    </div>
+    <div class="desc" style="margin-bottom:14px;font-size:14px;">
+      Edit input coefficients and commodities. Column sums &lt; 1 &rArr; productive economy.
+    </div>
+    <div class="tech-matrix" id="techMatrix"></div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // TOY MODEL: CC, Depletion, Stabilizer, Capital
@@ -447,9 +564,12 @@ let targetG = 0; // Leontief equilibrium target for |G|
 let laborMode = 'implicit'; // 'implicit' | 'commodity'
 let trRatio = 1.0;          // t_r / value_added, from slider (0.1 to 1.0)
 let surplusLabor = 0;       // cumulative surplus s from production
+let coupleExchangeConsumption = true;  // couple exchange with consumption
+let currentConsRate = 0.055;           // updated each step by stabilizer
+let stepConsumptions = 0;              // consumptions counted this step (coupled mode)
 
 // ── Commodity types (sectors) ──
-const TYPES = [
+let TYPES = [
   { name:'wheat', color:'#f0883e', sym:'W' },
   { name:'cloth', color:'#e06c75', sym:'Cl'},
   { name:'iron',  color:'#9ea5b0', sym:'Fe'},
@@ -459,42 +579,50 @@ const TYPES = [
   { name:'fish',  color:'#56d4dd', sym:'Fi'},
   { name:'bread', color:'#d4a76a', sym:'Br'},
 ];
-const N_SECTORS = TYPES.length;
+let N_SECTORS = TYPES.length;
+
+// Pool of extra commodities for the "Add" button
+const COMMODITY_POOL = [
+  { name:'coal',   sym:'Co', color:'#777777' },
+  { name:'gold',   sym:'Au', color:'#ffd700' },
+  { name:'silk',   sym:'Si', color:'#ff69b4' },
+  { name:'oil',    sym:'Oi', color:'#4a7a3a' },
+  { name:'corn',   sym:'Cn', color:'#e8d44d' },
+  { name:'copper', sym:'Cu', color:'#b87333' },
+  { name:'tea',    sym:'Te', color:'#567d46' },
+  { name:'tin',    sym:'Sn', color:'#8b8b83' },
+  { name:'sugar',  sym:'Su', color:'#f5f5dc' },
+  { name:'lime',   sym:'Li', color:'#32cd32' },
+];
 
 // ═══════════════════════════════════════════════════════════════
 // LEONTIEF INPUT–OUTPUT SYSTEM
 // One canonical recipe per sector. Each takes 2 inputs → 1 output.
 // The economy is fully circular: every good is both produced and consumed.
 // ═══════════════════════════════════════════════════════════════
-const LEONTIEF_RECIPES = [
-  { output:'W',  inputs:['Br','Fi'], label:'Br+Fi → W',  desc:'harvest: bread for labor, fish meal for soil' },
-  { output:'Cl', inputs:['Fe','Wd'], label:'Fe+Wd → Cl', desc:'weave: iron spindle + wood loom' },
-  { output:'Fe', inputs:['Wd','Sa'], label:'Wd+Sa → Fe', desc:'smelt: charcoal + flux salt' },
-  { output:'Vi', inputs:['W','Wd'],  label:'W+Wd → Vi',  desc:'ferment: wheat mash + wood barrel' },
-  { output:'Wd', inputs:['Br','Fe'], label:'Br+Fe → Wd', desc:'lumber: bread for workers + iron axe' },
-  { output:'Sa', inputs:['Cl','Vi'], label:'Cl+Vi → Sa',  desc:'extract: cloth filter + wine solvent' },
-  { output:'Fi', inputs:['Wd','W'],  label:'Wd+W → Fi',  desc:'catch: wood boat + wheat bait' },
-  { output:'Br', inputs:['W','Sa'],  label:'W+Sa → Br',   desc:'bake: wheat flour + salt' },
+let LEONTIEF_RECIPES = [
+  { output:'W',  inputs:['Br','Fi'], coeffs:[0.4,0.4] },
+  { output:'Cl', inputs:['Fe','Wd'], coeffs:[0.4,0.4] },
+  { output:'Fe', inputs:['Wd','Sa'], coeffs:[0.4,0.4] },
+  { output:'Vi', inputs:['W','Wd'],  coeffs:[0.4,0.4] },
+  { output:'Wd', inputs:['Br','Fe'], coeffs:[0.4,0.4] },
+  { output:'Sa', inputs:['Cl','Vi'], coeffs:[0.4,0.4] },
+  { output:'Fi', inputs:['Wd','W'],  coeffs:[0.4,0.4] },
+  { output:'Br', inputs:['W','Sa'],  coeffs:[0.4,0.4] },
 ];
 
+function recipeLabel(r){ return r.inputs.join('+') + ' \u2192 ' + r.output; }
+
 // Technology matrix A[i][j] = input coefficient of good i per unit of good j produced.
-// Coefficient 0.4 per input ⇒ column sums = 0.8 (productive economy).
-// The gap 1 − 0.8 = 0.2 is value-added (labor), not tracked as a commodity.
-const LEONTIEF_A = (() => {
-  const A = Array.from({length:N_SECTORS}, ()=>Array(N_SECTORS).fill(0));
-  for (const r of LEONTIEF_RECIPES){
-    const j = TYPES.findIndex(t=>t.sym===r.output);
-    for (const inp of r.inputs){
-      const i = TYPES.findIndex(t=>t.sym===inp);
-      A[i][j] = 0.4;
-    }
-  }
-  return A;
-})();
+let LEONTIEF_A = [];
+let LEONTIEF_INV = [];
+let LEONTIEF_X_STAR = [];
+let PROD_WEIGHTS = [];
 
 // Compute (I−A)⁻¹ via Gauss-Jordan elimination
 function invertIminusA(A){
   const n=A.length;
+  if(n===0) return [];
   const aug=A.map((row,i)=>{
     const r=row.map((v,j)=>(i===j?1:0)-v);
     return [...r,...Array(n).fill(0).map((_,j)=>i===j?1:0)];
@@ -504,6 +632,7 @@ function invertIminusA(A){
     for(let r=c+1;r<n;r++) if(Math.abs(aug[r][c])>Math.abs(aug[mx][c])) mx=r;
     [aug[c],aug[mx]]=[aug[mx],aug[c]];
     const piv=aug[c][c];
+    if(Math.abs(piv)<1e-12) continue; // singular guard
     for(let j=0;j<2*n;j++) aug[c][j]/=piv;
     for(let r=0;r<n;r++){
       if(r===c)continue;
@@ -514,17 +643,30 @@ function invertIminusA(A){
   return aug.map(row=>row.slice(n));
 }
 
-const LEONTIEF_INV = invertIminusA(LEONTIEF_A);
-
-// Equilibrium gross output for uniform final demand d = [1,…,1]:
-//   x* = (I−A)⁻¹ d
-// This tells us how much of each good the economy must produce to sustain
-// one unit of final consumption of every good.
-const LEONTIEF_D = Array(N_SECTORS).fill(1);
-const LEONTIEF_X_STAR = LEONTIEF_INV.map(row=>row.reduce((s,v,j)=>s+v*LEONTIEF_D[j],0));
-const X_STAR_SUM = LEONTIEF_X_STAR.reduce((s,v)=>s+v,0);
-// Normalized production weights: probability of choosing each sector for production
-const PROD_WEIGHTS = LEONTIEF_X_STAR.map(v=>v/X_STAR_SUM);
+// Rebuild all derived Leontief structures from TYPES + LEONTIEF_RECIPES
+function rebuildLeontief(){
+  N_SECTORS = TYPES.length;
+  // Build A matrix from recipes
+  LEONTIEF_A = Array.from({length:N_SECTORS}, ()=>Array(N_SECTORS).fill(0));
+  for (const r of LEONTIEF_RECIPES){
+    const j = TYPES.findIndex(t=>t.sym===r.output);
+    if(j<0) continue;
+    for (let k=0; k<r.inputs.length; k++){
+      const i = TYPES.findIndex(t=>t.sym===r.inputs[k]);
+      if(i>=0) LEONTIEF_A[i][j] = r.coeffs[k];
+    }
+  }
+  // Compute inverse
+  LEONTIEF_INV = invertIminusA(LEONTIEF_A);
+  // Equilibrium gross output for uniform demand d=[1,...,1]
+  const d = Array(N_SECTORS).fill(1);
+  LEONTIEF_X_STAR = LEONTIEF_INV.map(row=>row.reduce((s,v,j)=>s+v*d[j],0));
+  const xSum = LEONTIEF_X_STAR.reduce((s,v)=>s+v,0);
+  PROD_WEIGHTS = xSum>0 ? LEONTIEF_X_STAR.map(v=>v/xSum) : Array(N_SECTORS).fill(1/N_SECTORS);
+  // Update displays
+  renderEditableMatrix();
+  updateLeontiefSummary();
+}
 
 function typeBySymbol(s) { return TYPES.find(t => t.sym === s); }
 
@@ -555,6 +697,7 @@ class Proprietor {
   }
   checkDeath() {
     if (!this.dead && this.money <= 0 && this.commodities.length === 0) {
+      if (laborMode === 'commodity') return; // can still work for wages
       this.dead = true;
       this.role = 'dead';
       logEntry('system',`💀 ${this.label} eliminated — no money, no commodities.`);
@@ -577,7 +720,7 @@ function init() {
   for (let i=0;i<n;i++){
     const a = 2*Math.PI*i/n - Math.PI/2;
     const p = new Proprietor(i, cx+radius*Math.cos(a), cy+radius*Math.sin(a));
-    if (i%2===0) p.money = 12+Math.floor(Math.random()*8);
+    p.money = 12+Math.floor(Math.random()*8);
     for (let j=0;j<initC;j++){
       p.commodities.push(new Commodity(TYPES[Math.floor(Math.random()*TYPES.length)], 3+Math.floor(Math.random()*5)));
     }
@@ -590,6 +733,17 @@ function init() {
 
   logEntry('system',`Init ${n} proprietors, mode=${mode}, prod=${prodMode}, target |G|=${targetG}`);
   updateStats();
+}
+
+// ── Exchange helper (extracted so coupled mode can reorder) ──
+function runExchanges(shuffled){
+  for (const p of shuffled){
+    p.roleTimer = Math.max(0, p.roleTimer-1);
+    if (p.roleTimer>0) continue;
+    if (mode==='capital' && p.isCapitalist){ attemptCapital(p); continue; }
+    if (p.money>0 && Math.random()<0.5) attemptBuy(p);
+    else if (p.commodities.length>0 && Math.random()<0.4) attemptSell(p);
+  }
 }
 
 // ── Simulation step ──
@@ -607,42 +761,55 @@ function step(){
   }
 
   tick++;
+  stepConsumptions = 0;
   const alive = proprietors.filter(p=>!p.dead);
   const shuffled = [...alive].sort(()=>Math.random()-0.5);
 
-  // ═══════════════════════════════════════════════════════════
-  // MODE-DEPENDENT PRODUCTION & CONSUMPTION
-  // ═══════════════════════════════════════════════════════════
-  if (prodMode==='off'){
-    // No production. Pure consumption depletes G → 0. §9.10.4
-    consumeGoods(alive, 0.07);
+  if (coupleExchangeConsumption) {
+    // ═══════════════════════════════════════════════════════════
+    // COUPLED: Exchange first (drives consumption), then production matches
+    // Consumption probability < 1 so buyers sometimes keep goods and
+    // can resell, maintaining money circulation.
+    // ═══════════════════════════════════════════════════════════
+
+    // Stabilizer: adjust consumption probability based on |G| drift
+    const drift = Gpre - targetG;
+    currentConsRate = Math.min(0.85, Math.max(0.15, 0.5 + drift*0.02));
+
+    // 1. Exchanges (probabilistic consumption → stepConsumptions counted)
+    runExchanges(shuffled);
+
+    // 2. Production: match consumption. Each production is 2→3 (net +1),
+    //    so we need stepConsumptions production events to maintain |G|.
+    //    Cap at 1 production per proprietor per step to prevent concentration.
+    if (prodMode!=='off' && stepConsumptions>0){
+      let produced = 0;
+      const target = stepConsumptions;
+      for (const p of shuffled){
+        if (produced>=target) break;
+        if (p.commodities.length>=2 && attemptLeontief(p)) produced++;
+      }
+    }
 
   } else {
-    // ── LEONTIEF STABILIZER (§9.12–9.14) ──
-    // Proportional feedback controller: drives |G| → targetG.
-    //   drift > 0 ⇒ too many goods: boost consumption, suppress production
-    //   drift < 0 ⇒ too few goods: boost production, suppress consumption
-    //   drift = 0 ⇒ balanced
-    const drift = Gpre - targetG;
-    const consRate = Math.min(0.12, Math.max(0, 0.055 + drift*0.015));
-    const prodRate = Math.min(0.12, Math.max(0, 0.055 - drift*0.015));
-
-    // Production: pick a recipe weighted by x*, execute if inputs available
-    for (const p of shuffled){
-      if (p.commodities.length>=2 && Math.random()<prodRate)
-        attemptLeontief(p);
+    // ═══════════════════════════════════════════════════════════
+    // INDEPENDENT: Production+Consumption first, then exchanges
+    // ═══════════════════════════════════════════════════════════
+    if (prodMode==='off'){
+      consumeGoods(alive, 0.07);
+    } else {
+      // ── LEONTIEF STABILIZER (§9.12–9.14) ──
+      const drift = Gpre - targetG;
+      const consRate = Math.min(0.12, Math.max(0, 0.055 + drift*0.015));
+      const prodRate = Math.min(0.12, Math.max(0, 0.055 - drift*0.015));
+      currentConsRate = consRate;
+      for (const p of shuffled){
+        if (p.commodities.length>=2 && Math.random()<prodRate)
+          attemptLeontief(p);
+      }
+      consumeGoods(alive, consRate);
     }
-    // Consumption
-    consumeGoods(alive, consRate);
-  }
-
-  // ── Exchanges (always) ──
-  for (const p of shuffled){
-    p.roleTimer = Math.max(0, p.roleTimer-1);
-    if (p.roleTimer>0) continue;
-    if (mode==='capital' && p.isCapitalist){ attemptCapital(p); continue; }
-    if (p.money>0 && Math.random()<0.5) attemptBuy(p);
-    else if (p.commodities.length>0 && Math.random()<0.4) attemptSell(p);
+    runExchanges(shuffled);
   }
 
   // ── Death check ──
@@ -689,6 +856,16 @@ function attemptBuy(buyer){
 
   addExchangeAnim(buyer,seller,c);
   logEntry('exchange',`${seller.label} \u2194 ${buyer.label}: ${c.type.sym}(v=${c.value})`);
+
+  // Coupled consumption: buying triggers consuming one of buyer's goods
+  // Probability < 1 so buyers sometimes keep goods for resale (money circulation)
+  if (coupleExchangeConsumption && Math.random()<currentConsRate && buyer.commodities.length>0) {
+    const ci2 = Math.floor(Math.random()*buyer.commodities.length);
+    const consumed = buyer.commodities.splice(ci2,1)[0];
+    animations.push({type:'consume', x:buyer.x, y:buyer.y, progress:0, color:consumed.type.color});
+    logEntry('depletion',`${buyer.label} consumed ${consumed.type.sym} (v=${consumed.value})`);
+    stepConsumptions++;
+  }
 }
 
 function attemptSell(seller){
@@ -710,81 +887,106 @@ function attemptSell(seller){
 
   addExchangeAnim(buyer,seller,c);
   logEntry('exchange',`${seller.label} \u2194 ${buyer.label}: ${c.type.sym}(v=${c.value})`);
+
+  // Coupled consumption: buying triggers consuming one of buyer's goods
+  // Probability < 1 so buyers sometimes keep goods for resale (money circulation)
+  if (coupleExchangeConsumption && Math.random()<currentConsRate && buyer.commodities.length>0) {
+    const ci2 = Math.floor(Math.random()*buyer.commodities.length);
+    const consumed = buyer.commodities.splice(ci2,1)[0];
+    animations.push({type:'consume', x:buyer.x, y:buyer.y, progress:0, color:consumed.type.color});
+    logEntry('depletion',`${buyer.label} consumed ${consumed.type.sym} (v=${consumed.value})`);
+    stepConsumptions++;
+  }
 }
 
-// ── Leontief production (always conservative: 2→2, value conserved) ──
-// Pick a recipe weighted by equilibrium x*, find inputs, execute.
+// ── Leontief production ──
+// Try all recipes (weighted-shuffled) until one matches inputs. Returns boolean.
+// Coupled mode: 2→3 (net +1 to offset consumption). Decoupled: 2→2 (net 0).
 function attemptLeontief(producer){
-  if (producer.dead) return;
-  if (producer.commodities.length<2) return;
+  if (producer.dead) return false;
+  if (producer.commodities.length<2) return false;
   const syms = producer.commodities.map(c=>c.type.sym);
 
-  // Pick recipe weighted by PROD_WEIGHTS (Leontief equilibrium)
-  const r = Math.random();
-  let cum = 0, chosen = LEONTIEF_RECIPES[0];
-  for (let k=0;k<N_SECTORS;k++){
-    cum += PROD_WEIGHTS[k];
-    if (r<cum){ chosen=LEONTIEF_RECIPES[k]; break; }
-  }
+  // Try recipes in weighted-shuffled order (biased toward equilibrium)
+  const indices = Array.from({length:N_SECTORS}, (_,i)=>i);
+  indices.sort((a,b)=>(Math.random()/(PROD_WEIGHTS[a]||0.01))-(Math.random()/(PROD_WEIGHTS[b]||0.01)));
 
-  // Check if producer has both required inputs
-  const found = [];
-  for (const inp of chosen.inputs){
-    const idx = syms.findIndex((s,i)=>s===inp && !found.includes(i));
-    if (idx===-1) return; // can't do this recipe
-    found.push(idx);
+  let chosen = null, found = null;
+  for (const k of indices){
+    const recipe = LEONTIEF_RECIPES[k];
+    if (!recipe) continue;
+    const f = [];
+    let canDo = true;
+    for (const inp of recipe.inputs){
+      const idx = syms.findIndex((s,i)=>s===inp && !f.includes(i));
+      if (idx===-1){ canDo=false; break; }
+      f.push(idx);
+    }
+    if (canDo){ chosen=recipe; found=f; break; }
   }
+  if (!chosen) return false;
 
   // Consume inputs (highest index first to preserve indices)
   found.sort((a,b)=>b-a);
   const inputs = found.map(i=>producer.commodities.splice(i,1)[0]);
   const inputValue = inputs.reduce((s,c)=>s+c.value, 0);
 
-  // Leontief value-added: col Σ = 0.8, so material inputs account for 80%
-  // of output value. The remaining 20% is new value created by labor.
-  // U(out) = U(in) / 0.8 = U(in) * 1.25
-  // This offsets the value destroyed by consumption, keeping total V stable.
-  const COL_SUM = 0.8; // from the A matrix
+  // Leontief value-added: col Σ < 1, remainder is labor.
+  const jIdx = TYPES.findIndex(t=>t.sym===chosen.output);
+  const rawCOL_SUM = Math.max(0.01, LEONTIEF_A.reduce((s,row)=>s+row[jIdx],0));
+  // When coupled, cap effective col sum at 2/3 so labor value-added (50% of
+  // inputs) compensates for consumption-driven value loss: V stays stable.
+  // Derivation: 2·v_avg·(1/COL_SUM − 1) = v_avg  ⟹  COL_SUM = 2/3.
+  const COL_SUM = coupleExchangeConsumption ? Math.min(rawCOL_SUM, 2/3) : rawCOL_SUM;
   const totalOutputValue = Math.round(inputValue / COL_SUM);
-  const laborValue = totalOutputValue - inputValue; // the 0.2 contribution
+  const laborValue = totalOutputValue - inputValue;
 
   // ── Labor value split ──
-  const fullLaborValue = laborValue; // the 0.2 contribution
+  const fullLaborValue = laborValue;
   let tr = 0, surplus = 0, laborer = null;
   if (laborMode === 'commodity' && fullLaborValue > 0) {
     tr = Math.max(1, Math.round(fullLaborValue * trRatio));
     surplus = fullLaborValue - tr;
     if (producer.money < tr) {
-      // Can't afford labor — put inputs back and abort
       producer.commodities.push(...inputs);
-      return;
+      return false;
     }
     const laborers = proprietors.filter(p => p !== producer && !p.dead);
     laborer = laborers[Math.floor(Math.random() * laborers.length)];
     producer.money -= tr;
     laborer.money += tr;
     surplusLabor += surplus;
-    // Green wage-arrow animation: producer → laborer
     animations.push({type:'exchange_arrow', progress:0,
-      sx:producer.x, sy:producer.y, tx:laborer.x, ty:laborer.y,
+      from:{x:producer.x,y:producer.y}, to:{x:laborer.x,y:laborer.y},
       label:`t\u1D63=${tr}`, color:'#3fb950'});
   }
 
+  // ── Produce outputs ──
   const outType = typeBySymbol(chosen.output);
-  const secondType = TYPES[Math.floor(Math.random()*TYPES.length)];
+  const outputs = [];
 
-  const v1 = Math.max(1, Math.ceil(totalOutputValue/2));
-  const v2 = Math.max(1, totalOutputValue - v1);
-  const out1 = new Commodity(outType, v1);
-  const out2 = new Commodity(secondType, v2);
-  producer.commodities.push(out1, out2);
+  if (coupleExchangeConsumption) {
+    // Coupled: 2→3 (net +1 good — the labor net product offsets consumption)
+    const t2 = TYPES[Math.floor(Math.random()*TYPES.length)];
+    const t3 = TYPES[Math.floor(Math.random()*TYPES.length)];
+    const v1 = Math.max(1, Math.ceil(totalOutputValue/3));
+    const v2 = Math.max(1, Math.ceil(totalOutputValue/3));
+    const v3 = Math.max(1, totalOutputValue - v1 - v2);
+    outputs.push(new Commodity(outType, v1), new Commodity(t2, v2), new Commodity(t3, v3));
+  } else {
+    // Decoupled: 2→2 (net 0, original value-conserving behavior)
+    const t2 = TYPES[Math.floor(Math.random()*TYPES.length)];
+    const v1 = Math.max(1, Math.ceil(totalOutputValue/2));
+    const v2 = Math.max(1, totalOutputValue - v1);
+    outputs.push(new Commodity(outType, v1), new Commodity(t2, v2));
+  }
 
+  producer.commodities.push(...outputs);
   producer.role='producer'; producer.roleTimer=8;
   productionCount++;
 
-  // Green ring animation
+  // Animations
   animations.push({type:'production', x:producer.x, y:producer.y, progress:0});
-  // Floating label: shows what was produced + labor value-added
   const labelExtra = laborMode==='commodity' && laborer
     ? `+${fullLaborValue} (t\u1D63=${tr}, s=${surplus})`
     : `+${fullLaborValue}`;
@@ -792,20 +994,22 @@ function attemptLeontief(producer){
     label:`\u2191 ${outType.sym} ${labelExtra}`, color:outType.color});
 
   const inStr  = inputs.map(c=>`${c.type.sym}(${c.value})`).join('+');
-  const outStr = `${outType.sym}(${v1})+${secondType.sym}(${v2})`;
+  const outStr = outputs.map(c=>`${c.type.sym}(${c.value})`).join('+');
   const laborStr = laborMode==='commodity' && laborer
     ? `+${fullLaborValue} labor (${laborer.label} t\u1D63=${tr}, s=${surplus})`
     : `+${fullLaborValue} labor`;
-  logEntry('production',`${producer.label}: ${inStr} \u2192 ${outStr}  ${laborStr}  [${chosen.label}]`);
+  const rLabel = recipeLabel(chosen);
+  logEntry('production',`${producer.label}: ${inStr} \u2192 ${outStr}  ${laborStr}  [${rLabel}]`);
 
-  // Show recipe toast
+  // Recipe toast
   const toast = document.getElementById('recipeToast');
   const toastLabor = laborMode==='commodity' && laborer
     ? `+${fullLaborValue} labor (${laborer.label} t\u1D63=${tr}, s=${surplus})`
     : `+${fullLaborValue} labor`;
-  toast.textContent = `${producer.label}  ${chosen.label}   U=${inputValue}\u2192${totalOutputValue} (${toastLabor})`;
+  toast.textContent = `${producer.label}  ${rLabel}   U=${inputValue}\u2192${totalOutputValue} (${toastLabor})`;
   toast.classList.add('visible');
   recipeTimer = 20;
+  return true;
 }
 
 function attemptCapital(cap){
@@ -918,9 +1122,12 @@ function draw(){
   // Animations
   for (let i=animations.length-1;i>=0;i--){
     const a=animations[i];
-    // Speed: exchange arrows fade over ~0.5s at 60fps → progress ~0.033/frame
+    // Exchange arrows: fade time correlates with sim speed, minimum 1 second
+    const simSpd = +document.getElementById('speed').value;
+    const fadeMs = Math.max(1000, 3000/simSpd);
+    const exchFade = 1/(fadeMs/1000*60);
     const spd = (a.type==='produce_label') ? 0.015
-              : (a.type==='exchange_arrow') ? 0.033
+              : (a.type==='exchange_arrow') ? exchFade
               : 0.025;
     a.progress += spd;
     if (a.progress>=1){ animations.splice(i,1); continue; }
@@ -1240,36 +1447,123 @@ function updateStats(){
   document.getElementById('stat-productions').textContent = productionCount;
   document.getElementById('stat-surplus').textContent = surplusAccumulated;
   document.getElementById('stat-surplus-labor').textContent = surplusLabor;
-  updateTechMatrix();
 }
 
-// ── Fixed Leontief technology matrix display ──
-function updateTechMatrix(){
+// ── Editable Leontief technology matrix ──
+function renderEditableMatrix(){
   const el = document.getElementById('techMatrix');
+  if(!el) return;
+  const canRemove = TYPES.length > 1;
   let html = '';
-  for (let j=0;j<N_SECTORS;j++){
+  for (let j=0; j<LEONTIEF_RECIPES.length; j++){
     const r = LEONTIEF_RECIPES[j];
-    const outT = TYPES[j];
-    // Input coefficients from column j of A
-    const coeffs = r.inputs.map(inp=>{
-      const i = TYPES.findIndex(t=>t.sym===inp);
-      const tc = TYPES[i];
-      return `<span class="sym" style="color:${tc.color}">${LEONTIEF_A[i][j]}${inp}</span>`;
-    }).join(' + ');
-    // Equilibrium weight
-    const xw = (PROD_WEIGHTS[j]*100).toFixed(0);
-    html += `<div class="tech-row">
-      <span class="tech-out" style="color:${outT.color}">${outT.sym}</span>
-      <span class="tech-arrow">&larr;</span>
-      <span class="tech-coeff">${coeffs}</span>
-      <span class="tech-count" title="equilibrium weight">x*${xw}%</span>
+    const outT = TYPES.find(t=>t.sym===r.output);
+    if(!outT) continue;
+    const xw = PROD_WEIGHTS[j] !== undefined ? (PROD_WEIGHTS[j]*100).toFixed(0) : '?';
+    const colSum = r.coeffs.reduce((s,c)=>s+c, 0);
+    html += `<div class="tech-edit-row">`;
+    html += `<span class="tech-edit-sym" style="color:${outT.color}">${outT.sym}</span>`;
+    html += `<span class="tech-edit-arrow">\u2190</span>`;
+    for (let k=0; k<r.inputs.length; k++){
+      if(k>0) html += `<span class="tech-edit-plus">+</span>`;
+      html += `<input type="number" min="0.05" max="0.95" step="0.05" value="${r.coeffs[k]}" onchange="onCoeffChange(${j},${k},this.value)" title="Input coefficient">`;
+      html += `<select onchange="onInputChange(${j},${k},this.value)" title="Input commodity">`;
+      for (const t of TYPES){
+        html += `<option value="${t.sym}" ${t.sym===r.inputs[k]?'selected':''}>${t.sym}</option>`;
+      }
+      html += `</select>`;
+    }
+    html += `<span class="tech-count" title="equilibrium weight">x*${xw}%</span>`;
+    html += `<button class="btn-remove" ${canRemove?'':'disabled'} onclick="removeCommodity(${j})" title="Remove commodity">\u2715</button>`;
+    html += `</div>`;
+  }
+  // Column sum info
+  if(LEONTIEF_RECIPES.length>0){
+    const avgCS = LEONTIEF_RECIPES.reduce((s,r)=>s+r.coeffs.reduce((a,b)=>a+b,0),0)/LEONTIEF_RECIPES.length;
+    const csClass = avgCS>=1 ? 'tech-col-sum-warn' : '';
+    html += `<div class="tech-row" style="border-top:1px solid #30363d;margin-top:4px;padding-top:4px;">
+      <span class="${csClass}" style="font-size:11px;">avg col \u03A3 = ${avgCS.toFixed(2)} \u2192 ${(1-avgCS).toFixed(2)} value-added</span>
     </div>`;
   }
-  // Column sum (value-added)
-  html += `<div class="tech-row" style="border-top:1px solid #30363d;margin-top:4px;padding-top:4px;">
-    <span style="color:#6e7681;font-size:11px;">col Σ = 0.8 → 0.2 value-added (labor)</span>
-  </div>`;
+  // Add button
+  const canAdd = COMMODITY_POOL.some(c=>!TYPES.find(t=>t.sym===c.sym));
+  html += `<button class="btn-add-commodity" ${canAdd?'':'disabled'} onclick="addCommodity()">+ Add Commodity</button>`;
   el.innerHTML = html;
+}
+
+function onCoeffChange(recipeIdx, inputIdx, value){
+  const val = Math.max(0.05, Math.min(0.95, parseFloat(value)||0.4));
+  const r = LEONTIEF_RECIPES[recipeIdx];
+  const otherCoeff = r.coeffs[1-inputIdx];
+  if(val+otherCoeff>=1){
+    r.coeffs[inputIdx] = Math.round(Math.max(0.05, 0.99-otherCoeff)*100)/100;
+  } else {
+    r.coeffs[inputIdx] = Math.round(val*100)/100;
+  }
+  rebuildLeontief();
+  resetSim();
+}
+
+function onInputChange(recipeIdx, inputIdx, sym){
+  LEONTIEF_RECIPES[recipeIdx].inputs[inputIdx] = sym;
+  rebuildLeontief();
+  resetSim();
+}
+
+function addCommodity(){
+  const available = COMMODITY_POOL.filter(c=>!TYPES.find(t=>t.sym===c.sym));
+  if(!available.length) return;
+  const newT = available[0];
+  TYPES.push({name:newT.name, color:newT.color, sym:newT.sym});
+  // Pick 2 random existing commodities as inputs (from the ones before this new one)
+  const existing = TYPES.filter(t=>t.sym!==newT.sym);
+  const inp1 = existing[Math.floor(Math.random()*existing.length)].sym;
+  const inp2 = existing[Math.floor(Math.random()*existing.length)].sym;
+  LEONTIEF_RECIPES.push({output:newT.sym, inputs:[inp1,inp2], coeffs:[0.4,0.4]});
+  rebuildLeontief();
+  resetSim();
+}
+
+function removeCommodity(idx){
+  if(TYPES.length<=1) return;
+  const removedSym = LEONTIEF_RECIPES[idx].output;
+  TYPES.splice(idx,1);
+  LEONTIEF_RECIPES.splice(idx,1);
+  // Update any recipe that references the removed commodity as input
+  for(const r of LEONTIEF_RECIPES){
+    for(let k=0; k<r.inputs.length; k++){
+      if(r.inputs[k]===removedSym){
+        r.inputs[k] = TYPES[Math.floor(Math.random()*TYPES.length)].sym;
+      }
+    }
+  }
+  rebuildLeontief();
+  resetSim();
+}
+
+function openLeontiefEditor(){
+  document.getElementById('leontiefModal').classList.remove('hidden');
+  renderEditableMatrix();
+}
+function closeLeontiefEditor(){
+  document.getElementById('leontiefModal').classList.add('hidden');
+}
+function updateLeontiefSummary(){
+  const el = document.getElementById('leontief-summary');
+  if(!el) return;
+  const avgCS = LEONTIEF_RECIPES.length>0
+    ? LEONTIEF_RECIPES.reduce((s,r)=>s+r.coeffs.reduce((a,b)=>a+b,0),0)/LEONTIEF_RECIPES.length
+    : 0;
+  el.textContent = `${TYPES.length} commodities, avg col \u03A3 = ${avgCS.toFixed(2)}`;
+}
+
+function setCoupling(on){
+  coupleExchangeConsumption = on;
+  document.getElementById('btn-couple-on').className = on?'active':'';
+  document.getElementById('btn-couple-off').className = on?'':'active';
+  document.getElementById('coupling-desc').textContent = on
+    ? 'Each exchange triggers consumption: buying drives using.'
+    : 'Consumption and exchange are independent processes.';
 }
 
 // ── Log ──
@@ -1373,6 +1667,7 @@ function loop(ts){
 }
 
 window.addEventListener('resize', ()=>{ resize(); });
+rebuildLeontief();
 resize(); init();
 requestAnimationFrame(loop);
 </script>
