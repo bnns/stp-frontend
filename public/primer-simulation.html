@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Circulation &amp; Production — Toy Model</title>
+<title>Value, Capital &amp; Reproduction — Dynamic Model</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -36,7 +36,8 @@
     letter-spacing: 0.5px;
   }
   .mode-badge.cc  { background: #0d419d; color: #79c0ff; }
-  .mode-badge.capital { background: #5b0d5b; color: #d2a8ff; }
+  .mode-badge.simple { background: #5b0d5b; color: #d2a8ff; }
+  .mode-badge.expanded { background: #5b3000; color: #ffa060; }
 
   /* ── Main grid ── */
   .main-grid {
@@ -463,8 +464,8 @@
 <body>
 
 <header>
-  <h1>Circulation &amp; Production</h1>
-  <span class="subtitle">Toy model — Primer §9-11</span>
+  <h1>Value, Capital &amp; Reproduction</h1>
+  <span class="subtitle">Dynamic model — Primer §9-22</span>
   <div class="mode-badge cc" id="modeBadge">CC — Simple Circulation</div>
 </header>
 
@@ -474,8 +475,9 @@
     <div class="group">
       <div class="group-label">Mode</div>
       <div class="btn-row">
-        <button id="btn-mode-cc" class="active" onclick="setMode('cc')">CC (Simple)</button>
-        <button id="btn-mode-capital" onclick="setMode('capital')">Capital</button>
+        <button id="btn-mode-cc" class="active" onclick="setMode('cc')">CC</button>
+        <button id="btn-mode-simple" onclick="setMode('simple')">Simple</button>
+        <button id="btn-mode-expanded" onclick="setMode('expanded')">Expanded</button>
       </div>
       <div class="desc" id="mode-desc">Stabilized commodity region: circulation + value-conserving production. §9.14</div>
     </div>
@@ -598,6 +600,46 @@
       <div class="group-label">Leontief Technology A</div>
       <div class="desc" id="leontief-summary"></div>
       <button onclick="openLeontiefEditor()">Edit Matrix</button>
+    </div>
+
+    <div class="divider" id="expanded-params-divider" style="display:none"></div>
+
+    <!-- Expanded Reproduction Parameters -->
+    <div class="group section-collapsed" id="section-expanded-params" style="display:none">
+      <div class="collapsible-header" onclick="toggleSection('section-expanded-params')">
+        <div class="group-label">Reproduction Parameters</div>
+        <span class="collapse-arrow">&#x25BC;</span>
+      </div>
+      <div class="collapsible-body">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="group-label" style="font-size:12px;">Accumulation rate &mdash; <span id="accum-rate-pct">50</span>%</div>
+          <input type="range" id="accumRateSlider" min="0" max="100" value="50" step="5"
+                 oninput="updateAccumRate()" style="width:100%;accent-color:#ffa060;">
+          <div class="desc" style="font-size:12px;">0% = simple reproduction (no growth). 100% = max expanded reproduction.</div>
+
+          <div class="group-label" style="font-size:12px;margin-top:4px;">Rate of exploitation s/v &mdash; <span id="exploit-rate-pct">100</span>%</div>
+          <input type="range" id="exploitRateSlider" min="10" max="300" value="100" step="10"
+                 oninput="updateExploitRate()" style="width:100%;accent-color:#ffa060;">
+          <div class="desc" style="font-size:12px;">Surplus per unit of variable capital (wages).</div>
+
+          <div class="group-label" style="font-size:12px;margin-top:4px;">Wage per worker &mdash; <span id="wage-val">5</span></div>
+          <input type="range" id="wageSlider" min="1" max="20" value="5" step="1"
+                 oninput="updateWage()" style="width:100%;accent-color:#ffa060;">
+
+          <div class="group-label" style="font-size:12px;margin-top:4px;">Capitalists &mdash; <span id="num-cap-val">2</span></div>
+          <input type="range" id="numCapSlider" min="2" max="4" value="2" step="1"
+                 oninput="updateNumCap()" style="width:100%;accent-color:#ffa060;">
+        </div>
+
+        <div style="border-top:1px solid #21262d;margin:8px 0;"></div>
+        <div class="group-label" style="font-size:11px;">Departmental Accounting</div>
+        <div style="font-family:'SF Mono',Consolas,monospace;font-size:11px;line-height:1.6;">
+          <div style="color:#e06c75;">Dept I (K): c\u2081=<span id="dept-I-c">0</span> v\u2081=<span id="dept-I-v">0</span> s\u2081=<span id="dept-I-s">0</span> out=<span id="dept-I-out">0</span></div>
+          <div style="color:#3fb950;">Dept II (C): c\u2082=<span id="dept-II-c">0</span> v\u2082=<span id="dept-II-v">0</span> s\u2082=<span id="dept-II-s">0</span> out=<span id="dept-II-out">0</span></div>
+          <div style="color:#b1bac4;">W\u2081=<span id="dept-W1">0</span> Q=<span id="dept-Q">0</span></div>
+          <div style="color:#d2a8ff;">Profit rate s/(c+v)=<span id="dept-profrate">0</span>%</div>
+        </div>
+      </div>
     </div>
 
     <div class="divider" id="capital-forms-divider" style="display:none"></div>
@@ -803,7 +845,7 @@
 
 <script>
 // ============================================================
-// TOY MODEL: CC, Depletion, Stabilizer, Capital
+// DYNAMIC MODEL: CC, Depletion, Stabilizer, Capital, Expanded Reproduction
 // Continuous-quantity model (fractional goods, Leontief I/O)
 // ============================================================
 
@@ -872,6 +914,24 @@ let loans = [];  // { lenderId, borrowerId, principal, remaining, interestRate }
 let usuryInterestRate = 0.10;
 let usuryInstallmentRatio = 0.15;  // fraction of debtor's money per step
 
+// ── Expanded reproduction ──
+let expandedParams = {
+  accumRate: 0.50,
+  rateExploitation: 1.0,
+  wagePerWorker: 5.0,
+  numCapitalists: 2,
+};
+
+let deptAccounting = {
+  I:  { c:0, v:0, s:0, output:0 },
+  II: { c:0, v:0, s:0, output:0 },
+};
+
+let deptIOutputHistory = [];
+let deptIIOutputHistory = [];
+let profitRateHistory = [];
+let capitalStockHistory = [];
+
 // Per-step accumulators
 let stepMerchantProfit = 0;
 let stepLoanInterest = 0;
@@ -883,16 +943,20 @@ let mevHistory = [];  // monetary expression of value: M/V
 
 // Chart series visibility (all on by default)
 const CHART_SERIES = [
-  { key:'goods',    color:'#f0883e', legendLabel:'Commodity' },
-  { key:'value',    color:'#79c0ff', legendLabel:'Value' },
-  { key:'share',    color:'#8b949e', legendLabel:'Value share' },
-  { key:'produced', color:'#3fb950', legendLabel:'Production' },
-  { key:'consumed', color:'#da3633', legendLabel:'Consumption' },
-  { key:'arbitrage',color:'#d2a8ff', legendLabel:'Arbitrage' },
-  { key:'surplus',  color:'#e06c75', legendLabel:'Surplus' },
-  { key:'merchant', color:'#ff9f43', legendLabel:'Merchant' },
-  { key:'usury',    color:'#ffd700', legendLabel:'Usury' },
-  { key:'melt',     color:'#58a6ff', legendLabel:'MELT' },
+  { key:'goods',    color:'#f0883e', legendLabel:'Goods',       modes:['cc','simple','expanded'] },
+  { key:'value',    color:'#79c0ff', legendLabel:'Value',       modes:['cc','simple','expanded'] },
+  { key:'share',    color:'#8b949e', legendLabel:'Value share', modes:['cc','simple','expanded'] },
+  { key:'produced', color:'#3fb950', legendLabel:'Production',  modes:['cc','simple'] },
+  { key:'consumed', color:'#da3633', legendLabel:'Consumption', modes:['cc','simple'] },
+  { key:'arbitrage',color:'#d2a8ff', legendLabel:'Arbitrage',   modes:['cc','simple'] },
+  { key:'surplus',  color:'#e06c75', legendLabel:'Surplus',     modes:['cc','simple'] },
+  { key:'merchant', color:'#ff9f43', legendLabel:'Merchant',    modes:['cc','simple'] },
+  { key:'usury',    color:'#ffd700', legendLabel:'Usury',       modes:['cc','simple'] },
+  { key:'melt',     color:'#58a6ff', legendLabel:'MELT',        modes:['cc','simple','expanded'] },
+  { key:'deptI',    color:'#e06c75', legendLabel:'Dept I (K)',   modes:['expanded'] },
+  { key:'deptII',   color:'#3fb950', legendLabel:'Dept II (C)', modes:['expanded'] },
+  { key:'profRate', color:'#d2a8ff', legendLabel:'Profit rate',  modes:['expanded'] },
+  { key:'capitalStock', color:'#ff9f43', legendLabel:'Capital stock', modes:['expanded'] },
 ];
 let chartVisible = Object.fromEntries(CHART_SERIES.map(s=>[s.key,true]));
 
@@ -932,6 +996,10 @@ let LEONTIEF_RECIPES = [
   { output:'W',  inputs:['Cl','Cl'], coeffs:[0.4,0.4] },
   { output:'Cl', inputs:['W','W'],   coeffs:[0.4,0.4] },
 ];
+
+// Defaults for restoring after expanded mode
+const DEFAULT_TYPES = TYPES.map(t=>({...t}));
+const DEFAULT_RECIPES = LEONTIEF_RECIPES.map(r=>({output:r.output, inputs:[...r.inputs], coeffs:[...r.coeffs]}));
 
 function recipeLabel(r){ return r.inputs.join('+') + ' \u2192 ' + r.output; }
 
@@ -1006,6 +1074,10 @@ class Proprietor {
     this.isCapitalist = false;
     this.capitalSurplus = 0;
     this.dead = false;
+    this.agentClass = 'worker';
+    this.department = 0;
+    this.wageIncome = 0;
+    this.profitIncome = 0;
   }
   totalGoods() {
     return Object.values(this.inventory).reduce((s, q) => s + q, 0);
@@ -1070,7 +1142,16 @@ class Proprietor {
 }
 
 // ── Init ──
+let _wasExpandedMode = false;
 function init() {
+  // Restore default TYPES/recipes when leaving expanded mode
+  if (_wasExpandedMode && mode !== 'expanded') {
+    TYPES = DEFAULT_TYPES.map(t=>({...t}));
+    LEONTIEF_RECIPES = DEFAULT_RECIPES.map(r=>({output:r.output, inputs:[...r.inputs], coeffs:[...r.coeffs]}));
+    rebuildLeontief();
+  }
+  _wasExpandedMode = (mode === 'expanded');
+
   const n = +document.getElementById('numProprietors').value;
   const initC = +document.getElementById('initCommodities').value;
   proprietors = []; animations = [];
@@ -1078,6 +1159,8 @@ function init() {
   gHistory=[]; vHistory=[]; mHistory=[]; ownerValueHistories=[];
   prodPerTickHistory=[]; consPerTickHistory=[]; arbCumHistory=[]; surplusCumHistory=[];
   loans=[]; merchantCumHistory=[]; usuryCumHistory=[]; mevHistory=[];
+  deptIOutputHistory=[]; deptIIOutputHistory=[]; profitRateHistory=[]; capitalStockHistory=[];
+  deptAccounting = { I:{c:0,v:0,s:0,output:0}, II:{c:0,v:0,s:0,output:0} };
   merchantExchangeRates = {};
   for (const t of TYPES) merchantExchangeRates[t.sym] = 1.5;
   // Reset capital eligibility — all owners eligible by default
@@ -1099,12 +1182,49 @@ function init() {
       p.addGoods(sym, chunk);
       remaining -= chunk;
     }
-    if (mode==='capital' && i===0){ p.isCapitalist=true; p.money=40; }
+    if (mode==='simple' && i===0){ p.isCapitalist=true; p.money=40; }
     proprietors.push(p);
   }
 
-  // Set Leontief target: |G| should stay at this level in conservative mode
-  targetG = proprietors.reduce((s,p)=>s+p.totalGoods(), 0);
+  // ── Expanded mode init ──
+  if (mode === 'expanded') {
+    laborMode = 'commodity';
+    prodMode = 'conservative';
+    TYPES = [
+      { name:'capital goods', color:'#e06c75', sym:'K' },
+      { name:'consumption goods', color:'#3fb950', sym:'C' },
+    ];
+    LEONTIEF_RECIPES = [
+      { output:'K', inputs:['K'], coeffs:[0.4] },
+      { output:'C', inputs:['K'], coeffs:[0.3] },
+    ];
+    rebuildLeontief();
+
+    const nCap = expandedParams.numCapitalists;
+    const nDeptI = Math.ceil(nCap / 2);
+    // Assign classes
+    for (let i = 0; i < proprietors.length; i++) {
+      const p = proprietors[i];
+      if (i < nCap) {
+        p.agentClass = 'capitalist';
+        p.isCapitalist = true;
+        p.department = i < nDeptI ? 1 : 2;
+        p.money = 200;
+        p.inventory = { K: 8 };
+      } else {
+        p.agentClass = 'worker';
+        p.isCapitalist = false;
+        // Split workers across departments
+        p.department = ((i - nCap) % 2 === 0) ? 1 : 2;
+        p.money = 10;
+        p.inventory = { C: 2 };
+      }
+    }
+    targetG = Infinity;
+  } else {
+    // Set Leontief target: |G| should stay at this level in conservative mode
+    targetG = proprietors.reduce((s,p)=>s+p.totalGoods(), 0);
+  }
 
   ownerValueHistories = proprietors.map(() => []);
   // Populate capital eligibility with all owner ids
@@ -1135,8 +1255,237 @@ function runExchanges(shuffled){
   }
 }
 
+// ── Expanded reproduction step ──
+function stepExpanded(){
+  tick++;
+  stepConsumedQty = 0;
+  stepProducedQty = 0;
+  stepArbQty = 0;
+  stepSurplusQty = 0;
+  stepMerchantProfit = 0;
+  stepLoanInterest = 0;
+
+  // Reset per-step accounting
+  deptAccounting = { I:{c:0,v:0,s:0,output:0}, II:{c:0,v:0,s:0,output:0} };
+  for (const p of proprietors) { p.wageIncome = 0; p.profitIncome = 0; }
+
+  const alive = proprietors.filter(p => !p.dead);
+  const capitalists = alive.filter(p => p.agentClass === 'capitalist');
+  const workers = alive.filter(p => p.agentClass === 'worker');
+
+  // ── Phase 1: Production ──
+  for (const cap of capitalists) {
+    const deptKey = cap.department === 1 ? 'I' : 'II';
+    const outputSym = cap.department === 1 ? 'K' : 'C';
+    const kAvail = cap.inventory['K'] || 0;
+    if (kAvail < DEATH_THRESHOLD) continue;
+
+    const recipe = LEONTIEF_RECIPES.find(r => r.output === outputSym);
+    if (!recipe) continue;
+    const kCoeff = recipe.coeffs[0]; // K input coefficient
+
+    // Scale by available K, capped
+    let scale = Math.min(kAvail / kCoeff, PROD_SCALE_MAX);
+    if (scale < DEATH_THRESHOLD) continue;
+
+    // Hire workers from this department
+    const deptWorkers = workers.filter(w => w.department === cap.department && !w.dead);
+    const numHired = Math.min(deptWorkers.length, Math.ceil(scale));
+    if (numHired === 0) continue;
+
+    // Value components
+    const kConsumed = scale * kCoeff;
+    const c = kConsumed * UNIT_PRICE;
+    const v = numHired * expandedParams.wagePerWorker;
+    const s = v * expandedParams.rateExploitation;
+
+    // Check capitalist has money for wages
+    if (cap.money < v) continue;
+
+    // Execute production
+    cap.removeGoods('K', kConsumed);
+    cap.money -= v;
+
+    // Pay wages to workers
+    const wageEach = expandedParams.wagePerWorker;
+    const hired = deptWorkers.slice(0, numHired);
+    for (const w of hired) {
+      w.money += wageEach;
+      w.wageIncome += wageEach;
+      // Wage animation
+      animations.push({type:'exchange_arrow', progress:0,
+        from:{x:cap.x,y:cap.y}, to:{x:w.x,y:w.y},
+        label:`w=${wageEach.toFixed(0)}`, color:'#3fb950'});
+    }
+
+    // Produce output: quantity = (c + v + s) / UNIT_PRICE
+    const outputQty = (c + v + s) / UNIT_PRICE;
+    cap.addGoods(outputSym, outputQty);
+    cap.profitIncome += s;
+    stepProducedQty += outputQty;
+    productionCount++;
+
+    // Record accounting
+    deptAccounting[deptKey].c += c;
+    deptAccounting[deptKey].v += v;
+    deptAccounting[deptKey].s += s;
+    deptAccounting[deptKey].output += outputQty;
+
+    // Production animation
+    animations.push({type:'production', x:cap.x, y:cap.y, progress:0});
+    const outType = typeBySymbol(outputSym);
+    animations.push({type:'produce_label', ownerId:cap.id, progress:0,
+      label:`\u2191${outputQty.toFixed(1)}${outputSym}`, color:outType?.color||'#3fb950'});
+    logEntry('production',`${cap.label} Dept ${deptKey}: ${kConsumed.toFixed(1)}K \u2192 ${outputQty.toFixed(1)}${outputSym}, c=${c.toFixed(0)} v=${v.toFixed(0)} s=${s.toFixed(0)}`);
+  }
+
+  // ── Phase 2: Worker Consumption ──
+  for (const w of workers) {
+    if (w.money < DEATH_THRESHOLD) continue;
+    const spendBudget = w.money * 0.9;
+    // Find C sellers (primarily Dept II capitalists)
+    const cSellers = alive.filter(p => (p.inventory['C'] || 0) > DEATH_THRESHOLD && p !== w);
+    if (!cSellers.length) continue;
+
+    let spent = 0;
+    for (const seller of cSellers) {
+      if (spent >= spendBudget) break;
+      const avail = seller.inventory['C'] || 0;
+      if (avail < DEATH_THRESHOLD) continue;
+      const maxQty = Math.min(avail, (spendBudget - spent) / UNIT_PRICE);
+      if (maxQty < DEATH_THRESHOLD) continue;
+      const price = maxQty * UNIT_PRICE;
+      seller.removeGoods('C', maxQty);
+      w.money -= price;
+      seller.money += price;
+      spent += price;
+      exchangeCount++;
+      // Consume most of it (subsistence)
+      const consumed = maxQty * 0.8;
+      stepConsumedQty += consumed;
+      // Worker keeps a small buffer
+      w.addGoods('C', maxQty - consumed);
+      logEntry('exchange',`${w.label} buys ${maxQty.toFixed(1)}C from ${seller.label} @ ${price.toFixed(0)}`);
+    }
+  }
+
+  // ── Phase 3: Capitalist Investment & Consumption ──
+  for (const cap of capitalists) {
+    const surplus = cap.profitIncome;
+    if (surplus < DEATH_THRESHOLD) continue;
+
+    const investAmt = surplus * expandedParams.accumRate;
+    const luxuryAmt = surplus * (1 - expandedParams.accumRate);
+
+    // Reinvestment: buy K
+    if (investAmt > DEATH_THRESHOLD) {
+      const kSellers = alive.filter(p => (p.inventory['K'] || 0) > DEATH_THRESHOLD && p !== cap);
+      let investSpent = 0;
+      for (const seller of kSellers) {
+        if (investSpent >= investAmt) break;
+        const avail = seller.inventory['K'] || 0;
+        if (avail < DEATH_THRESHOLD) continue;
+        const maxQty = Math.min(avail, (investAmt - investSpent) / UNIT_PRICE, cap.money / UNIT_PRICE);
+        if (maxQty < DEATH_THRESHOLD) continue;
+        const price = maxQty * UNIT_PRICE;
+        seller.removeGoods('K', maxQty);
+        cap.addGoods('K', maxQty);
+        cap.money -= price;
+        seller.money += price;
+        investSpent += price;
+        exchangeCount++;
+        logEntry('capital',`${cap.label} invests: buys ${maxQty.toFixed(1)}K from ${seller.label}`);
+      }
+    }
+
+    // Luxury consumption: buy and consume C
+    if (luxuryAmt > DEATH_THRESHOLD) {
+      const cSellers = alive.filter(p => (p.inventory['C'] || 0) > DEATH_THRESHOLD && p !== cap);
+      let luxSpent = 0;
+      for (const seller of cSellers) {
+        if (luxSpent >= luxuryAmt) break;
+        const avail = seller.inventory['C'] || 0;
+        if (avail < DEATH_THRESHOLD) continue;
+        const maxQty = Math.min(avail, (luxuryAmt - luxSpent) / UNIT_PRICE, cap.money / UNIT_PRICE);
+        if (maxQty < DEATH_THRESHOLD) continue;
+        const price = maxQty * UNIT_PRICE;
+        seller.removeGoods('C', maxQty);
+        cap.money -= price;
+        seller.money += price;
+        luxSpent += price;
+        stepConsumedQty += maxQty; // luxury consumed
+        exchangeCount++;
+        logEntry('exchange',`${cap.label} luxury: ${maxQty.toFixed(1)}C from ${seller.label}`);
+      }
+    }
+  }
+
+  // ── Phase 4: Inter-Department Exchange ──
+  // Dept II capitalists buy K from Dept I for next period's production
+  const deptII_caps = capitalists.filter(c => c.department === 2);
+  const deptI_caps = capitalists.filter(c => c.department === 1);
+  for (const cap2 of deptII_caps) {
+    const kNeeded = 4; // target K holding
+    const kHave = cap2.inventory['K'] || 0;
+    if (kHave >= kNeeded) continue;
+    const deficit = kNeeded - kHave;
+    for (const cap1 of deptI_caps) {
+      const avail = cap1.inventory['K'] || 0;
+      if (avail < DEATH_THRESHOLD) continue;
+      const qty = Math.min(avail, deficit, cap2.money / UNIT_PRICE);
+      if (qty < DEATH_THRESHOLD) continue;
+      const price = qty * UNIT_PRICE;
+      cap1.removeGoods('K', qty);
+      cap2.addGoods('K', qty);
+      cap2.money -= price;
+      cap1.money += price;
+      exchangeCount++;
+      logEntry('exchange',`Dept II ${cap2.label} buys ${qty.toFixed(1)}K from Dept I ${cap1.label}`);
+    }
+  }
+
+  // ── Phase 5: Death check + Record history ──
+  for (const p of alive) p.checkDeath();
+
+  // Record to standard history arrays
+  gHistory.push(proprietors.reduce((s,p)=>s+p.totalGoods(),0));
+  const GV = proprietors.reduce((s,p)=>s+p.goodsValue(),0);
+  vHistory.push(GV);
+  const M = proprietors.reduce((s,p)=>s+p.money,0);
+  mHistory.push(M);
+  mevHistory.push(M > DEATH_THRESHOLD ? GV / M : 0);
+  const melt = M > DEATH_THRESHOLD ? GV / M : 0;
+  const meltAdjusted = proprietors.map(p => p.goodsValue() + p.money * melt);
+  const totalMeltAdj = meltAdjusted.reduce((s,v) => s + v, 0);
+  for (let i = 0; i < proprietors.length; i++){
+    const share = totalMeltAdj > DEATH_THRESHOLD ? meltAdjusted[i] / totalMeltAdj * 100 : 0;
+    ownerValueHistories[i].push(share);
+  }
+  prodPerTickHistory.push(stepProducedQty);
+  consPerTickHistory.push(stepConsumedQty);
+  // Push zeros to unused cumulative arrays for chart compat
+  arbCumHistory.push(arbCumHistory.length ? arbCumHistory[arbCumHistory.length-1] : 0);
+  surplusCumHistory.push(surplusCumHistory.length ? surplusCumHistory[surplusCumHistory.length-1] : 0);
+  merchantCumHistory.push(merchantCumHistory.length ? merchantCumHistory[merchantCumHistory.length-1] : 0);
+  usuryCumHistory.push(usuryCumHistory.length ? usuryCumHistory[usuryCumHistory.length-1] : 0);
+
+  // Expanded-specific histories
+  deptIOutputHistory.push(deptAccounting.I.output);
+  deptIIOutputHistory.push(deptAccounting.II.output);
+  const totalC = deptAccounting.I.c + deptAccounting.II.c;
+  const totalV = deptAccounting.I.v + deptAccounting.II.v;
+  const totalS = deptAccounting.I.s + deptAccounting.II.s;
+  profitRateHistory.push((totalC + totalV) > DEATH_THRESHOLD ? totalS / (totalC + totalV) : 0);
+  capitalStockHistory.push(proprietors.filter(p=>p.agentClass==='capitalist').reduce((s,p)=>s+(p.inventory['K']||0),0));
+
+  recipeTimer = Math.max(0, recipeTimer-1);
+  if (recipeTimer===0) document.getElementById('recipeToast').classList.remove('visible');
+  updateStats();
+}
+
 // ── Simulation step ──
 function step(){
+  if (mode === 'expanded') { stepExpanded(); return; }
   // Check depletion — halt if G≈0
   const Gpre = proprietors.reduce((s,p)=>s+p.totalGoods(),0);
   if (Gpre<DEATH_THRESHOLD){
@@ -1658,23 +2007,30 @@ function processLoanRepayments(){
 // ── Capital sub-mode toggles ──
 function setMerchantCapital(on){
   capitalSubModes.merchant = on;
+  if (on) proprietors.filter(p=>!p.dead).forEach(p => capitalEligible.merchant.add(p.id));
   document.getElementById('btn-merchant-on').className = on?'active':'';
   document.getElementById('btn-merchant-off').className = on?'':'active';
   document.getElementById('merchant-rates-container').style.display = on?'block':'none';
   if (on) renderMerchantRates();
   updateCapitalSubmodesDesc();
+  renderCapitalOwnerPickers();
+  markPresetDirty();
 }
 
 function setUsuryCapital(on){
   capitalSubModes.usury = on;
+  if (on) proprietors.filter(p=>!p.dead).forEach(p => capitalEligible.usury.add(p.id));
   document.getElementById('btn-usury-on').className = on?'active':'';
   document.getElementById('btn-usury-off').className = on?'':'active';
   document.getElementById('usury-settings').style.display = on?'block':'none';
   updateCapitalSubmodesDesc();
+  renderCapitalOwnerPickers();
+  markPresetDirty();
 }
 
 function setIndustrialCapital(on){
   capitalSubModes.industrial = on;
+  if (on) proprietors.filter(p=>!p.dead).forEach(p => capitalEligible.industrial.add(p.id));
   document.getElementById('btn-industrial-on').className = on?'active':'';
   document.getElementById('btn-industrial-off').className = on?'':'active';
   if (on){
@@ -1686,6 +2042,8 @@ function setIndustrialCapital(on){
     document.getElementById('btn-labor-implicit').style.opacity = '1';
   }
   updateCapitalSubmodesDesc();
+  renderCapitalOwnerPickers();
+  markPresetDirty();
 }
 
 function renderMerchantRates(){
@@ -1710,51 +2068,59 @@ function renderMerchantRates(){
 
 function onMerchantRateChange(sym, val){
   merchantExchangeRates[sym] = Math.max(1.0, Math.min(5.0, parseFloat(val) || 1.5));
+  markPresetDirty();
 }
 
 function updateUsuryRate(){
   const slider = document.getElementById('usuryRateSlider');
   usuryInterestRate = +slider.value / 100;
   document.getElementById('usury-rate-pct').textContent = slider.value;
+  markPresetDirty();
 }
 
 function updateUsuryInstallment(){
   const slider = document.getElementById('usuryInstallSlider');
   usuryInstallmentRatio = +slider.value / 100;
   document.getElementById('usury-install-pct').textContent = slider.value;
+  markPresetDirty();
 }
 
 function renderCapitalOwnerPickers(){
-  ['merchant','usury','industrial'].forEach(mode => {
-    const el = document.getElementById(mode+'-owners');
+  ['merchant','usury','industrial'].forEach(sm => {
+    const el = document.getElementById(sm+'-owners');
     if (!el) return;
     const alive = proprietors.filter(p => !p.dead);
-    const set = capitalEligible[mode];
-    const allOn = alive.every(p => set.has(p.id));
+    const isOn = capitalSubModes[sm];
+    const set = capitalEligible[sm];
+    const allOn = isOn && alive.every(p => set.has(p.id));
+    const dis = isOn ? '' : 'disabled';
+    const opac = isOn ? '' : 'opacity:0.4;';
     let html = '<div class="group-label" style="font-size:12px;margin-bottom:4px;">Owners</div>';
-    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">';
-    html += `<label style="font-size:12px;cursor:pointer;margin-right:4px;color:#8b949e;">`;
-    html += `<input type="checkbox" ${allOn?'checked':''} onchange="toggleAllCapitalOwners('${mode}',this.checked)" style="margin-right:2px;">All</label>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;${opac}">`;
+    html += `<label style="font-size:12px;cursor:${isOn?'pointer':'default'};margin-right:4px;color:#8b949e;">`;
+    html += `<input type="checkbox" ${allOn?'checked':''} ${dis} onchange="toggleAllCapitalOwners('${sm}',this.checked)" style="margin-right:2px;">All</label>`;
     for (const p of alive) {
-      const checked = set.has(p.id) ? 'checked' : '';
-      html += `<label style="font-size:12px;cursor:pointer;">`;
-      html += `<input type="checkbox" ${checked} onchange="toggleCapitalOwner('${mode}',${p.id},this.checked)" style="margin-right:2px;">${p.label}</label>`;
+      const checked = isOn && set.has(p.id) ? 'checked' : '';
+      html += `<label style="font-size:12px;cursor:${isOn?'pointer':'default'};">`;
+      html += `<input type="checkbox" ${checked} ${dis} onchange="toggleCapitalOwner('${sm}',${p.id},this.checked)" style="margin-right:2px;">${p.label}</label>`;
     }
     html += '</div>';
     el.innerHTML = html;
   });
 }
 
-function toggleCapitalOwner(mode, ownerId, on){
-  if (on) capitalEligible[mode].add(ownerId);
-  else capitalEligible[mode].delete(ownerId);
+function toggleCapitalOwner(md, ownerId, on){
+  if (on) capitalEligible[md].add(ownerId);
+  else capitalEligible[md].delete(ownerId);
   renderCapitalOwnerPickers();
+  markPresetDirty();
 }
 
-function toggleAllCapitalOwners(mode, on){
-  if (on) proprietors.filter(p=>!p.dead).forEach(p => capitalEligible[mode].add(p.id));
-  else capitalEligible[mode].clear();
+function toggleAllCapitalOwners(md, on){
+  if (on) proprietors.filter(p=>!p.dead).forEach(p => capitalEligible[md].add(p.id));
+  else capitalEligible[md].clear();
   renderCapitalOwnerPickers();
+  markPresetDirty();
 }
 
 function openCapitalModal(){
@@ -1836,6 +2202,13 @@ function draw(){
     ctx.fillText('CC \u2014 Stabilized Commodity Region', cx, cy-20);
     ctx.font='italic 33px Georgia'; ctx.fillStyle='#8b949eaa';
     ctx.fillText('C \u2192 M \u2192 C\u2032', cx, cy+20);
+  } else if (mode==='expanded'){
+    ctx.font='26px Georgia'; ctx.fillStyle='#ffa060';
+    ctx.fillText('Expanded Reproduction', cx, cy-28);
+    ctx.font='20px Georgia'; ctx.fillStyle='#ffa060aa';
+    ctx.fillText('Dept I (K)  \u00B7  Dept II (C)', cx, cy+4);
+    ctx.font='16px "SF Mono",Consolas,monospace'; ctx.fillStyle='#ffa06088';
+    ctx.fillText(`accum=${Math.round(expandedParams.accumRate*100)}%  s/v=${Math.round(expandedParams.rateExploitation*100)}%`, cx, cy+30);
   } else {
     ctx.font='26px Georgia'; ctx.fillStyle='#bfa0d4';
     ctx.fillText('Capital Circuit', cx, cy-20);
@@ -1990,11 +2363,15 @@ function draw(){
 
     let bg='#161b22', border='#30363d';
     if (p.dead) { bg='#0d0d0d'; border='#4a2020'; }
+    else if (mode==='expanded') {
+      if (p.agentClass==='capitalist') { border='#ff9f43'; bg='#3d2200'; }
+      else { border='#56d4dd'; bg='#0d2d30'; }
+    }
     else if (p.role==='buyer')     {border='#58a6ff'; bg='#0d2240';}
     else if (p.role==='seller')    {border='#f0883e'; bg='#3d1f00';}
     else if (p.role==='producer')  {border='#3fb950'; bg='#0a3d1c';}
     else if (p.role==='capitalist'){border='#d2a8ff'; bg='#2d1a4e';}
-    if (!p.dead && p.isCapitalist&&mode==='capital'){border='#d2a8ff'; bg='#2d1a4e';}
+    if (!p.dead && p.isCapitalist&&mode==='simple'){border='#d2a8ff'; bg='#2d1a4e';}
 
     ctx.beginPath(); ctx.arc(p.x,p.y,R,0,2*Math.PI);
     ctx.fillStyle=bg; ctx.fill();
@@ -2018,6 +2395,15 @@ function draw(){
       ctx.font=`${Math.max(14,R*0.38)}px "SF Mono",Consolas,monospace`;
       ctx.fillStyle='#9dd3ff';
       ctx.fillText(`m=${p.money.toFixed(1)}`, p.x, p.y+R*0.22);
+
+      // Class+dept label in expanded mode
+      if (mode==='expanded' && p.department > 0) {
+        const classLabel = p.agentClass==='capitalist' ? 'Cap' : 'Wkr';
+        const deptLabel = p.department===1 ? 'DI' : 'DII';
+        ctx.font=`${Math.max(11,R*0.28)}px "SF Mono",Consolas,monospace`;
+        ctx.fillStyle = p.agentClass==='capitalist' ? '#ff9f43' : '#56d4dd';
+        ctx.fillText(`${classLabel} ${deptLabel}`, p.x, p.y+R*0.55);
+      }
 
       // Inventory arc segments (colored arcs proportional to share of each type)
       const entries = Object.entries(p.inventory).filter(([_, q]) => q > DEATH_THRESHOLD);
@@ -2091,8 +2477,13 @@ function drawChart(){
     { key:'merchant', data: merchantCumHistory, color: '#ff9f43', label: 'Merchant \u03A3',   fmt: 1 },
     { key:'usury',    data: usuryCumHistory,    color: '#ffd700', label: 'Usury interest \u03A3', fmt: 1 },
     { key:'melt',     data: mevHistory,         color: '#58a6ff', label: 'MELT (V/M)',          fmt: 3 },
+    { key:'deptI',    data: deptIOutputHistory,  color: '#e06c75', label: 'Dept I K/t',    fmt: 1 },
+    { key:'deptII',   data: deptIIOutputHistory, color: '#3fb950', label: 'Dept II C/t',   fmt: 1 },
+    { key:'profRate', data: profitRateHistory,   color: '#d2a8ff', label: 'Profit rate',   fmt: 3 },
+    { key:'capitalStock', data: capitalStockHistory, color: '#ff9f43', label: 'K stock', fmt: 1 },
   ];
-  const series = allSeries.filter(s => chartVisible[s.key]);
+  const modeFilter = CHART_SERIES.filter(cs => !cs.modes || cs.modes.includes(mode)).map(cs => cs.key);
+  const series = allSeries.filter(s => chartVisible[s.key] && modeFilter.includes(s.key));
 
   const ROWS = Math.ceil(series.length / COLS);
   const totalW = W - pad.l - pad.r;
@@ -2198,10 +2589,12 @@ function drawChart(){
 function toggleChart(key){
   chartVisible[key] = !chartVisible[key];
   renderChartLegend();
+  markPresetDirty();
 }
 function renderChartLegend(){
   const el = document.getElementById('chart-legend');
-  el.innerHTML = CHART_SERIES.map(s =>
+  const visible = CHART_SERIES.filter(s => !s.modes || s.modes.includes(mode));
+  el.innerHTML = visible.map(s =>
     `<div class="legend-item${chartVisible[s.key]?'':' off'}" onclick="toggleChart('${s.key}')"><div class="legend-dot" style="background:${s.color}"></div> ${s.legendLabel}</div>`
   ).join('');
 }
@@ -2231,6 +2624,26 @@ function updateStats(){
   document.getElementById('stat-loans').textContent = loans.length;
   const uCum = usuryCumHistory.length ? usuryCumHistory[usuryCumHistory.length-1] : 0;
   document.getElementById('stat-usury').textContent = uCum.toFixed(1);
+
+  // Expanded mode stats
+  if (mode === 'expanded') {
+    document.getElementById('dept-I-c').textContent = deptAccounting.I.c.toFixed(0);
+    document.getElementById('dept-I-v').textContent = deptAccounting.I.v.toFixed(0);
+    document.getElementById('dept-I-s').textContent = deptAccounting.I.s.toFixed(0);
+    document.getElementById('dept-I-out').textContent = deptAccounting.I.output.toFixed(1);
+    document.getElementById('dept-II-c').textContent = deptAccounting.II.c.toFixed(0);
+    document.getElementById('dept-II-v').textContent = deptAccounting.II.v.toFixed(0);
+    document.getElementById('dept-II-s').textContent = deptAccounting.II.s.toFixed(0);
+    document.getElementById('dept-II-out').textContent = deptAccounting.II.output.toFixed(1);
+    document.getElementById('dept-W1').textContent = deptAccounting.I.v.toFixed(0);
+    // Q = Dept II profit realized = Dept II surplus
+    document.getElementById('dept-Q').textContent = deptAccounting.II.s.toFixed(0);
+    const tc = deptAccounting.I.c + deptAccounting.II.c;
+    const tv = deptAccounting.I.v + deptAccounting.II.v;
+    const ts = deptAccounting.I.s + deptAccounting.II.s;
+    const pr = (tc + tv) > DEATH_THRESHOLD ? (ts / (tc + tv) * 100) : 0;
+    document.getElementById('dept-profrate').textContent = pr.toFixed(1);
+  }
 }
 
 // ── Editable Leontief technology matrix ──
@@ -2348,6 +2761,7 @@ function setCoupling(on){
   document.getElementById('coupling-desc').textContent = on
     ? 'Each exchange triggers consumption: buying drives using.'
     : 'Consumption and exchange are independent processes.';
+  markPresetDirty();
 }
 
 // ── Log ──
@@ -2375,27 +2789,62 @@ function setArbitrage(on){
   allowArbitrage = on;
   document.getElementById('btn-arb-on').className = on ? 'active' : '';
   document.getElementById('btn-arb-off').className = on ? '' : 'active';
+  markPresetDirty();
 }
 
 function setMode(m){
   mode=m;
   document.getElementById('btn-mode-cc').className = m==='cc'?'active':'';
-  document.getElementById('btn-mode-capital').className = m==='capital'?'active':'';
+  document.getElementById('btn-mode-simple').className = m==='simple'?'active':'';
+  document.getElementById('btn-mode-expanded').className = m==='expanded'?'active':'';
   const badge = document.getElementById('modeBadge');
   if (m==='cc'){ badge.className='mode-badge cc'; badge.textContent='CC \u2014 Simple Circulation'; }
-  else { badge.className='mode-badge capital'; badge.textContent='Capital \u2014 M\u2192C\u2192M\u2032'; }
+  else if (m==='simple'){ badge.className='mode-badge simple'; badge.textContent='Simple Capital \u2014 M\u2192C\u2192M\u2032'; }
+  else { badge.className='mode-badge expanded'; badge.textContent='Expanded Reproduction'; }
   document.getElementById('mode-desc').textContent = m==='cc'
     ? 'Stabilized commodity region: circulation + value-conserving production. §9.14'
-    : 'Capital circuit: M \u2192 C \u2192 ... \u2192 M\u2032 with surplus extraction. §11.1';
-  if (m==='capital') setProd('conservative');
+    : m==='simple'
+    ? 'Capital circuit: M \u2192 C \u2192 ... \u2192 M\u2032 with surplus extraction. §11.1'
+    : 'Two-sector reproduction: Dept I (K) + Dept II (C). Robinson\u2019s identity.';
+  if (m==='simple') setProd('conservative');
 
   // Capital Forms group visibility
-  const showForms = m==='capital';
+  const showForms = m==='simple';
   document.getElementById('section-capital-forms').style.display = showForms?'flex':'none';
   document.getElementById('capital-forms-divider').style.display = showForms?'block':'none';
 
-  // Disable all sub-modes when leaving capital
-  if (m==='cc'){
+  // Expanded params visibility
+  const showExpanded = m==='expanded';
+  document.getElementById('section-expanded-params').style.display = showExpanded?'flex':'none';
+  document.getElementById('expanded-params-divider').style.display = showExpanded?'block':'none';
+  if (showExpanded) document.getElementById('section-expanded-params').classList.remove('section-collapsed');
+
+  // Hide/show sections based on mode
+  document.getElementById('section-production').style.display = showExpanded?'none':'flex';
+  document.getElementById('section-coupling').style.display = showExpanded?'none':'flex';
+  document.getElementById('section-labor').style.display = showExpanded?'none':'flex';
+  // Hide Leontief edit button in expanded mode
+  const leontiefBtns = document.querySelectorAll('.group > button[onclick="openLeontiefEditor()"]');
+  leontiefBtns.forEach(b => b.style.display = showExpanded?'none':'inline-block');
+
+  // Force-disable controls in expanded mode
+  if (showExpanded) {
+    setArbitrage(false);
+    document.getElementById('btn-arb-on').disabled = true;
+    document.getElementById('btn-arb-on').style.opacity = '0.4';
+    document.getElementById('btn-labor-implicit').disabled = true;
+    document.getElementById('btn-labor-implicit').style.opacity = '0.4';
+  } else {
+    document.getElementById('btn-arb-on').disabled = false;
+    document.getElementById('btn-arb-on').style.opacity = '1';
+    if (!capitalSubModes.industrial) {
+      document.getElementById('btn-labor-implicit').disabled = false;
+      document.getElementById('btn-labor-implicit').style.opacity = '1';
+    }
+  }
+
+  // Disable all sub-modes when leaving simple/capital
+  if (m!=='simple'){
     if (capitalSubModes.industrial) setIndustrialCapital(false);
     capitalSubModes.merchant = false;
     capitalSubModes.usury = false;
@@ -2413,6 +2862,7 @@ function setMode(m){
 
   // Clamp t_r slider bounds by mode
   if (laborMode==='commodity') updateTrSlider();
+  renderChartLegend();
   resetSim();
 }
 
@@ -2440,12 +2890,13 @@ function setLabor(m){
     ? 'Each producer adds their own labor. No money exchanged for labor.'
     : 'Labor is a commodity: producers pay t\u1D63 to hire a laborer. Surplus s = value-added \u2212 t\u1D63 retained by producer.';
   updateTrSlider();
+  markPresetDirty();
 }
 
 function updateTrSlider(){
   const slider = document.getElementById('trSlider');
   // Clamp bounds by mode
-  const minVal = mode==='capital' ? 10 : 50;
+  const minVal = (mode==='simple' || mode==='expanded') ? 10 : 50;
   slider.min = minVal;
   if (+slider.value < minVal) slider.value = minVal;
   trRatio = +slider.value / 100;
@@ -2455,6 +2906,33 @@ function updateTrSlider(){
   const desc = document.getElementById('tr-desc');
   if (pct >= 100) desc.textContent = 'Simple reproduction: t\u1D63 = value-added, no surplus (s=0).';
   else desc.textContent = `t\u1D63 = ${pct}% of value-added. Surplus s = ${100-pct}% retained by producer.`;
+  markPresetDirty();
+}
+
+// ── Expanded parameter sliders ──
+function updateAccumRate(){
+  const v = +document.getElementById('accumRateSlider').value;
+  expandedParams.accumRate = v / 100;
+  document.getElementById('accum-rate-pct').textContent = v;
+  markPresetDirty();
+}
+function updateExploitRate(){
+  const v = +document.getElementById('exploitRateSlider').value;
+  expandedParams.rateExploitation = v / 100;
+  document.getElementById('exploit-rate-pct').textContent = v;
+  markPresetDirty();
+}
+function updateWage(){
+  const v = +document.getElementById('wageSlider').value;
+  expandedParams.wagePerWorker = v;
+  document.getElementById('wage-val').textContent = v;
+  markPresetDirty();
+}
+function updateNumCap(){
+  const v = +document.getElementById('numCapSlider').value;
+  expandedParams.numCapitalists = v;
+  document.getElementById('num-cap-val').textContent = v;
+  if (mode === 'expanded') resetSim();
 }
 
 function togglePlay(){
@@ -2467,12 +2945,14 @@ function stepOnce(){
   if (G<DEATH_THRESHOLD){ logEntry('system','\u26A0 G\u22480 \u2014 cannot step, circulation halted.'); return; }
   step();
 }
+let _loadingPreset = false;
 function resetSim(){
   playing=false;
   document.getElementById('btn-play').innerHTML='\u25B6 Play';
   document.getElementById('btn-play').className='primary';
   document.getElementById('log').innerHTML='';
   resize(); init();
+  if (!_loadingPreset) markPresetDirty();
 }
 
 // ── Loop ──
@@ -2509,6 +2989,14 @@ canvas.addEventListener('click', (e) => {
 
 // ── Presets (localStorage) ──
 const PRESETS_KEY = 'sim-presets';
+let activePresetName = null;  // currently loaded preset name (null = unsaved state)
+
+function markPresetDirty(){
+  if (activePresetName !== null) {
+    activePresetName = null;
+    renderPresetList();
+  }
+}
 
 function getPresetState(){
   return {
@@ -2524,11 +3012,17 @@ function getPresetState(){
     TYPES: TYPES.map(t=>({name:t.name, color:t.color, sym:t.sym})),
     LEONTIEF_RECIPES: LEONTIEF_RECIPES.map(r=>({output:r.output, inputs:[...r.inputs], coeffs:[...r.coeffs]})),
     capitalSubModes: {...capitalSubModes},
+    capitalEligible: {
+      merchant: [...capitalEligible.merchant],
+      usury: [...capitalEligible.usury],
+      industrial: [...capitalEligible.industrial],
+    },
     merchantExchangeRates: {...merchantExchangeRates},
     usuryInterestRate,
     usuryInstallmentRatio,
     chartVisible: {...chartVisible},
-    collapsedSections: ['section-stats','section-production','section-labor','section-presets']
+    expandedParams: {...expandedParams},
+    collapsedSections: ['section-stats','section-production','section-labor','section-presets','section-expanded-params']
       .filter(id => document.getElementById(id)?.classList.contains('section-collapsed')),
   };
 }
@@ -2549,6 +3043,7 @@ function savePreset(name){
   const all = getAllPresets();
   all[name] = getPresetState();
   localStorage.setItem(PRESETS_KEY, JSON.stringify(all));
+  activePresetName = name;
   renderPresetList();
 }
 
@@ -2556,6 +3051,22 @@ function loadPreset(name){
   const all = getAllPresets();
   const s = all[name];
   if (!s) return;
+
+  // Backward compat: 'capital' → 'simple'
+  if (s.mode === 'capital') s.mode = 'simple';
+
+  // Restore expanded params
+  if (s.expandedParams) {
+    expandedParams = {...expandedParams, ...s.expandedParams};
+    document.getElementById('accumRateSlider').value = Math.round(expandedParams.accumRate * 100);
+    document.getElementById('accum-rate-pct').textContent = Math.round(expandedParams.accumRate * 100);
+    document.getElementById('exploitRateSlider').value = Math.round(expandedParams.rateExploitation * 100);
+    document.getElementById('exploit-rate-pct').textContent = Math.round(expandedParams.rateExploitation * 100);
+    document.getElementById('wageSlider').value = expandedParams.wagePerWorker;
+    document.getElementById('wage-val').textContent = expandedParams.wagePerWorker;
+    document.getElementById('numCapSlider').value = expandedParams.numCapitalists;
+    document.getElementById('num-cap-val').textContent = expandedParams.numCapitalists;
+  }
 
   // Restore TYPES and recipes before anything else (setMode may trigger resetSim)
   if (s.TYPES && s.TYPES.length > 0){
@@ -2599,13 +3110,6 @@ function loadPreset(name){
   // Mode (triggers resetSim internally)
   if (s.mode) setMode(s.mode);
 
-  // Capital sub-modes (must come after setMode since setMode('cc') disables them)
-  if (s.capitalSubModes && s.mode === 'capital'){
-    setMerchantCapital(!!s.capitalSubModes.merchant);
-    setUsuryCapital(!!s.capitalSubModes.usury);
-    setIndustrialCapital(!!s.capitalSubModes.industrial);
-  }
-
   // Chart visibility
   if (s.chartVisible){
     for (const k of CHART_SERIES.map(c=>c.key)) chartVisible[k] = s.chartVisible[k] !== false;
@@ -2614,7 +3118,7 @@ function loadPreset(name){
 
   // Sidebar collapsed sections
   if (s.collapsedSections){
-    for (const id of ['section-stats','section-production','section-labor','section-presets']){
+    for (const id of ['section-stats','section-production','section-labor','section-presets','section-expanded-params']){
       const el = document.getElementById(id);
       if (!el) continue;
       if (s.collapsedSections.includes(id)) el.classList.add('section-collapsed');
@@ -2622,8 +3126,26 @@ function loadPreset(name){
     }
   }
 
+  activePresetName = name;
   rebuildLeontief();
+  _loadingPreset = true;
   resetSim();
+  _loadingPreset = false;
+
+  // Capital sub-modes + eligibility must come after resetSim since init() resets them
+  if (s.capitalSubModes && s.mode === 'simple'){
+    setMerchantCapital(!!s.capitalSubModes.merchant);
+    setUsuryCapital(!!s.capitalSubModes.usury);
+    setIndustrialCapital(!!s.capitalSubModes.industrial);
+  }
+  if (s.capitalEligible) {
+    capitalEligible.merchant = new Set(s.capitalEligible.merchant || []);
+    capitalEligible.usury = new Set(s.capitalEligible.usury || []);
+    capitalEligible.industrial = new Set(s.capitalEligible.industrial || []);
+    renderCapitalOwnerPickers();
+  }
+
+  renderPresetList();
 }
 
 function deletePreset(name){
@@ -2638,12 +3160,18 @@ function renderPresetList(){
   const all = getAllPresets();
   const names = Object.keys(all);
   if (names.length === 0){ el.innerHTML = '<div class="desc">No saved presets.</div>'; return; }
-  el.innerHTML = names.map(n =>
-    `<div class="preset-item">
-      <span class="preset-name" onclick="loadPreset('${n.replace(/'/g,"\\'")}')" title="Load &quot;${n.replace(/"/g,'&quot;')}&quot;">${n}</span>
-      <button class="preset-delete" onclick="event.stopPropagation();deletePreset('${n.replace(/'/g,"\\'")}')" title="Delete">&times;</button>
-    </div>`
-  ).join('');
+  el.innerHTML = names.map(n => {
+    const isActive = (n === activePresetName);
+    const esc = n.replace(/'/g,"\\'");
+    const escH = n.replace(/"/g,'&quot;');
+    return `<div class="preset-item" style="${isActive?'background:#1f6feb22;border:1px solid #1f6feb44;':''}">
+      <span class="preset-name" onclick="loadPreset('${esc}')" title="Load &quot;${escH}&quot;" style="${isActive?'color:#58a6ff;font-weight:700;':''}">${isActive?'\u25B8 ':''}${n}</span>
+      <span style="display:flex;gap:2px;flex-shrink:0;">
+        <button class="preset-delete" onclick="event.stopPropagation();savePreset('${esc}')" title="Update" style="color:#3fb950;">\u21BB</button>
+        <button class="preset-delete" onclick="event.stopPropagation();deletePreset('${esc}')" title="Delete">&times;</button>
+      </span>
+    </div>`;
+  }).join('');
 }
 
 // Render preset list and chart legend on load
@@ -2658,7 +3186,7 @@ requestAnimationFrame(loop);
 (function(){
   var _d=function(b){return decodeURIComponent(escape(atob(b)))};
   var _1=_d('wqkgMjAyNSBZdWFuIFlhbyAmIEdhYnJpZWwgVHVwaW5hbWLDoQ==');
-  var _2=_d('IMK3IFRveSBtb2RlbCBmb3IgPGk+QSBQcmltZXIgb24gUGhlbm9tZW5vbG9naWNhbCBQb2xpdGljYWwgRWNvbm9teTwvaT4=');
+  var _2=_d('IMK3IER5bmFtaWMgbW9kZWwgZm9yIDxpPkEgUHJpbWVyIG9uIFBoZW5vbWVub2xvZ2ljYWwgUG9saXRpY2FsIEVjb25vbXk8L2k+');
   var _t=_1+_2;
   var _i=function(){
     if(document.getElementById('_m'))return;
