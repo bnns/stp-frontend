@@ -136,7 +136,9 @@
     flex-wrap: wrap;
     background: #0d1117;
   }
-  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; transition: opacity 0.15s; }
+  .legend-item.off { opacity: 0.3; }
+  .legend-item.off .legend-dot { background: #6e7681 !important; }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
   /* Floating log overlay */
@@ -405,6 +407,56 @@
     font-family: 'SF Mono','Consolas',monospace;
   }
   .recipe-toast.visible { opacity: 1; }
+
+  /* Presets */
+  .preset-input-row {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .preset-input-row input[type="text"] {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    background: #161b22;
+    color: #e6edf3;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .preset-input-row input[type="text"]::placeholder { color: #6e7681; }
+  .preset-input-row button:disabled { opacity: 0.4; cursor: default; }
+  .preset-list { display: flex; flex-direction: column; gap: 3px; max-height: 180px; overflow-y: auto; }
+  .preset-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.12s;
+  }
+  .preset-item:hover { background: #21262d; }
+  .preset-item .preset-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .preset-item .preset-delete {
+    background: none; border: none; color: #6e7681; cursor: pointer;
+    font-size: 15px; padding: 0 4px; line-height: 1; flex-shrink: 0;
+  }
+  .preset-item .preset-delete:hover { color: #da3633; }
+
+  #_m {
+    font-size: 11px !important;
+    color: #6e7681 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    height: auto !important;
+    overflow: visible !important;
+    pointer-events: auto !important;
+    clip: auto !important;
+    margin-left: auto;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+  }
+  #_m i { font-style: italic; }
 </style>
 <script src="https://cdn.counter.dev/script.js" data-id="594404c5-6814-4476-a5af-d35ddc284e98" data-utcoffset="-5"></script>
 </head>
@@ -556,6 +608,23 @@
       <div class="desc" id="capital-forms-desc">No sub-modes active.</div>
       <button onclick="openCapitalModal()">Configure</button>
     </div>
+
+    <div class="divider"></div>
+
+    <!-- Presets -->
+    <div class="group section-collapsed" id="section-presets">
+      <div class="collapsible-header" onclick="toggleSection('section-presets')">
+        <div class="group-label">Presets</div>
+        <span class="collapse-arrow">&#x25BC;</span>
+      </div>
+      <div class="collapsible-body">
+        <div class="preset-input-row">
+          <input type="text" id="preset-name-input" placeholder="Preset name&hellip;" oninput="document.getElementById('btn-save-preset').disabled=!this.value.trim()" onkeydown="if(event.key==='Enter'&&this.value.trim())savePreset()">
+          <button id="btn-save-preset" onclick="savePreset()" disabled>Save</button>
+        </div>
+        <div class="preset-list" id="preset-list"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ── Canvas column ── -->
@@ -631,15 +700,7 @@
       <div class="recipe-toast" id="recipeToast"></div>
     </div>
 
-    <div class="legend-bar">
-      <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> Money</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#f0883e"></div> Commodity</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div> Production</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#d2a8ff"></div> Capital &gamma;</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#da3633"></div> Consumption</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ff9f43"></div> Merchant</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ffd700"></div> Usury</div>
-    </div>
+    <div class="legend-bar" id="chart-legend"></div>
 
     <div class="chart-strip">
       <canvas id="chart"></canvas>
@@ -819,6 +880,21 @@ let stepLoanInterest = 0;
 let merchantCumHistory = [];
 let usuryCumHistory = [];
 let mevHistory = [];  // monetary expression of value: M/V
+
+// Chart series visibility (all on by default)
+const CHART_SERIES = [
+  { key:'goods',    color:'#f0883e', legendLabel:'Commodity' },
+  { key:'value',    color:'#79c0ff', legendLabel:'Value' },
+  { key:'share',    color:'#8b949e', legendLabel:'Value share' },
+  { key:'produced', color:'#3fb950', legendLabel:'Production' },
+  { key:'consumed', color:'#da3633', legendLabel:'Consumption' },
+  { key:'arbitrage',color:'#d2a8ff', legendLabel:'Arbitrage' },
+  { key:'surplus',  color:'#e06c75', legendLabel:'Surplus' },
+  { key:'merchant', color:'#ff9f43', legendLabel:'Merchant' },
+  { key:'usury',    color:'#ffd700', legendLabel:'Usury' },
+  { key:'melt',     color:'#58a6ff', legendLabel:'MELT' },
+];
+let chartVisible = Object.fromEntries(CHART_SERIES.map(s=>[s.key,true]));
 
 // ── Commodity types (sectors) ──
 let TYPES = [
@@ -2004,21 +2080,19 @@ function drawChart(){
   const cellPadR = 20; // right padding inside each cell for owner labels
   const gapX = 8, gapY = 4;
 
-  const series = [
-    // Row 1
-    { data: gHistory,              color: '#f0883e', label: '|G| goods',      fmt: 1 },
-    { data: vHistory,              color: '#79c0ff', label: 'V value',        fmt: 1 },
-    { multi: true, datasets: ownerValueHistories, label: 'Value share %', fmt: 0 },
-    { data: prodPerTickHistory,    color: '#3fb950', label: 'Produced/t',     fmt: 2 },
-    { data: consPerTickHistory,    color: '#da3633', label: 'Consumed/t',     fmt: 2 },
-    // Row 3
-    { data: arbCumHistory,     color: '#d2a8ff', label: 'Arbitrage \u03A3',   fmt: 1 },
-    { data: surplusCumHistory, color: '#e06c75', label: 'Surplus val \u03A3', fmt: 1 },
-    // Capital sub-mode charts
-    { data: merchantCumHistory, color: '#ff9f43', label: 'Merchant \u03A3',   fmt: 1 },
-    { data: usuryCumHistory,    color: '#ffd700', label: 'Usury interest \u03A3', fmt: 1 },
-    { data: mevHistory,         color: '#58a6ff', label: 'MELT (V/M)',          fmt: 3 },
+  const allSeries = [
+    { key:'goods',    data: gHistory,              color: '#f0883e', label: '|G| goods',      fmt: 1 },
+    { key:'value',    data: vHistory,              color: '#79c0ff', label: 'V value',        fmt: 1 },
+    { key:'share',    multi: true, datasets: ownerValueHistories, label: 'Value share %', fmt: 0 },
+    { key:'produced', data: prodPerTickHistory,    color: '#3fb950', label: 'Produced/t',     fmt: 2 },
+    { key:'consumed', data: consPerTickHistory,    color: '#da3633', label: 'Consumed/t',     fmt: 2 },
+    { key:'arbitrage',data: arbCumHistory,     color: '#d2a8ff', label: 'Arbitrage \u03A3',   fmt: 1 },
+    { key:'surplus',  data: surplusCumHistory, color: '#e06c75', label: 'Surplus val \u03A3', fmt: 1 },
+    { key:'merchant', data: merchantCumHistory, color: '#ff9f43', label: 'Merchant \u03A3',   fmt: 1 },
+    { key:'usury',    data: usuryCumHistory,    color: '#ffd700', label: 'Usury interest \u03A3', fmt: 1 },
+    { key:'melt',     data: mevHistory,         color: '#58a6ff', label: 'MELT (V/M)',          fmt: 3 },
   ];
+  const series = allSeries.filter(s => chartVisible[s.key]);
 
   const ROWS = Math.ceil(series.length / COLS);
   const totalW = W - pad.l - pad.r;
@@ -2119,6 +2193,17 @@ function drawChart(){
   chartCtx.font = '11px "SF Mono",Consolas,monospace'; chartCtx.fillStyle = '#8b949e';
   chartCtx.textAlign = 'right'; chartCtx.textBaseline = 'top';
   chartCtx.fillText(`t=${tick}`, W - pad.r, H - pad.b + 2);
+}
+
+function toggleChart(key){
+  chartVisible[key] = !chartVisible[key];
+  renderChartLegend();
+}
+function renderChartLegend(){
+  const el = document.getElementById('chart-legend');
+  el.innerHTML = CHART_SERIES.map(s =>
+    `<div class="legend-item${chartVisible[s.key]?'':' off'}" onclick="toggleChart('${s.key}')"><div class="legend-dot" style="background:${s.color}"></div> ${s.legendLabel}</div>`
+  ).join('');
 }
 
 function drawCellLabel(label, color, cx, cy, cellW){
@@ -2422,9 +2507,169 @@ canvas.addEventListener('click', (e) => {
   }
 });
 
+// ── Presets (localStorage) ──
+const PRESETS_KEY = 'sim-presets';
+
+function getPresetState(){
+  return {
+    mode,
+    prodMode,
+    allowArbitrage,
+    laborMode,
+    trRatio,
+    coupleExchangeConsumption,
+    numProprietors: +document.getElementById('numProprietors').value,
+    initCommodities: +document.getElementById('initCommodities').value,
+    speed: +document.getElementById('speed').value,
+    TYPES: TYPES.map(t=>({name:t.name, color:t.color, sym:t.sym})),
+    LEONTIEF_RECIPES: LEONTIEF_RECIPES.map(r=>({output:r.output, inputs:[...r.inputs], coeffs:[...r.coeffs]})),
+    capitalSubModes: {...capitalSubModes},
+    merchantExchangeRates: {...merchantExchangeRates},
+    usuryInterestRate,
+    usuryInstallmentRatio,
+    chartVisible: {...chartVisible},
+    collapsedSections: ['section-stats','section-production','section-labor','section-presets']
+      .filter(id => document.getElementById(id)?.classList.contains('section-collapsed')),
+  };
+}
+
+function getAllPresets(){
+  try { return JSON.parse(localStorage.getItem(PRESETS_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+
+function savePreset(name){
+  if (!name){
+    const input = document.getElementById('preset-name-input');
+    name = input.value.trim();
+    if (!name) return;
+    input.value = '';
+    document.getElementById('btn-save-preset').disabled = true;
+  }
+  const all = getAllPresets();
+  all[name] = getPresetState();
+  localStorage.setItem(PRESETS_KEY, JSON.stringify(all));
+  renderPresetList();
+}
+
+function loadPreset(name){
+  const all = getAllPresets();
+  const s = all[name];
+  if (!s) return;
+
+  // Restore TYPES and recipes before anything else (setMode may trigger resetSim)
+  if (s.TYPES && s.TYPES.length > 0){
+    TYPES = s.TYPES.map(t=>({name:t.name, color:t.color, sym:t.sym}));
+    N_SECTORS = TYPES.length;
+  }
+  if (s.LEONTIEF_RECIPES) LEONTIEF_RECIPES = s.LEONTIEF_RECIPES.map(r=>({output:r.output, inputs:[...r.inputs], coeffs:[...r.coeffs]}));
+  if (s.merchantExchangeRates) merchantExchangeRates = {...s.merchantExchangeRates};
+  if (s.usuryInterestRate != null) usuryInterestRate = s.usuryInterestRate;
+  if (s.usuryInstallmentRatio != null) usuryInstallmentRatio = s.usuryInstallmentRatio;
+
+  // Sliders
+  if (s.numProprietors != null){
+    document.getElementById('numProprietors').value = s.numProprietors;
+    document.getElementById('prop-count').textContent = s.numProprietors;
+  }
+  if (s.initCommodities != null){
+    document.getElementById('initCommodities').value = s.initCommodities;
+    document.getElementById('comm-count').textContent = s.initCommodities;
+  }
+  if (s.speed != null) document.getElementById('speed').value = s.speed;
+
+  // Usury sliders
+  document.getElementById('usuryRateSlider').value = Math.round(usuryInterestRate * 100);
+  document.getElementById('usury-rate-pct').textContent = Math.round(usuryInterestRate * 100);
+  document.getElementById('usuryInstallSlider').value = Math.round(usuryInstallmentRatio * 100);
+  document.getElementById('usury-install-pct').textContent = Math.round(usuryInstallmentRatio * 100);
+
+  // tr slider
+  if (s.trRatio != null){
+    trRatio = s.trRatio;
+    document.getElementById('trSlider').value = Math.round(trRatio * 100);
+  }
+
+  // Toggles (order matters: setMode before capital sub-modes)
+  if (s.coupleExchangeConsumption != null) setCoupling(s.coupleExchangeConsumption);
+  if (s.allowArbitrage != null) setArbitrage(s.allowArbitrage);
+  if (s.prodMode) setProd(s.prodMode);
+  if (s.laborMode) setLabor(s.laborMode);
+
+  // Mode (triggers resetSim internally)
+  if (s.mode) setMode(s.mode);
+
+  // Capital sub-modes (must come after setMode since setMode('cc') disables them)
+  if (s.capitalSubModes && s.mode === 'capital'){
+    setMerchantCapital(!!s.capitalSubModes.merchant);
+    setUsuryCapital(!!s.capitalSubModes.usury);
+    setIndustrialCapital(!!s.capitalSubModes.industrial);
+  }
+
+  // Chart visibility
+  if (s.chartVisible){
+    for (const k of CHART_SERIES.map(c=>c.key)) chartVisible[k] = s.chartVisible[k] !== false;
+    renderChartLegend();
+  }
+
+  // Sidebar collapsed sections
+  if (s.collapsedSections){
+    for (const id of ['section-stats','section-production','section-labor','section-presets']){
+      const el = document.getElementById(id);
+      if (!el) continue;
+      if (s.collapsedSections.includes(id)) el.classList.add('section-collapsed');
+      else el.classList.remove('section-collapsed');
+    }
+  }
+
+  rebuildLeontief();
+  resetSim();
+}
+
+function deletePreset(name){
+  const all = getAllPresets();
+  delete all[name];
+  localStorage.setItem(PRESETS_KEY, JSON.stringify(all));
+  renderPresetList();
+}
+
+function renderPresetList(){
+  const el = document.getElementById('preset-list');
+  const all = getAllPresets();
+  const names = Object.keys(all);
+  if (names.length === 0){ el.innerHTML = '<div class="desc">No saved presets.</div>'; return; }
+  el.innerHTML = names.map(n =>
+    `<div class="preset-item">
+      <span class="preset-name" onclick="loadPreset('${n.replace(/'/g,"\\'")}')" title="Load &quot;${n.replace(/"/g,'&quot;')}&quot;">${n}</span>
+      <button class="preset-delete" onclick="event.stopPropagation();deletePreset('${n.replace(/'/g,"\\'")}')" title="Delete">&times;</button>
+    </div>`
+  ).join('');
+}
+
+// Render preset list and chart legend on load
+renderPresetList();
+renderChartLegend();
+
 rebuildLeontief();
 resize(); init();
 requestAnimationFrame(loop);
+
+// ── _m ──
+(function(){
+  var _d=function(b){return decodeURIComponent(escape(atob(b)))};
+  var _1=_d('wqkgMjAyNSBZdWFuIFlhbyAmIEdhYnJpZWwgVHVwaW5hbWLDoQ==');
+  var _2=_d('IMK3IFRveSBtb2RlbCBmb3IgPGk+QSBQcmltZXIgb24gUGhlbm9tZW5vbG9naWNhbCBQb2xpdGljYWwgRWNvbm9teTwvaT4=');
+  var _t=_1+_2;
+  var _i=function(){
+    if(document.getElementById('_m'))return;
+    var e=document.createElement('div');e.id='_m';e.innerHTML=_t;
+    var h=document.querySelector('header');
+    if(h)h.appendChild(e);
+  };
+  _i();
+  new MutationObserver(_i).observe(document.body,{childList:true,subtree:true});
+  setInterval(_i,4000);
+})();
 </script>
 </body>
 </html>
