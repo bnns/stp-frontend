@@ -338,9 +338,58 @@
   }
 
   /* Production recipe callout (shown on canvas) */
+  /* Legend overlay */
+  .legend-overlay {
+    position: absolute;
+    top: 8px; left: 8px;
+    width: 280px;
+    max-height: 70%;
+    background: #0d1117ee;
+    border: 1px solid #21262d;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-size: 13px;
+    z-index: 10;
+  }
+  .legend-overlay.collapsed .legend-body { display: none; }
+  .legend-body {
+    overflow-y: auto;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .legend-section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #6e7681;
+    margin-top: 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #21262d;
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.4;
+  }
+  .legend-icon {
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+    font-size: 15px;
+  }
+  .legend-text {
+    color: #b1bac4;
+    font-size: 12px;
+  }
+  .legend-text b { color: #e6edf3; font-weight: 600; }
+
   .recipe-toast {
     position: absolute;
-    left: 50%; bottom: 12px;
     transform: translateX(-50%);
     background: #0a3d1cdd;
     border: 1px solid #3fb950;
@@ -352,7 +401,7 @@
     opacity: 0;
     transition: opacity 0.3s;
     z-index: 5;
-    white-space: nowrap;
+    text-align: center;
     font-family: 'SF Mono','Consolas',monospace;
   }
   .recipe-toast.visible { opacity: 1; }
@@ -521,6 +570,62 @@
         </div>
         <div class="log-entries" id="log"></div>
       </div>
+      <!-- Legend overlay -->
+      <div class="legend-overlay" id="legendOverlay">
+        <div class="log-hdr" onclick="toggleLegend()">
+          <span>Legend</span>
+          <span id="legendToggle">&#x25BC;</span>
+        </div>
+        <div class="legend-body">
+          <div class="legend-section-title">Node</div>
+          <div class="legend-row">
+            <span class="legend-icon" style="color:#f8fafc;font-weight:700;">O&#x2081;</span>
+            <span class="legend-text"><b>Name</b> &mdash; proprietor identity</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-icon" style="color:#9dd3ff;font-family:'SF Mono',Consolas,monospace;font-size:11px;">m=</span>
+            <span class="legend-text"><b>Money</b> &mdash; monetary holdings</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-icon"><span style="display:inline-block;width:18px;height:4px;border-radius:2px;background:linear-gradient(90deg,#f0883e,#e06c75,#9ea5b0);"></span></span>
+            <span class="legend-text"><b>Arcs</b> &mdash; inventory (goods owned)</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-icon" style="color:#f5a76e;">3.2</span>
+            <span class="legend-text"><b>Total</b> &mdash; goods quantity below node</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-icon" style="color:#6e7681;">&#x1F446;</span>
+            <span class="legend-text"><b>Click node</b> to inject money</span>
+          </div>
+
+          <div class="legend-section-title">Events</div>
+          <div class="legend-row">
+            <span class="legend-icon"><span style="display:inline-block;width:16px;height:2px;background:#fff;position:relative;top:-1px;"></span></span>
+            <span class="legend-text"><b style="color:#fff;">Exchange</b> &mdash; white arrows between buyer and seller</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-icon" style="color:#3fb950;">&#x25CB;</span>
+            <span class="legend-text"><b style="color:#3fb950;">Production</b> &mdash; green ring expands from producer</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-icon" style="color:#79c0ff;font-size:11px;font-family:'SF Mono',Consolas,monospace;">&#x2191;&#x2193;</span>
+            <span class="legend-text"><b style="color:#79c0ff;">Receipt</b> &mdash; &#x2191;gained &#x2193;lost per owner (exchange and production)</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-icon" style="color:#d2a8ff;">&#x25CF;</span>
+            <span class="legend-text"><b style="color:#d2a8ff;">Profit</b> &mdash; purple dots along M&#x2192;C&#x2192;M&#x2032; circuit</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-icon">&#x26F5;</span>
+            <span class="legend-text"><b style="color:#ff9f43;">Merchant</b> &mdash; ship sails in from abroad with Sp</span>
+          </div>
+          <div class="legend-row">
+            <span class="legend-icon"><span style="display:inline-block;width:16px;height:5px;background:#ffd700;border-radius:2px;position:relative;top:-1px;"></span></span>
+            <span class="legend-text"><b style="color:#ffd700;">Usury</b> &mdash; gold channel (thins as debt repaid)</span>
+          </div>
+        </div>
+      </div>
       <!-- Recipe toast -->
       <div class="recipe-toast" id="recipeToast"></div>
     </div>
@@ -533,9 +638,6 @@
       <div class="legend-item"><div class="legend-dot" style="background:#da3633"></div> Consumption</div>
       <div class="legend-item"><div class="legend-dot" style="background:#ff9f43"></div> Merchant</div>
       <div class="legend-item"><div class="legend-dot" style="background:#ffd700"></div> Usury</div>
-      <div class="legend-item" style="margin-left:auto;color:#6e7681">
-        Stabilizer P: production replenishes what circulation consumes (§9.14)
-      </div>
     </div>
 
     <div class="chart-strip">
@@ -579,6 +681,7 @@
       <div class="desc" style="font-size:12px;color:#6e7681;margin-bottom:8px;font-style:italic;">
         Increases total value V and MELT, but only because it appropriates value produced in a foreign CC &mdash; no new value is created within this circuit.
       </div>
+      <div id="merchant-owners" style="margin-bottom:8px;"></div>
       <div id="merchant-rates-container" style="display:none;">
         <div class="group-label" style="font-size:12px;margin-bottom:4px;">Value of 1 Sp relative to 1 unit of domestic good</div>
         <div id="merchant-rates-table" class="tech-matrix"></div>
@@ -600,6 +703,7 @@
       <div class="desc" style="font-size:12px;color:#6e7681;margin-bottom:8px;font-style:italic;">
         Does not change total value V or MELT. Usury only redistributes existing money between proprietors &mdash; it is parasitic on value already in circulation.
       </div>
+      <div id="usury-owners" style="margin-bottom:8px;"></div>
       <div id="usury-settings" style="display:none;">
         <div style="margin-bottom:8px;">
           <div class="group-label" style="font-size:12px;">Interest rate &mdash; <span id="usury-rate-pct">10</span>%</div>
@@ -627,6 +731,7 @@
       <div class="desc" style="font-size:13px;margin-bottom:8px;">
         Forces commodity labor mode: surplus value extracted from production. Disables implicit labor toggle.
       </div>
+      <div id="industrial-owners" style="margin-bottom:8px;"></div>
       <div class="desc" style="font-size:12px;color:#6e7681;font-style:italic;">
         Increases V and MELT through labor&rsquo;s value-added in production. The t&#7523; slider controls how surplus is distributed: at 100% the laborer receives the full value-added (no surplus appropriated); below 100% the producer retains the difference as surplus value s.
       </div>
@@ -693,6 +798,8 @@ let stepSurplusQty = 0;              // surplus value s this step
 
 // Capital sub-modes (independently toggleable)
 let capitalSubModes = { merchant: false, usury: false, industrial: false };
+// Which owners can participate in each sub-mode (sets of owner ids, default all)
+let capitalEligible = { merchant: new Set(), usury: new Set(), industrial: new Set() };
 
 // Merchant: foreign good + exchange rates
 const FOREIGN_GOOD = { name: 'spice', sym: 'Sp', color: '#ff9f43' };
@@ -896,6 +1003,8 @@ function init() {
   loans=[]; merchantCumHistory=[]; usuryCumHistory=[]; mevHistory=[];
   merchantExchangeRates = {};
   for (const t of TYPES) merchantExchangeRates[t.sym] = 1.5;
+  // Reset capital eligibility — all owners eligible by default
+  capitalEligible = { merchant: new Set(), usury: new Set(), industrial: new Set() };
 
   const cx = canvas.width/(2*DPR);
   const cy = canvas.height/(2*DPR);
@@ -921,6 +1030,12 @@ function init() {
   targetG = proprietors.reduce((s,p)=>s+p.totalGoods(), 0);
 
   ownerValueHistories = proprietors.map(() => []);
+  // Populate capital eligibility with all owner ids
+  for (const p of proprietors) {
+    capitalEligible.merchant.add(p.id);
+    capitalEligible.usury.add(p.id);
+    capitalEligible.industrial.add(p.id);
+  }
 
   logEntry('system',`Init ${n} proprietors, mode=${mode}, prod=${prodMode}, target |G|=${targetG.toFixed(1)}`);
   updateStats();
@@ -936,8 +1051,8 @@ function runExchanges(shuffled){
     if (p.roleTimer>0) continue;
     // Arbitrage: any proprietor can try to buy low / sell high (price ≠ value)
     if (allowArbitrage && p.money>=5 && Math.random()<0.15){ attemptCapital(p); continue; }
-    if (capitalSubModes.merchant && p.money>=5 && Math.random()<0.12){ attemptMerchantCapital(p); continue; }
-    if (capitalSubModes.usury && p.money>=10 && Math.random()<0.20){ attemptUsury(p); continue; }
+    if (capitalSubModes.merchant && capitalEligible.merchant.has(p.id) && p.money>=5 && Math.random()<0.12){ attemptMerchantCapital(p); continue; }
+    if (capitalSubModes.usury && capitalEligible.usury.has(p.id) && p.money>=10 && Math.random()<0.20){ attemptUsury(p); continue; }
     if (p.money>0 && Math.random()<0.5) attemptBuy(p);
     else if (p.totalGoods()>DEATH_THRESHOLD && Math.random()<0.4) attemptSell(p);
   }
@@ -991,6 +1106,8 @@ function step(){
       const prodOrder = [...shuffled].sort((a,b) => a.totalGoods() - b.totalGoods());
       for (const p of prodOrder){
         if (netProduced>=target) break;
+        // Industrial surplus production: only eligible owners produce beyond replacement
+        if (capitalSubModes.industrial && netProduced >= stepConsumedQty && !capitalEligible.industrial.has(p.id)) continue;
         const remaining = target - netProduced;
         const goodsBefore = p.totalGoods();
         if (attemptLeontief(p, remaining)) {
@@ -1030,9 +1147,12 @@ function step(){
   const M = proprietors.reduce((s,p)=>s+p.money,0);
   mHistory.push(M);
   mevHistory.push(M > DEATH_THRESHOLD ? GV / M : 0); // MELT: value per unit of money
-  const totalWealth = proprietors.reduce((s,p) => s + p.totalValue(), 0);
+  // MELT-adjusted value share: goodsValue + money × MELT
+  const melt = M > DEATH_THRESHOLD ? GV / M : 0;
+  const meltAdjusted = proprietors.map(p => p.goodsValue() + p.money * melt);
+  const totalMeltAdj = meltAdjusted.reduce((s,v) => s + v, 0);
   for (let i = 0; i < proprietors.length; i++){
-    const share = totalWealth > DEATH_THRESHOLD ? proprietors[i].totalValue() / totalWealth * 100 : 0;
+    const share = totalMeltAdj > DEATH_THRESHOLD ? meltAdjusted[i] / totalMeltAdj * 100 : 0;
     ownerValueHistories[i].push(share);
   }
   prodPerTickHistory.push(stepProducedQty);
@@ -1072,8 +1192,6 @@ function consumeGoods(props, rate){
       );
       if (qty < DEATH_THRESHOLD) continue;
       p.removeGoods(sym, qty);
-      const ctype = typeBySymbol(sym);
-      animations.push({type:'consume', x:p.x, y:p.y, progress:0, color:ctype?.color||'#da3633'});
       logEntry('depletion',`${p.label} consumed ${qty.toFixed(2)} ${sym}`);
       stepConsumedQty += qty;
     }
@@ -1116,8 +1234,6 @@ function attemptBuy(buyer){
       );
       if (cqty > DEATH_THRESHOLD) {
         buyer.removeGoods(csym, cqty);
-        const ctype = typeBySymbol(csym);
-        animations.push({type:'consume', x:buyer.x, y:buyer.y, progress:0, color:ctype?.color||'#da3633'});
         logEntry('depletion',`${buyer.label} consumed ${cqty.toFixed(2)} ${csym}`);
         stepConsumedQty += cqty;
       }
@@ -1161,8 +1277,6 @@ function attemptSell(seller){
       );
       if (cqty > DEATH_THRESHOLD) {
         buyer.removeGoods(csym, cqty);
-        const ctype = typeBySymbol(csym);
-        animations.push({type:'consume', x:buyer.x, y:buyer.y, progress:0, color:ctype?.color||'#da3633'});
         logEntry('depletion',`${buyer.label} consumed ${cqty.toFixed(2)} ${csym}`);
         stepConsumedQty += cqty;
       }
@@ -1275,22 +1389,25 @@ function attemptLeontief(producer, maxNetQty){
   // Animations
   const outType = typeBySymbol(outSym);
   animations.push({type:'production', x:producer.x, y:producer.y, progress:0});
-  const labelExtra = laborMode==='commodity' && laborer
-    ? `+${fullLaborValue.toFixed(1)} (t\u1D63=${tr.toFixed(1)}, s=${surplus.toFixed(1)})`
-    : `+${fullLaborValue.toFixed(1)}`;
-  animations.push({type:'produce_label', x:producer.x, y:producer.y, progress:0,
-    label:`\u2191 ${scale.toFixed(2)} ${outSym} ${labelExtra}`, color:outType?.color||'#3fb950'});
+  const inputsDown = Object.entries(inputQtys).map(([s,q])=>`\u2193${q.toFixed(1)}${s}`).join(' ');
+  const laborDown = laborMode==='commodity' && laborer ? ` \u2193t\u1D63=${tr.toFixed(1)}` : '';
+  animations.push({type:'produce_label', ownerId:producer.id, progress:0,
+    label:`\u2191${scale.toFixed(1)}${outSym}  ${inputsDown}${laborDown}`, color:outType?.color||'#3fb950'});
 
   const inStr  = Object.entries(inputQtys).map(([s,q])=>`${q.toFixed(2)}${s}`).join('+');
   const laborStr = laborMode==='commodity' && laborer
-    ? `+${fullLaborValue.toFixed(1)} labor (${laborer.label} t\u1D63=${tr.toFixed(1)}, s=${surplus.toFixed(1)})`
-    : `+${fullLaborValue.toFixed(1)} labor`;
+    ? `t=${fullLaborValue.toFixed(1)}, t\u1D63=${tr.toFixed(1)}\u2192${laborer.label}, t\u209B=${surplus.toFixed(1)}`
+    : `t=${fullLaborValue.toFixed(1)}`;
   const rLabel = recipeLabel(chosen);
   logEntry('production',`${producer.label}: ${inStr} \u2192 ${scale.toFixed(2)} ${outSym}  ${laborStr}  [${rLabel}]`);
 
-  // Recipe toast
+  // Recipe toast — position near the producer
   const toast = document.getElementById('recipeToast');
-  toast.textContent = `${producer.label}  ${rLabel}   ${inStr}\u2192${scale.toFixed(2)}${outSym} (${laborStr})`;
+  toast.innerHTML = `${producer.label} &nbsp;${rLabel} &nbsp; ${inStr}\u2192${scale.toFixed(2)}${outSym}<br>${laborStr}`;
+  const cxCanvas = canvas.width/(2*DPR), cyCanvas = canvas.height/(2*DPR);
+  const nodeR = Math.min(52, Math.min(cxCanvas,cyCanvas)*0.73*0.34);
+  toast.style.left = producer.x + 'px';
+  toast.style.top = (producer.y + nodeR + 36) + 'px';
   toast.classList.add('visible');
   recipeTimer = 20;
   return true;
@@ -1389,8 +1506,10 @@ function attemptMerchantCapital(merchant){
   buyer.role='buyer'; buyer.roleTimer=6;
   exchangeCount += 2;
 
-  animations.push({type:'capital', from:{x:seller.x,y:seller.y}, to:{x:merchant.x,y:merchant.y}, progress:0});
-  animations.push({type:'capital', from:{x:merchant.x,y:merchant.y}, to:{x:buyer.x,y:buyer.y}, progress:0});
+  // Ship sails in from center (abroad) to merchant, then merchant delivers to buyer
+  const cxAnim = canvas.width/(2*DPR), cyAnim = canvas.height/(2*DPR);
+  animations.push({type:'merchant', from:{x:cxAnim,y:cyAnim}, to:{x:merchant.x,y:merchant.y}, progress:0, label:`${foreignQty.toFixed(1)}Sp`});
+  animations.push({type:'exchange_arrow', from:{x:merchant.x,y:merchant.y}, to:{x:buyer.x,y:buyer.y}, progress:0, color:FOREIGN_GOOD.color, label:`${foreignQty.toFixed(1)}Sp`});
   logEntry('capital',`\uD83C\uDFEA ${merchant.label}: merchant ${qty.toFixed(2)}${sym}\u2192${foreignQty.toFixed(2)}Sp @${valueRate.toFixed(1)}\u00D7, profit=${profit.toFixed(1)} [${seller.label}\u2192${buyer.label}]`);
 }
 
@@ -1528,8 +1647,42 @@ function updateUsuryInstallment(){
   document.getElementById('usury-install-pct').textContent = slider.value;
 }
 
+function renderCapitalOwnerPickers(){
+  ['merchant','usury','industrial'].forEach(mode => {
+    const el = document.getElementById(mode+'-owners');
+    if (!el) return;
+    const alive = proprietors.filter(p => !p.dead);
+    const set = capitalEligible[mode];
+    const allOn = alive.every(p => set.has(p.id));
+    let html = '<div class="group-label" style="font-size:12px;margin-bottom:4px;">Owners</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">';
+    html += `<label style="font-size:12px;cursor:pointer;margin-right:4px;color:#8b949e;">`;
+    html += `<input type="checkbox" ${allOn?'checked':''} onchange="toggleAllCapitalOwners('${mode}',this.checked)" style="margin-right:2px;">All</label>`;
+    for (const p of alive) {
+      const checked = set.has(p.id) ? 'checked' : '';
+      html += `<label style="font-size:12px;cursor:pointer;">`;
+      html += `<input type="checkbox" ${checked} onchange="toggleCapitalOwner('${mode}',${p.id},this.checked)" style="margin-right:2px;">${p.label}</label>`;
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  });
+}
+
+function toggleCapitalOwner(mode, ownerId, on){
+  if (on) capitalEligible[mode].add(ownerId);
+  else capitalEligible[mode].delete(ownerId);
+  renderCapitalOwnerPickers();
+}
+
+function toggleAllCapitalOwners(mode, on){
+  if (on) proprietors.filter(p=>!p.dead).forEach(p => capitalEligible[mode].add(p.id));
+  else capitalEligible[mode].clear();
+  renderCapitalOwnerPickers();
+}
+
 function openCapitalModal(){
   renderMerchantRates();
+  renderCapitalOwnerPickers();
   document.getElementById('capitalModal').classList.remove('hidden');
 }
 function closeCapitalModal(){
@@ -1548,12 +1701,16 @@ function updateCapitalSubmodesDesc(){
 // ── Animations ──
 function addExchangeAnim(buyer, seller, sym, qty, price){
   const ctype = typeBySymbol(sym);
-  // Money arrow: buyer → seller
+  // Arrows without labels
   animations.push({type:'exchange_arrow', from:{x:buyer.x,y:buyer.y}, to:{x:seller.x,y:seller.y}, progress:0,
-    color:'#58a6ff', label:`m=${price.toFixed(1)}`});
-  // Commodity arrow: seller → buyer
+    color:'#58a6ff'});
   animations.push({type:'exchange_arrow', from:{x:seller.x,y:seller.y}, to:{x:buyer.x,y:buyer.y}, progress:0,
-    color:ctype?.color||'#f0883e', label:`${qty.toFixed(2)} ${sym}`});
+    color:ctype?.color||'#f0883e'});
+  // Receipts: what each party gained/lost
+  animations.push({type:'produce_label', ownerId:buyer.id, progress:0,
+    label:`\u2191${qty.toFixed(1)}${sym} \u2193m=${price.toFixed(1)}`, color:'#79c0ff'});
+  animations.push({type:'produce_label', ownerId:seller.id, progress:0,
+    label:`\u2191m=${price.toFixed(1)} \u2193${qty.toFixed(1)}${sym}`, color:'#f0883e'});
 }
 
 // ── Render ──
@@ -1646,6 +1803,7 @@ function draw(){
     const fadeMs = Math.max(1000, 3000/simSpd);
     const exchFade = 1/(fadeMs/1000*60);
     const spd = (a.type==='produce_label') ? 0.015
+              : (a.type==='merchant') ? 0.005
               : (a.type==='exchange_arrow') ? exchFade
               : 0.025;
     a.progress += spd;
@@ -1703,14 +1861,6 @@ function draw(){
       // Inner glow
       ctx.beginPath(); ctx.arc(a.x,a.y,s*0.5,0,2*Math.PI);
       ctx.strokeStyle='#3fb95044'; ctx.lineWidth=1; ctx.stroke();
-    } else if (a.type==='consume'){
-      const s=20*t;
-      ctx.beginPath(); ctx.arc(a.x,a.y+s*2,4*(1-t),0,2*Math.PI);
-      ctx.fillStyle=(a.color||'#da3633')+fade; ctx.fill();
-      // Downward arrow
-      ctx.font='21px Georgia'; ctx.fillStyle='#e8585a'+fade;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('\u2193', a.x, a.y+s*3);
     } else if (a.type==='capital'){
       const dx=a.to.x-a.from.x, dy=a.to.y-a.from.y;
       const bx=(a.from.x+a.to.x)/2 + (-dy*0.2);
@@ -1726,15 +1876,34 @@ function draw(){
         ctx.beginPath(); ctx.arc(tx,ty,3,0,2*Math.PI);
         ctx.fillStyle='#d2a8ff44'; ctx.fill();
       }
+    } else if (a.type==='merchant'){
+      // Ship emoji sailing from center (abroad) to merchant node
+      const dx=a.to.x-a.from.x, dy=a.to.y-a.from.y;
+      const px=a.from.x + dx*t;
+      const py=a.from.y + dy*t;
+      ctx.save();
+      ctx.globalAlpha = 1-t*0.3;
+      ctx.font = '84px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('\u26F5', px, py);
+      // Cargo label below ship
+      if (a.label){
+        ctx.font = 'bold 16px "SF Mono",Consolas,monospace';
+        ctx.fillStyle = '#f0f6fc';
+        ctx.fillText(a.label, px, py + 50);
+      }
+      ctx.restore();
     } else if (a.type==='produce_label'){
-      // Floating upward label showing what was produced
+      // Floating upward label showing what was produced, anchored to owner's current position
+      const owner = proprietors[a.ownerId];
+      if (!owner) continue;
       const rise = 70 * t;
       const nodeR = Math.min(52, radius*0.34);
-      const startY = a.y - nodeR - 16;
+      const startY = owner.y - nodeR - 16;
       ctx.font='bold 24px "SF Mono",Consolas,monospace';
       ctx.fillStyle = a.color + fade;
       ctx.textAlign='center'; ctx.textBaseline='bottom';
-      ctx.fillText(a.label, a.x, startY - rise);
+      ctx.fillText(a.label, owner.x, startY - rise);
     }
   }
 
@@ -1807,8 +1976,7 @@ function draw(){
     }
   }
 
-  // ── Node anatomy legend (top-left) ──
-  drawNodeLegend(ctx);
+
 
   // Depletion warning
   const G = proprietors.reduce((s,p)=>s+p.totalGoods(),0);
@@ -1821,95 +1989,6 @@ function draw(){
   }
 
   drawChart();
-}
-
-function drawNodeLegend(ctx){
-  const lx = 18, ly = 16; // top-left origin
-  const R = 44; // legend node radius (2x)
-  const nodeCx = lx + R + 16, nodeCy = ly + R + 48; // extra top margin below title
-
-  // Background panel
-  const pw = 420, ph = 306;
-  ctx.fillStyle = '#0d1117dd';
-  ctx.strokeStyle = '#30363d';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(lx, ly, pw, ph, 10);
-  ctx.fill(); ctx.stroke();
-
-  // Title
-  ctx.font = '16px Georgia';
-  ctx.fillStyle = '#b1bac4';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText('NODE ANATOMY', lx + 14, ly + 10);
-
-  // Draw example node
-  ctx.beginPath(); ctx.arc(nodeCx, nodeCy, R, 0, 2*Math.PI);
-  ctx.fillStyle = '#161b22'; ctx.fill();
-  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 2.5; ctx.stroke();
-
-  // Name in node
-  ctx.font = 'bold 24px Georgia';
-  ctx.fillStyle = '#f8fafc'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('O\u2081', nodeCx, nodeCy - 10);
-
-  // Money in node
-  ctx.font = '20px "SF Mono",Consolas,monospace';
-  ctx.fillStyle = '#9dd3ff';
-  ctx.fillText('m=13.0', nodeCx, nodeCy + 16);
-
-  // Inventory arc segments around node
-  const legendColors = ['#f0883e','#e06c75','#9ea5b0','#bc8cff','#a67c52'];
-  let legendAngle = -Math.PI/2;
-  const segAngle = 2*Math.PI / legendColors.length;
-  for (let i = 0; i < legendColors.length; i++){
-    ctx.beginPath();
-    ctx.arc(nodeCx, nodeCy, R + 10, legendAngle, legendAngle + segAngle - 0.08);
-    ctx.strokeStyle = legendColors[i];
-    ctx.lineWidth = 6;
-    ctx.stroke();
-    legendAngle += segAngle;
-  }
-
-  // Goods total below
-  ctx.font = '18px Georgia'; ctx.fillStyle = '#f5a76ecc';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText('3.2', nodeCx, nodeCy + R + 14);
-
-  // Callout lines and labels
-  const labelX = lx + 195;
-  const callouts = [
-    { label: 'proprietor name',  sx: nodeCx + 10, sy: nodeCy - 10, ex: labelX, ey: nodeCy - 36, lineColor: '#e0e6ef', textColor: '#f0f6fc' },
-    { label: 'money holdings',   sx: nodeCx + 14, sy: nodeCy + 16, ex: labelX, ey: nodeCy + 4,  lineColor: '#7bbfef', textColor: '#9dd3ff' },
-    { label: 'inventory arcs (owned goods)', sx: nodeCx + R + 10, sy: nodeCy - 6, ex: labelX, ey: nodeCy + 42, lineColor: '#d09060', textColor: '#f5a76e' },
-    { label: 'goods total',  sx: nodeCx, sy: nodeCy + R + 20, ex: labelX, ey: nodeCy + 78, lineColor: '#c08050', textColor: '#f5a76e' },
-  ];
-
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  for (const c of callouts){
-    // Leader line — bright, visible stroke
-    ctx.beginPath();
-    ctx.moveTo(c.sx, c.sy);
-    ctx.lineTo(c.ex - 4, c.ey);
-    ctx.strokeStyle = c.lineColor; ctx.lineWidth = 1.5; ctx.stroke();
-    // Dot at source
-    ctx.beginPath(); ctx.arc(c.sx, c.sy, 3, 0, 2*Math.PI);
-    ctx.fillStyle = c.lineColor; ctx.fill();
-    // Dot at label end
-    ctx.beginPath(); ctx.arc(c.ex - 4, c.ey, 2, 0, 2*Math.PI);
-    ctx.fillStyle = c.lineColor; ctx.fill();
-    // Label
-    ctx.font = '17px Georgia';
-    ctx.fillStyle = c.textColor;
-    ctx.fillText(c.label, c.ex, c.ey);
-  }
-
-  // Click hint
-  ctx.font = 'italic 14px Georgia';
-  ctx.fillStyle = '#6e7681';
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText('Click any node to inject money', lx + 14, ly + ph - 22);
 }
 
 function drawChart(){
@@ -2198,6 +2277,11 @@ function toggleLog(){
   const o = document.getElementById('logOverlay');
   o.classList.toggle('collapsed');
   document.getElementById('logToggle').textContent = o.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
+}
+function toggleLegend(){
+  const o = document.getElementById('legendOverlay');
+  o.classList.toggle('collapsed');
+  document.getElementById('legendToggle').textContent = o.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
 }
 
 // ── Controls ──
