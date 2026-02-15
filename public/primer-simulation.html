@@ -378,8 +378,6 @@
       <div class="desc" id="mode-desc">Stabilized commodity region: circulation + value-conserving production. §9.14</div>
     </div>
 
-    <div class="divider"></div>
-
     <div class="group">
       <div class="group-label">Simulation</div>
       <div class="btn-row">
@@ -415,12 +413,26 @@
       <div class="collapsible-body">
         <div class="stat-row"><span>Goods |G|</span><span class="stat-value" id="stat-G">0</span></div>
         <div class="stat-row"><span>Total money M</span><span class="stat-value" id="stat-Mcirc">0</span></div>
-        <div class="stat-row"><span>Total value V</span><span class="stat-value" id="stat-Mtotal">0</span></div>
+        <div class="stat-row"><span>Goods value V</span><span class="stat-value" id="stat-Mtotal">0</span></div>
         <div class="stat-row"><span>Exchanges</span><span class="stat-value" id="stat-exchanges">0</span></div>
         <div class="stat-row"><span>Productions</span><span class="stat-value" id="stat-productions">0</span></div>
-        <div class="stat-row"><span>Surplus &delta;</span><span class="stat-value" id="stat-surplus">0</span></div>
-        <div class="stat-row"><span>Labor surplus s</span><span class="stat-value" id="stat-surplus-labor">0</span></div>
+        <div class="stat-row"><span>Arbitrage &delta;</span><span class="stat-value" id="stat-surplus">0</span></div>
+        <div class="stat-row"><span>Surplus value s</span><span class="stat-value" id="stat-surplus-labor">0</span></div>
+        <div class="stat-row"><span>Merchant profit</span><span class="stat-value" id="stat-merchant">0</span></div>
+        <div class="stat-row"><span>Active loans</span><span class="stat-value" id="stat-loans">0</span></div>
+        <div class="stat-row"><span>Usury interest</span><span class="stat-value" id="stat-usury">0</span></div>
       </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="group">
+      <div class="group-label">Arbitrage</div>
+      <div class="btn-row">
+        <button id="btn-arb-on" onclick="setArbitrage(true)">On</button>
+        <button id="btn-arb-off" class="active" onclick="setArbitrage(false)">Off</button>
+      </div>
+      <div class="desc" id="arb-desc">Any proprietor can buy low, sell high (price &ne; value). Independent of mode.</div>
     </div>
 
     <div class="divider"></div>
@@ -485,6 +497,15 @@
       <div class="desc" id="leontief-summary"></div>
       <button onclick="openLeontiefEditor()">Edit Matrix</button>
     </div>
+
+    <div class="divider" id="capital-forms-divider" style="display:none"></div>
+
+    <!-- Capital Sub-Modes -->
+    <div class="group" id="section-capital-forms" style="display:none">
+      <div class="group-label">Capital Forms</div>
+      <div class="desc" id="capital-forms-desc">No sub-modes active.</div>
+      <button onclick="openCapitalModal()">Configure</button>
+    </div>
   </div>
 
   <!-- ── Canvas column ── -->
@@ -510,6 +531,8 @@
       <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div> Production</div>
       <div class="legend-item"><div class="legend-dot" style="background:#d2a8ff"></div> Capital &gamma;</div>
       <div class="legend-item"><div class="legend-dot" style="background:#da3633"></div> Consumption</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff9f43"></div> Merchant</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ffd700"></div> Usury</div>
       <div class="legend-item" style="margin-left:auto;color:#6e7681">
         Stabilizer P: production replenishes what circulation consumes (§9.14)
       </div>
@@ -532,6 +555,82 @@
       Edit input coefficients and commodities. Column sums &lt; 1 &rArr; productive economy.
     </div>
     <div class="tech-matrix" id="techMatrix"></div>
+  </div>
+</div>
+
+<!-- Capital Sub-Modes Modal -->
+<div class="modal-overlay hidden" id="capitalModal" onclick="if(event.target===this)closeCapitalModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Capital Sub-Modes</h2>
+      <button class="modal-close" onclick="closeCapitalModal()">&times;</button>
+    </div>
+
+    <!-- Merchant Capital -->
+    <div style="margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-weight:700;font-size:15px;color:#ff9f43;">Merchant Capital</span>
+        <button id="btn-merchant-on" onclick="setMerchantCapital(true)">On</button>
+        <button id="btn-merchant-off" class="active" onclick="setMerchantCapital(false)">Off</button>
+      </div>
+      <div class="desc" style="font-size:13px;margin-bottom:8px;">
+        Buy domestic goods, trade abroad 1:1 for foreign spice (Sp), sell domestically. Sp has higher value than domestic goods, so the merchant realizes a monetary profit from the value asymmetry.
+      </div>
+      <div class="desc" style="font-size:12px;color:#6e7681;margin-bottom:8px;font-style:italic;">
+        Increases total value V and MELT, but only because it appropriates value produced in a foreign CC &mdash; no new value is created within this circuit.
+      </div>
+      <div id="merchant-rates-container" style="display:none;">
+        <div class="group-label" style="font-size:12px;margin-bottom:4px;">Value of 1 Sp relative to 1 unit of domestic good</div>
+        <div id="merchant-rates-table" class="tech-matrix"></div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #30363d;margin:12px 0;"></div>
+
+    <!-- Usury Capital -->
+    <div style="margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-weight:700;font-size:15px;color:#ffd700;">Usury Capital</span>
+        <button id="btn-usury-on" onclick="setUsuryCapital(true)">On</button>
+        <button id="btn-usury-off" class="active" onclick="setUsuryCapital(false)">Off</button>
+      </div>
+      <div class="desc" style="font-size:13px;margin-bottom:8px;">
+        Rich proprietors lend money to cash-poor ones. Interest absorbs value from debtors over time.
+      </div>
+      <div class="desc" style="font-size:12px;color:#6e7681;margin-bottom:8px;font-style:italic;">
+        Does not change total value V or MELT. Usury only redistributes existing money between proprietors &mdash; it is parasitic on value already in circulation.
+      </div>
+      <div id="usury-settings" style="display:none;">
+        <div style="margin-bottom:8px;">
+          <div class="group-label" style="font-size:12px;">Interest rate &mdash; <span id="usury-rate-pct">10</span>%</div>
+          <input type="range" id="usuryRateSlider" min="5" max="50" value="10" step="1"
+                 oninput="updateUsuryRate()" style="width:100%;accent-color:#ffd700;">
+        </div>
+        <div>
+          <div class="group-label" style="font-size:12px;">Installment ratio &mdash; <span id="usury-install-pct">15</span>%</div>
+          <input type="range" id="usuryInstallSlider" min="5" max="40" value="15" step="1"
+                 oninput="updateUsuryInstallment()" style="width:100%;accent-color:#ffd700;">
+          <div class="desc" style="font-size:12px;">Fraction of debtor's money paid per step toward loan.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #30363d;margin:12px 0;"></div>
+
+    <!-- Industrial Capital -->
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-weight:700;font-size:15px;color:#e06c75;">Industrial Capital</span>
+        <button id="btn-industrial-on" onclick="setIndustrialCapital(true)">On</button>
+        <button id="btn-industrial-off" class="active" onclick="setIndustrialCapital(false)">Off</button>
+      </div>
+      <div class="desc" style="font-size:13px;margin-bottom:8px;">
+        Forces commodity labor mode: surplus value extracted from production. Disables implicit labor toggle.
+      </div>
+      <div class="desc" style="font-size:12px;color:#6e7681;font-style:italic;">
+        Increases V and MELT through labor&rsquo;s value-added in production. The t&#7523; slider controls how surplus is distributed: at 100% the laborer receives the full value-added (no surplus appropriated); below 100% the producer retains the difference as surplus value s.
+      </div>
+    </div>
   </div>
 </div>
 
@@ -569,10 +668,18 @@ let animations = [];
 let gHistory = [];
 let vHistory = [];
 let mHistory = [];
-let exchPerTickHistory = [];
+let ownerValueHistories = [];
 let prodPerTickHistory = [];
 let consPerTickHistory = [];
+let arbCumHistory = [];
+let surplusCumHistory = [];
+let allowArbitrage = false;         // toggle for capital arbitrage
 let recipeTimer = 0;
+
+const OWNER_COLORS = [
+  '#f0883e','#79c0ff','#3fb950','#d2a8ff','#e06c75','#56d4dd',
+  '#d4a76a','#9ea5b0','#ff69b4','#ffd700','#b87333','#32cd32',
+];
 let targetG = 0; // Leontief equilibrium target for |G|
 let laborMode = 'implicit'; // 'implicit' | 'commodity'
 let trRatio = 1.0;          // t_r / value_added, from slider (0.1 to 1.0)
@@ -580,32 +687,56 @@ let surplusLabor = 0;       // cumulative surplus s from production
 let coupleExchangeConsumption = true;  // couple exchange with consumption
 let currentConsRate = 0.055;           // updated each step by stabilizer
 let stepConsumedQty = 0;              // total units consumed this step (coupled mode)
+let stepProducedQty = 0;              // total units produced this step (gross output)
+let stepArbQty = 0;                   // arbitrage δ this step
+let stepSurplusQty = 0;              // surplus value s this step
+
+// Capital sub-modes (independently toggleable)
+let capitalSubModes = { merchant: false, usury: false, industrial: false };
+
+// Merchant: foreign good + exchange rates
+const FOREIGN_GOOD = { name: 'spice', sym: 'Sp', color: '#ff9f43' };
+let merchantExchangeRates = {};  // sym → value multiplier (value of 1 Sp relative to 1 domestic good)
+
+// Usury: loans + settings
+let loans = [];  // { lenderId, borrowerId, principal, remaining, interestRate }
+let usuryInterestRate = 0.10;
+let usuryInstallmentRatio = 0.15;  // fraction of debtor's money per step
+
+// Per-step accumulators
+let stepMerchantProfit = 0;
+let stepLoanInterest = 0;
+
+// Cumulative history for charts
+let merchantCumHistory = [];
+let usuryCumHistory = [];
+let mevHistory = [];  // monetary expression of value: M/V
 
 // ── Commodity types (sectors) ──
 let TYPES = [
   { name:'wheat', color:'#f0883e', sym:'W' },
   { name:'cloth', color:'#e06c75', sym:'Cl'},
-  { name:'iron',  color:'#9ea5b0', sym:'Fe'},
-  { name:'wine',  color:'#bc8cff', sym:'Vi'},
-  { name:'wood',  color:'#a67c52', sym:'Wd'},
-  { name:'salt',  color:'#d0d0d0', sym:'Sa'},
-  { name:'fish',  color:'#56d4dd', sym:'Fi'},
-  { name:'bread', color:'#d4a76a', sym:'Br'},
 ];
 let N_SECTORS = TYPES.length;
 
 // Pool of extra commodities for the "Add" button
 const COMMODITY_POOL = [
-  { name:'coal',   sym:'Co', color:'#777777' },
-  { name:'gold',   sym:'Au', color:'#ffd700' },
-  { name:'silk',   sym:'Si', color:'#ff69b4' },
-  { name:'oil',    sym:'Oi', color:'#4a7a3a' },
-  { name:'corn',   sym:'Cn', color:'#e8d44d' },
-  { name:'copper', sym:'Cu', color:'#b87333' },
-  { name:'tea',    sym:'Te', color:'#567d46' },
-  { name:'tin',    sym:'Sn', color:'#8b8b83' },
-  { name:'sugar',  sym:'Su', color:'#f5f5dc' },
-  { name:'lime',   sym:'Li', color:'#32cd32' },
+  { name:'iron',  sym:'Fe', color:'#9ea5b0' },
+  { name:'wine',  sym:'Vi', color:'#bc8cff' },
+  { name:'wood',  sym:'Wd', color:'#a67c52' },
+  { name:'salt',  sym:'Sa', color:'#d0d0d0' },
+  { name:'fish',  sym:'Fi', color:'#56d4dd' },
+  { name:'bread', sym:'Br', color:'#d4a76a' },
+  { name:'coal',  sym:'Co', color:'#777777' },
+  { name:'gold',  sym:'Au', color:'#ffd700' },
+  { name:'silk',  sym:'Si', color:'#ff69b4' },
+  { name:'oil',   sym:'Oi', color:'#4a7a3a' },
+  { name:'corn',  sym:'Cn', color:'#e8d44d' },
+  { name:'copper',sym:'Cu', color:'#b87333' },
+  { name:'tea',   sym:'Te', color:'#567d46' },
+  { name:'tin',   sym:'Sn', color:'#8b8b83' },
+  { name:'sugar', sym:'Su', color:'#f5f5dc' },
+  { name:'lime',  sym:'Li', color:'#32cd32' },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -614,14 +745,8 @@ const COMMODITY_POOL = [
 // The economy is fully circular: every good is both produced and consumed.
 // ═══════════════════════════════════════════════════════════════
 let LEONTIEF_RECIPES = [
-  { output:'W',  inputs:['Br','Fi'], coeffs:[0.4,0.4] },
-  { output:'Cl', inputs:['Fe','Wd'], coeffs:[0.4,0.4] },
-  { output:'Fe', inputs:['Wd','Sa'], coeffs:[0.4,0.4] },
-  { output:'Vi', inputs:['W','Wd'],  coeffs:[0.4,0.4] },
-  { output:'Wd', inputs:['Br','Fe'], coeffs:[0.4,0.4] },
-  { output:'Sa', inputs:['Cl','Vi'], coeffs:[0.4,0.4] },
-  { output:'Fi', inputs:['Wd','W'],  coeffs:[0.4,0.4] },
-  { output:'Br', inputs:['W','Sa'],  coeffs:[0.4,0.4] },
+  { output:'W',  inputs:['Cl','Cl'], coeffs:[0.4,0.4] },
+  { output:'Cl', inputs:['W','W'],   coeffs:[0.4,0.4] },
 ];
 
 function recipeLabel(r){ return r.inputs.join('+') + ' \u2192 ' + r.output; }
@@ -681,7 +806,7 @@ function rebuildLeontief(){
   updateLeontiefSummary();
 }
 
-function typeBySymbol(s) { return TYPES.find(t => t.sym === s); }
+function typeBySymbol(s) { return TYPES.find(t => t.sym === s) || (s === FOREIGN_GOOD.sym ? FOREIGN_GOOD : undefined); }
 
 // ── Proprietor (continuous inventory) ──
 class Proprietor {
@@ -723,7 +848,32 @@ class Proprietor {
     return entries[entries.length - 1][0];
   }
   totalValue() {
-    return this.money + this.totalGoods() * UNIT_PRICE;
+    let goodsValue = 0;
+    for (const [sym, qty] of Object.entries(this.inventory)) {
+      if (qty < DEATH_THRESHOLD) continue;
+      if (sym === FOREIGN_GOOD.sym) {
+        const rates = Object.values(merchantExchangeRates);
+        const avgRate = rates.length ? rates.reduce((s,r)=>s+r,0)/rates.length : 1.5;
+        goodsValue += qty * UNIT_PRICE * avgRate;
+      } else {
+        goodsValue += qty * UNIT_PRICE;
+      }
+    }
+    return this.money + goodsValue;
+  }
+  goodsValue() {
+    let gv = 0;
+    for (const [sym, qty] of Object.entries(this.inventory)) {
+      if (qty < DEATH_THRESHOLD) continue;
+      if (sym === FOREIGN_GOOD.sym) {
+        const rates = Object.values(merchantExchangeRates);
+        const avgRate = rates.length ? rates.reduce((s,r)=>s+r,0)/rates.length : 1.5;
+        gv += qty * UNIT_PRICE * avgRate;
+      } else {
+        gv += qty * UNIT_PRICE;
+      }
+    }
+    return gv;
   }
   checkDeath() {
     if (!this.dead && this.money < DEATH_THRESHOLD && this.totalGoods() < DEATH_THRESHOLD) {
@@ -741,8 +891,11 @@ function init() {
   const initC = +document.getElementById('initCommodities').value;
   proprietors = []; animations = [];
   tick=0; exchangeCount=0; productionCount=0; surplusAccumulated=0; surplusLabor=0;
-  gHistory=[]; vHistory=[]; mHistory=[];
-  exchPerTickHistory=[]; prodPerTickHistory=[]; consPerTickHistory=[];
+  gHistory=[]; vHistory=[]; mHistory=[]; ownerValueHistories=[];
+  prodPerTickHistory=[]; consPerTickHistory=[]; arbCumHistory=[]; surplusCumHistory=[];
+  loans=[]; merchantCumHistory=[]; usuryCumHistory=[]; mevHistory=[];
+  merchantExchangeRates = {};
+  for (const t of TYPES) merchantExchangeRates[t.sym] = 1.5;
 
   const cx = canvas.width/(2*DPR);
   const cy = canvas.height/(2*DPR);
@@ -767,16 +920,24 @@ function init() {
   // Set Leontief target: |G| should stay at this level in conservative mode
   targetG = proprietors.reduce((s,p)=>s+p.totalGoods(), 0);
 
+  ownerValueHistories = proprietors.map(() => []);
+
   logEntry('system',`Init ${n} proprietors, mode=${mode}, prod=${prodMode}, target |G|=${targetG.toFixed(1)}`);
   updateStats();
 }
 
 // ── Exchange helper (extracted so coupled mode can reorder) ──
 function runExchanges(shuffled){
+  // Process loan repayments at start of exchange phase
+  if (capitalSubModes.usury) processLoanRepayments();
+
   for (const p of shuffled){
     p.roleTimer = Math.max(0, p.roleTimer-1);
     if (p.roleTimer>0) continue;
-    if (mode==='capital' && p.isCapitalist){ attemptCapital(p); continue; }
+    // Arbitrage: any proprietor can try to buy low / sell high (price ≠ value)
+    if (allowArbitrage && p.money>=5 && Math.random()<0.15){ attemptCapital(p); continue; }
+    if (capitalSubModes.merchant && p.money>=5 && Math.random()<0.12){ attemptMerchantCapital(p); continue; }
+    if (capitalSubModes.usury && p.money>=10 && Math.random()<0.20){ attemptUsury(p); continue; }
     if (p.money>0 && Math.random()<0.5) attemptBuy(p);
     else if (p.totalGoods()>DEATH_THRESHOLD && Math.random()<0.4) attemptSell(p);
   }
@@ -798,8 +959,11 @@ function step(){
 
   tick++;
   stepConsumedQty = 0;
-  const exchBefore = exchangeCount;
-  const prodBefore = productionCount;
+  stepProducedQty = 0;
+  stepArbQty = 0;
+  stepSurplusQty = 0;
+  stepMerchantProfit = 0;
+  stepLoanInterest = 0;
   const alive = proprietors.filter(p=>!p.dead);
   const shuffled = [...alive].sort(()=>Math.random()-0.5);
 
@@ -815,11 +979,14 @@ function step(){
     // 1. Exchanges (probabilistic consumption → stepConsumedQty tracked)
     runExchanges(shuffled);
 
-    // 2. Production: match consumption. Each production event nets
-    //    scale*(1-colSum) units. Poorest-first so wealth doesn't concentrate.
+    // 2. Production: match consumption (or exceed it under industrial capital).
+    //    Each production event nets scale*(1-colSum) units.
     if (prodMode!=='off' && stepConsumedQty>DEATH_THRESHOLD){
       let netProduced = 0;
-      const target = stepConsumedQty;
+      // Industrial capital: surplus production beyond replacement
+      const target = capitalSubModes.industrial
+        ? stepConsumedQty * 2.0
+        : stepConsumedQty;
       // Sort by ascending goods — poorest produce first
       const prodOrder = [...shuffled].sort((a,b) => a.totalGoods() - b.totalGoods());
       for (const p of prodOrder){
@@ -858,15 +1025,39 @@ function step(){
 
   // Record
   gHistory.push(proprietors.reduce((s,p)=>s+p.totalGoods(),0));
-  const V = proprietors.reduce((s,p)=>s+p.totalValue(),0);
-  vHistory.push(V);
-  mHistory.push(proprietors.reduce((s,p)=>s+p.money,0));
-  exchPerTickHistory.push(exchangeCount - exchBefore);
-  prodPerTickHistory.push(productionCount - prodBefore);
+  const GV = proprietors.reduce((s,p)=>s+p.goodsValue(),0); // goods-only value
+  vHistory.push(GV);
+  const M = proprietors.reduce((s,p)=>s+p.money,0);
+  mHistory.push(M);
+  mevHistory.push(M > DEATH_THRESHOLD ? GV / M : 0); // MELT: value per unit of money
+  const totalWealth = proprietors.reduce((s,p) => s + p.totalValue(), 0);
+  for (let i = 0; i < proprietors.length; i++){
+    const share = totalWealth > DEATH_THRESHOLD ? proprietors[i].totalValue() / totalWealth * 100 : 0;
+    ownerValueHistories[i].push(share);
+  }
+  prodPerTickHistory.push(stepProducedQty);
   consPerTickHistory.push(stepConsumedQty);
+  arbCumHistory.push((arbCumHistory.length ? arbCumHistory[arbCumHistory.length-1] : 0) + stepArbQty);
+  surplusCumHistory.push((surplusCumHistory.length ? surplusCumHistory[surplusCumHistory.length-1] : 0) + stepSurplusQty);
+  merchantCumHistory.push((merchantCumHistory.length ? merchantCumHistory[merchantCumHistory.length-1] : 0) + stepMerchantProfit);
+  usuryCumHistory.push((usuryCumHistory.length ? usuryCumHistory[usuryCumHistory.length-1] : 0) + stepLoanInterest);
   recipeTimer = Math.max(0, recipeTimer-1);
   if (recipeTimer===0) document.getElementById('recipeToast').classList.remove('visible');
   updateStats();
+}
+
+// ── Gini coefficient (0 = perfect equality, 1 = total concentration) ──
+function computeGini(values){
+  const n = values.length;
+  if (n < 2) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const sum = sorted.reduce((s, v) => s + v, 0);
+  if (sum < DEATH_THRESHOLD) return 0;
+  let numerator = 0;
+  for (let i = 0; i < n; i++){
+    numerator += (2 * (i + 1) - n - 1) * sorted[i];
+  }
+  return numerator / (n * sum);
 }
 
 // ── Consumption helper ──
@@ -1042,6 +1233,7 @@ function attemptLeontief(producer, maxNetQty){
   // Produce output
   const outSym = chosen.output;
   producer.addGoods(outSym, scale);
+  stepProducedQty += scale;
 
   // Value accounting
   const inputValue = scale * colSum * UNIT_PRICE;
@@ -1069,6 +1261,7 @@ function attemptLeontief(producer, maxNetQty){
       laborer.money += tr;
     }
     surplusLabor += surplus;
+    stepSurplusQty += surplus;
     if (laborer) {
       animations.push({type:'exchange_arrow', progress:0,
         from:{x:producer.x,y:producer.y}, to:{x:laborer.x,y:laborer.y},
@@ -1138,6 +1331,7 @@ function attemptCapital(cap){
   const surp = m2 - m1;    // δ = M' − M
   cap.capitalSurplus += surp;
   surplusAccumulated += surp;
+  stepArbQty += surp;
 
   cap.role='capitalist'; cap.roleTimer=12;
   seller.role='seller'; seller.roleTimer=6;
@@ -1148,6 +1342,207 @@ function attemptCapital(cap){
   animations.push({type:'capital', from:{x:seller.x,y:seller.y}, to:{x:cap.x,y:cap.y}, progress:0});
   animations.push({type:'capital', from:{x:cap.x,y:cap.y}, to:{x:buyer.x,y:buyer.y}, progress:0});
   logEntry('capital',`${cap.label}: M(${m1.toFixed(1)})\u2192C(${qty.toFixed(2)} ${sym})\u2192M'(${m2.toFixed(1)}), \u03B4=${surp.toFixed(1)}  [${seller.label}\u2192${cap.label}\u2192${buyer.label}]`);
+}
+
+// ── Merchant Capital ──
+function attemptMerchantCapital(merchant){
+  if (merchant.dead) return;
+  if (merchant.money < 5) return;
+
+  // Buy a domestic good from a seller
+  const sellers = proprietors.filter(p=>p!==merchant && !p.dead && p.totalGoods()>DEATH_THRESHOLD);
+  if (!sellers.length) return;
+  const seller = sellers[Math.floor(Math.random()*sellers.length)];
+  const sym = seller.randomGoodType();
+  if (!sym || sym === FOREIGN_GOOD.sym) return; // don't re-trade foreign goods
+
+  let qty = EXCHANGE_QTY_MIN + Math.random()*(EXCHANGE_QTY_MAX - EXCHANGE_QTY_MIN);
+  qty = Math.min(qty, seller.inventory[sym] || 0);
+  const cost = qty * UNIT_PRICE;
+  if (merchant.money < cost || qty < DEATH_THRESHOLD) return;
+
+  // Value asymmetry: 1 unit domestic trades 1:1 for 1 unit Sp abroad,
+  // but Sp is valued higher domestically (value multiplier > 1)
+  const valueRate = merchantExchangeRates[sym] || 1.5;
+  const foreignQty = qty; // 1:1 quantity exchange
+  const foreignValue = foreignQty * UNIT_PRICE * valueRate; // Sp sells at higher value
+
+  const buyers = proprietors.filter(p=>p!==merchant && p!==seller && !p.dead && p.money>=foreignValue);
+  if (!buyers.length) return;
+  const buyer = buyers[Math.floor(Math.random()*buyers.length)];
+
+  // Execute: merchant buys domestic, trades abroad 1:1 for Sp, sells Sp at higher value
+  merchant.money -= cost;
+  seller.money += cost;
+  seller.removeGoods(sym, qty);
+
+  buyer.money -= foreignValue;
+  merchant.money += foreignValue;
+  buyer.addGoods(FOREIGN_GOOD.sym, foreignQty);
+
+  const profit = foreignValue - cost; // = qty * UNIT_PRICE * (valueRate - 1)
+  stepMerchantProfit += profit;
+  surplusAccumulated += profit;
+
+  merchant.role='capitalist'; merchant.roleTimer=12;
+  seller.role='seller'; seller.roleTimer=6;
+  buyer.role='buyer'; buyer.roleTimer=6;
+  exchangeCount += 2;
+
+  animations.push({type:'capital', from:{x:seller.x,y:seller.y}, to:{x:merchant.x,y:merchant.y}, progress:0});
+  animations.push({type:'capital', from:{x:merchant.x,y:merchant.y}, to:{x:buyer.x,y:buyer.y}, progress:0});
+  logEntry('capital',`\uD83C\uDFEA ${merchant.label}: merchant ${qty.toFixed(2)}${sym}\u2192${foreignQty.toFixed(2)}Sp @${valueRate.toFixed(1)}\u00D7, profit=${profit.toFixed(1)} [${seller.label}\u2192${buyer.label}]`);
+}
+
+// ── Usury Capital ──
+function attemptUsury(lender){
+  if (lender.dead || lender.money < 15) return;
+
+  // Find a cash-poor proprietor with goods (has collateral but no money)
+  const candidates = proprietors.filter(p =>
+    p !== lender && !p.dead && p.money < 5 && p.totalGoods() > DEATH_THRESHOLD
+    && !loans.some(l => l.lenderId === lender.id && l.borrowerId === p.id)
+  );
+  if (!candidates.length) return;
+  const borrower = candidates[Math.floor(Math.random()*candidates.length)];
+
+  const principal = Math.min(lender.money * 0.3, 10);
+  if (principal < 1) return;
+  const remaining = principal * (1 + usuryInterestRate);
+
+  lender.money -= principal;
+  borrower.money += principal;
+
+  loans.push({
+    lenderId: lender.id,
+    borrowerId: borrower.id,
+    principal: principal,
+    remaining: remaining,
+    interestRate: usuryInterestRate
+  });
+
+  lender.role='capitalist'; lender.roleTimer=10;
+  borrower.role='buyer'; borrower.roleTimer=6;
+
+  logEntry('capital',`\uD83D\uDCB0 ${lender.label} lends ${principal.toFixed(1)} to ${borrower.label} (repay ${remaining.toFixed(1)}, rate=${(usuryInterestRate*100).toFixed(0)}%)`);
+}
+
+function processLoanRepayments(){
+  for (let i = loans.length - 1; i >= 0; i--){
+    const loan = loans[i];
+    const debtor = proprietors.find(p => p.id === loan.borrowerId);
+    const lender = proprietors.find(p => p.id === loan.lenderId);
+
+    // Write off if debtor is dead
+    if (!debtor || debtor.dead){
+      loans.splice(i, 1);
+      continue;
+    }
+
+    // Pay installment (slower at higher sim speed so loans are visible longer)
+    const simSpd = +document.getElementById('speed').value;
+    const spdFactor = Math.max(0.15, 1 / simSpd);
+    const payment = Math.min(debtor.money * usuryInstallmentRatio * spdFactor, loan.remaining);
+    if (payment > DEATH_THRESHOLD && debtor.money >= payment){
+      debtor.money -= payment;
+      if (lender && !lender.dead) lender.money += payment;
+      const interest = payment * (loan.interestRate / (1 + loan.interestRate));
+      stepLoanInterest += interest;
+      loan.remaining -= payment;
+    }
+
+    // Retire loan if paid off
+    if (loan.remaining <= DEATH_THRESHOLD){
+      loans.splice(i, 1);
+      logEntry('capital',`\u2705 Loan ${lender?lender.label:'?'}\u2192${debtor.label} repaid`);
+    }
+  }
+}
+
+// ── Capital sub-mode toggles ──
+function setMerchantCapital(on){
+  capitalSubModes.merchant = on;
+  document.getElementById('btn-merchant-on').className = on?'active':'';
+  document.getElementById('btn-merchant-off').className = on?'':'active';
+  document.getElementById('merchant-rates-container').style.display = on?'block':'none';
+  if (on) renderMerchantRates();
+  updateCapitalSubmodesDesc();
+}
+
+function setUsuryCapital(on){
+  capitalSubModes.usury = on;
+  document.getElementById('btn-usury-on').className = on?'active':'';
+  document.getElementById('btn-usury-off').className = on?'':'active';
+  document.getElementById('usury-settings').style.display = on?'block':'none';
+  updateCapitalSubmodesDesc();
+}
+
+function setIndustrialCapital(on){
+  capitalSubModes.industrial = on;
+  document.getElementById('btn-industrial-on').className = on?'active':'';
+  document.getElementById('btn-industrial-off').className = on?'':'active';
+  if (on){
+    setLabor('commodity');
+    document.getElementById('btn-labor-implicit').disabled = true;
+    document.getElementById('btn-labor-implicit').style.opacity = '0.4';
+  } else {
+    document.getElementById('btn-labor-implicit').disabled = false;
+    document.getElementById('btn-labor-implicit').style.opacity = '1';
+  }
+  updateCapitalSubmodesDesc();
+}
+
+function renderMerchantRates(){
+  const el = document.getElementById('merchant-rates-table');
+  if (!el) return;
+  let html = '';
+  for (const t of TYPES){
+    const rate = merchantExchangeRates[t.sym] || 1.5;
+    html += `<div class="tech-edit-row">
+      <span class="tech-edit-sym" style="color:${t.color}">${t.sym}</span>
+      <span class="tech-edit-arrow">\u2192</span>
+      <span style="color:#ff9f43;font-size:12px;">Sp</span>
+      <span style="color:#6e7681;font-size:12px;margin:0 4px;">\u00D7</span>
+      <input type="number" min="1.0" max="5.0" step="0.1" value="${rate.toFixed(1)}"
+             onchange="onMerchantRateChange('${t.sym}',this.value)"
+             style="width:70px;" title="Sp value multiplier vs ${t.sym}">
+      <span style="color:#6e7681;font-size:11px;">value</span>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+function onMerchantRateChange(sym, val){
+  merchantExchangeRates[sym] = Math.max(1.0, Math.min(5.0, parseFloat(val) || 1.5));
+}
+
+function updateUsuryRate(){
+  const slider = document.getElementById('usuryRateSlider');
+  usuryInterestRate = +slider.value / 100;
+  document.getElementById('usury-rate-pct').textContent = slider.value;
+}
+
+function updateUsuryInstallment(){
+  const slider = document.getElementById('usuryInstallSlider');
+  usuryInstallmentRatio = +slider.value / 100;
+  document.getElementById('usury-install-pct').textContent = slider.value;
+}
+
+function openCapitalModal(){
+  renderMerchantRates();
+  document.getElementById('capitalModal').classList.remove('hidden');
+}
+function closeCapitalModal(){
+  document.getElementById('capitalModal').classList.add('hidden');
+}
+
+function updateCapitalSubmodesDesc(){
+  const active = [];
+  if (capitalSubModes.merchant) active.push('Merchant');
+  if (capitalSubModes.usury) active.push('Usury');
+  if (capitalSubModes.industrial) active.push('Industrial');
+  const el = document.getElementById('capital-forms-desc');
+  if (el) el.textContent = active.length ? 'Active: ' + active.join(', ') : 'No sub-modes active.';
 }
 
 // ── Animations ──
@@ -1212,6 +1607,35 @@ function draw(){
     ctx.fillText('Capital Circuit', cx, cy-20);
     ctx.font='italic 33px Georgia'; ctx.fillStyle='#bfa0d4aa';
     ctx.fillText('M \u2192 C \u2192 \u2026 \u2192 M\u2032', cx, cy+20);
+  }
+
+  // Usury: draw dashed gold lines for active loans
+  if (capitalSubModes.usury) {
+    for (const loan of loans){
+      const lender = proprietors.find(p=>p.id===loan.lenderId);
+      const borrower = proprietors.find(p=>p.id===loan.borrowerId);
+      if (!lender || !borrower || lender.dead || borrower.dead) continue;
+      ctx.save();
+      // Width proportional to remaining debt (thick when new, thins as repaid)
+      const debtRatio = loan.remaining / (loan.principal * (1 + loan.interestRate));
+      const lw = 2 + debtRatio * 22; // 24px at full debt → 2px near payoff
+      ctx.beginPath();
+      ctx.moveTo(lender.x, lender.y);
+      ctx.lineTo(borrower.x, borrower.y);
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = lw;
+      ctx.globalAlpha = 0.3 + debtRatio * 0.4;
+      ctx.stroke();
+      // Debt label at midpoint
+      const mx = (lender.x + borrower.x) / 2;
+      const my = (lender.y + borrower.y) / 2;
+      ctx.globalAlpha = 0.8;
+      ctx.font = '11px "SF Mono",Consolas,monospace';
+      ctx.fillStyle = '#ffd700';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(`debt=${loan.remaining.toFixed(1)}`, mx, my - 8);
+      ctx.restore();
+    }
   }
 
   // Animations
@@ -1405,7 +1829,7 @@ function drawNodeLegend(ctx){
   const nodeCx = lx + R + 16, nodeCy = ly + R + 48; // extra top margin below title
 
   // Background panel
-  const pw = 420, ph = 280;
+  const pw = 420, ph = 306;
   ctx.fillStyle = '#0d1117dd';
   ctx.strokeStyle = '#30363d';
   ctx.lineWidth = 1;
@@ -1480,6 +1904,12 @@ function drawNodeLegend(ctx){
     ctx.fillStyle = c.textColor;
     ctx.fillText(c.label, c.ex, c.ey);
   }
+
+  // Click hint
+  ctx.font = 'italic 14px Georgia';
+  ctx.fillStyle = '#6e7681';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('Click any node to inject money', lx + 14, ly + ph - 22);
 }
 
 function drawChart(){
@@ -1487,100 +1917,155 @@ function drawChart(){
   chartCtx.clearRect(0,0,W,H);
   if (gHistory.length<2) return;
 
-  const pad = {l:50, r:12, t:2, b:16};
-  const gap = 1;
-  const cw = W - pad.l - pad.r;
+  // Dynamic grid layout
+  const COLS = 3;
+  const pad = {l:6, r:6, t:4, b:14};
+  const cellPadL = 36; // left padding inside each cell for value label
+  const cellPadR = 20; // right padding inside each cell for owner labels
+  const gapX = 8, gapY = 4;
 
   const series = [
-    { data: gHistory,           color: '#f0883e', label: '|G| goods' },
-    { data: vHistory,           color: '#79c0ff', label: 'V value' },
-    { data: mHistory,           color: '#588bdd', label: 'M money' },
-    { data: exchPerTickHistory, color: '#58a6ff', label: 'Exchanges/t' },
-    { data: prodPerTickHistory, color: '#3fb950', label: 'Production/t' },
-    { data: consPerTickHistory, color: '#da3633', label: 'Consumption/t' },
+    // Row 1
+    { data: gHistory,              color: '#f0883e', label: '|G| goods',      fmt: 1 },
+    { data: vHistory,              color: '#79c0ff', label: 'V value',        fmt: 1 },
+    { multi: true, datasets: ownerValueHistories, label: 'Value share %', fmt: 0 },
+    { data: prodPerTickHistory,    color: '#3fb950', label: 'Produced/t',     fmt: 2 },
+    { data: consPerTickHistory,    color: '#da3633', label: 'Consumed/t',     fmt: 2 },
+    // Row 3
+    { data: arbCumHistory,     color: '#d2a8ff', label: 'Arbitrage \u03A3',   fmt: 1 },
+    { data: surplusCumHistory, color: '#e06c75', label: 'Surplus val \u03A3', fmt: 1 },
+    // Capital sub-mode charts
+    { data: merchantCumHistory, color: '#ff9f43', label: 'Merchant \u03A3',   fmt: 1 },
+    { data: usuryCumHistory,    color: '#ffd700', label: 'Usury interest \u03A3', fmt: 1 },
+    { data: mevHistory,         color: '#58a6ff', label: 'MELT (V/M)',          fmt: 3 },
   ];
-  const numRows = series.length;
-  const totalH = H - pad.t - pad.b;
-  const rowH = (totalH - gap * (numRows - 1)) / numRows;
 
-  for (let s = 0; s < numRows; s++){
-    const {data, color, label} = series[s];
-    if (data.length < 2) continue;
-    const top = pad.t + s * (rowH + gap);
+  const ROWS = Math.ceil(series.length / COLS);
+  const totalW = W - pad.l - pad.r;
+  const totalH = H - pad.t - pad.b;
+  const cellW = (totalW - gapX * (COLS - 1)) / COLS;
+  const cellH = (totalH - gapY * (ROWS - 1)) / ROWS;
+
+  for (let s = 0; s < series.length; s++){
+    const entry = series[s];
+    const col = s % COLS;
+    const row = Math.floor(s / COLS);
+    const cx = pad.l + col * (cellW + gapX);
+    const cy = pad.t + row * (cellH + gapY);
+    const plotL = cx + cellPadL;
+    const plotR = cx + cellW - cellPadR;
+    const plotW = plotR - plotL;
+
+    // Cell border
+    chartCtx.strokeStyle = '#21262d'; chartCtx.lineWidth = 1;
+    chartCtx.strokeRect(cx, cy, cellW, cellH);
 
     // Alternating subtle background
-    if (s % 2 === 1){
+    if ((col + row) % 2 === 1){
       chartCtx.fillStyle = '#161b2233';
-      chartCtx.fillRect(pad.l, top, cw, rowH);
+      chartCtx.fillRect(cx, cy, cellW, cellH);
     }
 
-    // Separator line at bottom of each row
-    chartCtx.strokeStyle = '#21262d'; chartCtx.lineWidth = 1;
-    chartCtx.beginPath();
-    chartCtx.moveTo(pad.l, top + rowH);
-    chartCtx.lineTo(pad.l + cw, top + rowH);
-    chartCtx.stroke();
+    const margin = cellH * 0.14;
+    const plotH = cellH - 2 * margin;
 
-    // Left axis
-    chartCtx.beginPath();
-    chartCtx.moveTo(pad.l, top);
-    chartCtx.lineTo(pad.l, top + rowH);
-    chartCtx.stroke();
+    if (entry.multi) {
+      const datasets = entry.datasets;
+      if (!datasets.length || datasets[0].length < 2) {
+        drawCellLabel(entry.label, '#8b949e', cx, cy, cellW);
+        continue;
+      }
+      let globalMax = 0.1;
+      for (const ds of datasets) {
+        for (const v of ds) if (v > globalMax) globalMax = v;
+      }
+      const window = Math.floor(plotW);
+      for (let o = 0; o < datasets.length; o++){
+        const ds = datasets[o];
+        const pts = ds.slice(-window);
+        const step = plotW / Math.max(pts.length - 1, 1);
+        const clr = OWNER_COLORS[o % OWNER_COLORS.length];
+        chartCtx.beginPath();
+        for (let i = 0; i < pts.length; i++){
+          const x = plotL + i * step;
+          const y = cy + margin + plotH - (pts[i] / globalMax) * plotH;
+          i === 0 ? chartCtx.moveTo(x, y) : chartCtx.lineTo(x, y);
+        }
+        chartCtx.strokeStyle = clr; chartCtx.lineWidth = 1.2; chartCtx.stroke();
+        // Owner label at right end
+        const lastVal = pts[pts.length - 1];
+        const lastY = cy + margin + plotH - (lastVal / globalMax) * plotH;
+        chartCtx.font = '8px "SF Mono",Consolas,monospace';
+        chartCtx.fillStyle = clr;
+        chartCtx.textAlign = 'left'; chartCtx.textBaseline = 'middle';
+        const cly = Math.max(cy + 5, Math.min(cy + cellH - 5, lastY));
+        chartCtx.fillText('O'+(o+1), plotR + 2, cly);
+      }
+      drawCellLabel(entry.label, '#8b949e', cx, cy, cellW);
+    } else {
+      const {data, color, label} = entry;
+      if (data.length < 2) {
+        drawCellLabel(label, color, cx, cy, cellW);
+        continue;
+      }
 
-    // Data line — 0-based y-axis (no min-max rescaling artifacts)
-    const max = Math.max(...data, 0.1);
-    const margin = rowH * 0.12;
-    const plotH = rowH - 2 * margin;
-    const pts = data.slice(-Math.floor(cw));
-    const step = cw / Math.max(pts.length - 1, 1);
+      const max = Math.max(...data, 0.001);
+      const pts = data.slice(-Math.floor(plotW));
+      const step = plotW / Math.max(pts.length - 1, 1);
 
-    chartCtx.beginPath();
-    for (let i = 0; i < pts.length; i++){
-      const x = pad.l + i * step;
-      const y = top + margin + plotH - (pts[i] / max) * plotH;
-      i === 0 ? chartCtx.moveTo(x, y) : chartCtx.lineTo(x, y);
+      chartCtx.beginPath();
+      for (let i = 0; i < pts.length; i++){
+        const x = plotL + i * step;
+        const y = cy + margin + plotH - (pts[i] / max) * plotH;
+        i === 0 ? chartCtx.moveTo(x, y) : chartCtx.lineTo(x, y);
+      }
+      chartCtx.strokeStyle = color; chartCtx.lineWidth = 1.5; chartCtx.stroke();
+
+      // Current value — left of plot area
+      const last = pts[pts.length - 1];
+      const lastY = cy + margin + plotH - (last / max) * plotH;
+      chartCtx.font = '11px "SF Mono",Consolas,monospace';
+      chartCtx.fillStyle = color;
+      chartCtx.textAlign = 'right'; chartCtx.textBaseline = 'middle';
+      const clampedY = Math.max(cy + 7, Math.min(cy + cellH - 5, lastY));
+      const valStr = entry.fmt === 0 ? String(Math.round(last)) : last.toFixed(entry.fmt);
+      chartCtx.fillText(valStr, plotL - 3, clampedY);
+
+      drawCellLabel(label, color, cx, cy, cellW);
     }
-    chartCtx.strokeStyle = color; chartCtx.lineWidth = 1.8; chartCtx.stroke();
-
-    // Current value — left of axis
-    const last = pts[pts.length - 1];
-    const lastY = top + margin + plotH - (last / max) * plotH;
-    chartCtx.font = '12px "SF Mono",Consolas,monospace';
-    chartCtx.fillStyle = color;
-    chartCtx.textAlign = 'right'; chartCtx.textBaseline = 'middle';
-    const clampedY = Math.max(top + 7, Math.min(top + rowH - 5, lastY));
-    // Format: integers for counts, 1 decimal for quantities
-    const valStr = (s >= 3) ? String(Math.round(last)) : last.toFixed(1);
-    chartCtx.fillText(valStr, pad.l - 3, clampedY);
-
-    // Label — top-left inside chart area
-    chartCtx.font = '12px Georgia';
-    chartCtx.fillStyle = color;
-    chartCtx.textAlign = 'left'; chartCtx.textBaseline = 'top';
-    chartCtx.fillText(label, pad.l + 4, top + 1);
   }
 
-  // Shared time axis at bottom
-  chartCtx.font = '12px "SF Mono",Consolas,monospace'; chartCtx.fillStyle = '#8b949e';
-  chartCtx.textAlign = 'center'; chartCtx.textBaseline = 'top';
-  const btm = pad.t + numRows * rowH + (numRows - 1) * gap;
-  chartCtx.fillText(`t=${tick}`, pad.l + cw, btm + 1);
-  chartCtx.fillText('0', pad.l, btm + 1);
+  // Shared time label at bottom-right
+  chartCtx.font = '11px "SF Mono",Consolas,monospace'; chartCtx.fillStyle = '#8b949e';
+  chartCtx.textAlign = 'right'; chartCtx.textBaseline = 'top';
+  chartCtx.fillText(`t=${tick}`, W - pad.r, H - pad.b + 2);
+}
+
+function drawCellLabel(label, color, cx, cy, cellW){
+  chartCtx.font = '11px Georgia';
+  chartCtx.fillStyle = color;
+  chartCtx.textAlign = 'left'; chartCtx.textBaseline = 'top';
+  chartCtx.fillText(label, cx + 4, cy + 2);
 }
 
 // ── Stats ──
 function updateStats(){
   const G = proprietors.reduce((s,p)=>s+p.totalGoods(),0);
   const M = proprietors.reduce((s,p)=>s+p.money,0);
-  const V = proprietors.reduce((s,p)=>s+p.totalValue(),0);
+  const GV = proprietors.reduce((s,p)=>s+p.goodsValue(),0);
   document.getElementById('stat-tick').textContent = tick;
   document.getElementById('stat-G').textContent = G.toFixed(1);
   document.getElementById('stat-Mcirc').textContent = M.toFixed(1);
-  document.getElementById('stat-Mtotal').textContent = V.toFixed(1);
+  document.getElementById('stat-Mtotal').textContent = GV.toFixed(1);
   document.getElementById('stat-exchanges').textContent = exchangeCount;
   document.getElementById('stat-productions').textContent = productionCount;
   document.getElementById('stat-surplus').textContent = surplusAccumulated.toFixed(1);
   document.getElementById('stat-surplus-labor').textContent = surplusLabor.toFixed(1);
+  const mCum = merchantCumHistory.length ? merchantCumHistory[merchantCumHistory.length-1] : 0;
+  document.getElementById('stat-merchant').textContent = mCum.toFixed(1);
+  document.getElementById('stat-loans').textContent = loans.length;
+  const uCum = usuryCumHistory.length ? usuryCumHistory[usuryCumHistory.length-1] : 0;
+  document.getElementById('stat-usury').textContent = uCum.toFixed(1);
 }
 
 // ── Editable Leontief technology matrix ──
@@ -1716,6 +2201,12 @@ function toggleLog(){
 }
 
 // ── Controls ──
+function setArbitrage(on){
+  allowArbitrage = on;
+  document.getElementById('btn-arb-on').className = on ? 'active' : '';
+  document.getElementById('btn-arb-off').className = on ? '' : 'active';
+}
+
 function setMode(m){
   mode=m;
   document.getElementById('btn-mode-cc').className = m==='cc'?'active':'';
@@ -1727,6 +2218,29 @@ function setMode(m){
     ? 'Stabilized commodity region: circulation + value-conserving production. §9.14'
     : 'Capital circuit: M \u2192 C \u2192 ... \u2192 M\u2032 with surplus extraction. §11.1';
   if (m==='capital') setProd('conservative');
+
+  // Capital Forms group visibility
+  const showForms = m==='capital';
+  document.getElementById('section-capital-forms').style.display = showForms?'flex':'none';
+  document.getElementById('capital-forms-divider').style.display = showForms?'block':'none';
+
+  // Disable all sub-modes when leaving capital
+  if (m==='cc'){
+    if (capitalSubModes.industrial) setIndustrialCapital(false);
+    capitalSubModes.merchant = false;
+    capitalSubModes.usury = false;
+    capitalSubModes.industrial = false;
+    document.getElementById('btn-merchant-on').className = '';
+    document.getElementById('btn-merchant-off').className = 'active';
+    document.getElementById('btn-usury-on').className = '';
+    document.getElementById('btn-usury-off').className = 'active';
+    document.getElementById('btn-industrial-on').className = '';
+    document.getElementById('btn-industrial-off').className = 'active';
+    document.getElementById('merchant-rates-container').style.display = 'none';
+    document.getElementById('usury-settings').style.display = 'none';
+    updateCapitalSubmodesDesc();
+  }
+
   // Clamp t_r slider bounds by mode
   if (laborMode==='commodity') updateTrSlider();
   resetSim();
@@ -1801,6 +2315,28 @@ function loop(ts){
 }
 
 window.addEventListener('resize', ()=>{ resize(); });
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left);
+  const my = (e.clientY - rect.top);
+  const radius = Math.min(canvas.width/(2*DPR), canvas.height/(2*DPR)) * 0.73;
+  const hitR = Math.min(52, radius * 0.34) + 10;
+  for (const p of proprietors) {
+    if (p.dead) continue;
+    const dx = mx - p.x, dy = my - p.y;
+    if (dx*dx + dy*dy <= hitR*hitR) {
+      const alive = proprietors.filter(q => !q.dead);
+      const totalM = proprietors.reduce((s,q) => s + q.money, 0);
+      const inject = Math.floor(totalM / alive.length);
+      p.money += inject;
+      logEntry('system', `\uD83D\uDCB5 Injected m=${inject} into ${p.label}`);
+      updateStats();
+      break;
+    }
+  }
+});
+
 rebuildLeontief();
 resize(); init();
 requestAnimationFrame(loop);
