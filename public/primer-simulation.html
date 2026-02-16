@@ -3213,10 +3213,7 @@ function resetSim(){
   document.getElementById('btn-play').innerHTML='\u25B6 Play';
   document.getElementById('btn-play').className='primary';
   document.getElementById('log').innerHTML='';
-  // Reset technical change and coefficient sliders to defaults
-  expandedParams.techChangeEnabled = false;
-  const tcCb = document.getElementById('techChangeToggle');
-  if (tcCb) { tcCb.checked = false; toggleTechChange(); }
+  // Reset coefficient sliders to defaults (tech change will re-increment from here)
   const kiSl = document.getElementById('coeffKISlider');
   const kiiSl = document.getElementById('coeffKIISlider');
   if (kiSl) { kiSl.value = kiSl.defaultValue; document.getElementById('coeff-ki-val').textContent = (+kiSl.defaultValue).toFixed(2); }
