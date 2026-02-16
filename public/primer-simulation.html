@@ -466,7 +466,7 @@
 <header>
   <h1>Value, Capital &amp; Reproduction</h1>
   <span class="subtitle">Dynamic model — Primer §9-22</span>
-  <div class="mode-badge cc" id="modeBadge">CC — Simple Circulation</div>
+  <div class="mode-badge cc" id="modeBadge">Circulation &sect;9</div>
 </header>
 
 <div class="main-grid">
@@ -475,11 +475,11 @@
     <div class="group">
       <div class="group-label">Mode</div>
       <div class="btn-row">
-        <button id="btn-mode-cc" class="active" onclick="setMode('cc')">CC</button>
-        <button id="btn-mode-simple" onclick="setMode('simple')">Simple</button>
-        <button id="btn-mode-expanded" onclick="setMode('expanded')">Expanded</button>
+        <button id="btn-mode-cc" class="active" onclick="setMode('cc')">Circulation</button>
+        <button id="btn-mode-simple" onclick="setMode('simple')">Capital</button>
+        <button id="btn-mode-expanded" onclick="setMode('expanded')">Reproduction</button>
       </div>
-      <div class="desc" id="mode-desc">Stabilized commodity region: circulation + value-conserving production. §9.14</div>
+      <div class="desc" id="mode-desc">Commodity circulation with value-conserving production. &sect;9</div>
     </div>
 
     <div class="group">
@@ -521,16 +521,16 @@
         <div class="stat-row"><span>Exchanges</span><span class="stat-value" id="stat-exchanges">0</span></div>
         <div class="stat-row"><span>Productions</span><span class="stat-value" id="stat-productions">0</span></div>
         <div class="stat-row"><span>Arbitrage &delta;</span><span class="stat-value" id="stat-surplus">0</span></div>
-        <div class="stat-row"><span>Surplus value s</span><span class="stat-value" id="stat-surplus-labor">0</span></div>
+        <div class="stat-row"><span>Surplus &delta;</span><span class="stat-value" id="stat-surplus-labor">0</span></div>
         <div class="stat-row"><span>Merchant profit</span><span class="stat-value" id="stat-merchant">0</span></div>
         <div class="stat-row"><span>Active loans</span><span class="stat-value" id="stat-loans">0</span></div>
         <div class="stat-row"><span>Usury interest</span><span class="stat-value" id="stat-usury">0</span></div>
       </div>
     </div>
 
-    <div class="divider"></div>
+    <div class="divider" id="divider-arbitrage"></div>
 
-    <div class="group">
+    <div class="group" id="section-arbitrage">
       <div class="group-label">Arbitrage</div>
       <div class="btn-row">
         <button id="btn-arb-on" onclick="setArbitrage(true)">On</button>
@@ -539,7 +539,7 @@
       <div class="desc" id="arb-desc">Any proprietor can buy low, sell high (price &ne; value). Independent of mode.</div>
     </div>
 
-    <div class="divider"></div>
+    <div class="divider" id="divider-production"></div>
 
     <!-- 2. Production (collapsed by default) -->
     <div class="group section-collapsed" id="section-production">
@@ -556,7 +556,7 @@
       </div>
     </div>
 
-    <div class="divider"></div>
+    <div class="divider" id="divider-coupling"></div>
 
     <!-- 2b. Exchange-Consumption Coupling -->
     <div class="group" id="section-coupling">
@@ -568,7 +568,7 @@
       <div class="desc" id="coupling-desc">Each exchange triggers consumption: buying drives using.</div>
     </div>
 
-    <div class="divider"></div>
+    <div class="divider" id="divider-labor"></div>
 
     <!-- 3. Labor (collapsed by default) -->
     <div class="group section-collapsed" id="section-labor">
@@ -593,10 +593,10 @@
       </div>
     </div>
 
-    <div class="divider"></div>
+    <div class="divider" id="divider-leontief"></div>
 
     <!-- 4. Leontief Technology A -->
-    <div class="group">
+    <div class="group" id="section-leontief">
       <div class="group-label">Leontief Technology A</div>
       <div class="desc" id="leontief-summary"></div>
       <button onclick="openLeontiefEditor()">Edit Matrix</button>
@@ -604,40 +604,19 @@
 
     <div class="divider" id="expanded-params-divider" style="display:none"></div>
 
-    <!-- Expanded Reproduction Parameters -->
-    <div class="group section-collapsed" id="section-expanded-params" style="display:none">
-      <div class="collapsible-header" onclick="toggleSection('section-expanded-params')">
-        <div class="group-label">Reproduction Parameters</div>
-        <span class="collapse-arrow">&#x25BC;</span>
-      </div>
-      <div class="collapsible-body">
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <div class="group-label" style="font-size:12px;">Accumulation rate &mdash; <span id="accum-rate-pct">50</span>%</div>
-          <input type="range" id="accumRateSlider" min="0" max="100" value="50" step="5"
-                 oninput="updateAccumRate()" style="width:100%;accent-color:#ffa060;">
-          <div class="desc" style="font-size:12px;">0% = simple reproduction (no growth). 100% = max expanded reproduction.</div>
-
-          <div class="group-label" style="font-size:12px;margin-top:4px;">Rate of exploitation s/v &mdash; <span id="exploit-rate-pct">100</span>%</div>
-          <input type="range" id="exploitRateSlider" min="10" max="300" value="100" step="10"
-                 oninput="updateExploitRate()" style="width:100%;accent-color:#ffa060;">
-          <div class="desc" style="font-size:12px;">Surplus per unit of variable capital (wages).</div>
-
-          <div class="group-label" style="font-size:12px;margin-top:4px;">Wage per worker &mdash; <span id="wage-val">5</span></div>
-          <input type="range" id="wageSlider" min="1" max="20" value="5" step="1"
-                 oninput="updateWage()" style="width:100%;accent-color:#ffa060;">
-
-          <div class="group-label" style="font-size:12px;margin-top:4px;">Capitalists &mdash; <span id="num-cap-val">2</span></div>
-          <input type="range" id="numCapSlider" min="2" max="4" value="2" step="1"
-                 oninput="updateNumCap()" style="width:100%;accent-color:#ffa060;">
-        </div>
-
-        <div style="border-top:1px solid #21262d;margin:8px 0;"></div>
+    <!-- Expanded Reproduction -->
+    <div class="group" id="section-expanded-params" style="display:none">
+      <div class="group-label">Reproduction (2-sector) &mdash; &sect;22</div>
+      <div class="desc" style="font-size:12px;">Dept I (&tau;) + Dept II (&sigma;). &tau; = means of production, &sigma; = means of subsistence. &sect;22.8</div>
+      <button onclick="openExpandedParamsModal()">Configure</button>
+      <div style="margin-top:6px;">
         <div class="group-label" style="font-size:11px;">Departmental Accounting</div>
         <div style="font-family:'SF Mono',Consolas,monospace;font-size:11px;line-height:1.6;">
-          <div style="color:#e06c75;">Dept I (K): c\u2081=<span id="dept-I-c">0</span> v\u2081=<span id="dept-I-v">0</span> s\u2081=<span id="dept-I-s">0</span> out=<span id="dept-I-out">0</span></div>
-          <div style="color:#3fb950;">Dept II (C): c\u2082=<span id="dept-II-c">0</span> v\u2082=<span id="dept-II-v">0</span> s\u2082=<span id="dept-II-s">0</span> out=<span id="dept-II-out">0</span></div>
-          <div style="color:#b1bac4;">W\u2081=<span id="dept-W1">0</span> Q=<span id="dept-Q">0</span></div>
-          <div style="color:#d2a8ff;">Profit rate s/(c+v)=<span id="dept-profrate">0</span>%</div>
+          <div style="color:#e06c75;">Dept I (&tau;): c&#x2081;=<span id="dept-I-c">0</span> v&#x2081;=<span id="dept-I-v">0</span> &delta;&#x2081;=<span id="dept-I-s">0</span> out=<span id="dept-I-out">0</span></div>
+          <div style="color:#3fb950;">Dept II (&sigma;): c&#x2082;=<span id="dept-II-c">0</span> v&#x2082;=<span id="dept-II-v">0</span> &delta;&#x2082;=<span id="dept-II-s">0</span> out=<span id="dept-II-out">0</span></div>
+          <div style="color:#b1bac4;">&lambda;=<span id="dept-lambda">0</span>% &epsilon;=<span id="dept-epsilon">0</span>% &kappa;=<span id="dept-kappa">0</span>%</div>
+          <div style="color:#56d4dd;">c/v=<span id="dept-organic">0</span></div>
+          <div style="color:#8b949e;font-size:10px;">p(&tau;)=<span id="dept-pK">0</span> p(&sigma;)=<span id="dept-pC">0</span></div>
         </div>
       </div>
     </div>
@@ -676,9 +655,11 @@
       <canvas id="world"></canvas>
       <!-- Floating log -->
       <div class="log-overlay" id="logOverlay">
-        <div class="log-hdr" onclick="toggleLog()">
-          <span>Transaction Log</span>
-          <span id="logToggle">&#x25BC;</span>
+        <div class="log-hdr">
+          <span onclick="toggleLog()" style="cursor:pointer;">Transaction Log</span>
+          <span id="logCopy" onclick="event.stopPropagation();copyLog()" style="cursor:pointer;font-size:11px;color:#b1bac4;padding:0 4px;" title="Copy log">&#x2398;</span>
+          <span style="flex:1;" onclick="toggleLog()"></span>
+          <span id="logToggle" onclick="toggleLog()" style="cursor:pointer;">&#x25BC;</span>
         </div>
         <div class="log-entries" id="log"></div>
       </div>
@@ -843,6 +824,72 @@
   </div>
 </div>
 
+<!-- Expanded Reproduction Parameters Modal -->
+<div class="modal-overlay hidden" id="expandedParamsModal" onclick="if(event.target===this)closeExpandedParamsModal()">
+  <div class="modal" autocomplete="off">
+    <div class="modal-header">
+      <h2>Reproduction Parameters</h2>
+      <button class="modal-close" onclick="closeExpandedParamsModal()">&times;</button>
+    </div>
+    <div class="desc" style="margin-bottom:14px;font-size:14px;">
+      Two-department reproduction (&sect;22.8). Dept I produces &tau; (means of production), Dept II produces &sigma; (means of subsistence). Each &theta;-cycle, surplus &delta; is split into reinvestment c<sub>n+1</sub>+v<sub>n+1</sub> and revenue r<sub>n</sub> via the allocation &alpha;<sup>k</sup> (&sect;22.1.4).
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div>
+        <div class="group-label" style="font-size:13px;">Reinvestment share &lambda; &mdash; <span id="accum-rate-pct">50</span>% <span style="font-size:11px;color:#8b949e;">&sect;22.2</span></div>
+        <input type="range" id="accumRateSlider" min="0" max="100" value="50" step="5"
+               oninput="updateAccumRate()" style="width:100%;accent-color:#ffa060;">
+        <div class="desc" style="font-size:12px;">&lambda;=0: simple reproduction, all surplus consumed as revenue r=&delta; (&sect;22.2.3). &lambda;&gt;0: expanded reproduction, &tau; stocks grow each cycle. Accumulation rate &kappa;=&lambda;&epsilon;.</div>
+      </div>
+      <div>
+        <div class="group-label" style="font-size:13px;">Rate of exploitation &epsilon; = t<sub>s</sub>/t<sub>r</sub> &mdash; <span id="exploit-rate-pct">100</span>% <span style="font-size:11px;color:#8b949e;">&sect;17.5</span></div>
+        <input type="range" id="exploitRateSlider" min="10" max="300" value="100" step="10"
+               oninput="updateExploitRate()" style="width:100%;accent-color:#ffa060;">
+        <div class="desc" style="font-size:12px;">Ratio of surplus labor-time to necessary labor-time. Higher &epsilon; means more surplus &delta; per worker hired, increasing both revenue and reinvestment.</div>
+      </div>
+      <div>
+        <div class="group-label" style="font-size:13px;">Wage m<sub>w</sub> &mdash; <span id="wage-val">5</span> <span style="font-size:11px;color:#8b949e;">&sect;21.3</span></div>
+        <input type="range" id="wageSlider" min="1" max="20" value="5" step="1"
+               oninput="updateWage()" style="width:100%;accent-color:#ffa060;">
+        <div class="desc" style="font-size:12px;">Variable capital v per worker. Enters value-price formulas: p(&tau;)&nbsp;=&nbsp;m<sub>w</sub>(1+&epsilon;)/(1&minus;a<sub>&tau;&tau;</sub>). Higher wages raise commodity prices and shift organic composition c/v.</div>
+      </div>
+      <div style="border-top:1px solid #30363d;margin:4px 0;padding-top:4px;">
+        <div class="desc" style="font-size:12px;color:#8b949e;margin-bottom:6px;">Technical coefficients (Leontief input&ndash;output). These determine the organic composition c/v: higher coefficients mean more constant capital per unit of output, raising c/v and concentrating reinvestment in &tau; rather than wages.</div>
+      </div>
+      <div>
+        <div class="group-label" style="font-size:13px;">a<sub>&tau;&tau;</sub> Dept I &mdash; <span id="coeff-ki-val">0.4</span></div>
+        <input type="range" id="coeffKISlider" min="0.1" max="0.9" value="0.4" step="0.05"
+               oninput="updateExpandedCoeffs()" style="width:100%;accent-color:#e06c75;">
+        <div class="desc" style="font-size:12px;">Units of &tau; consumed to produce one unit of &tau;. Dept I&rsquo;s self-consumption: net output available for sale is (1&minus;a<sub>&tau;&tau;</sub>) per unit produced.</div>
+      </div>
+      <div>
+        <div class="group-label" style="font-size:13px;">a<sub>&sigma;&tau;</sub> Dept II &mdash; <span id="coeff-kii-val">0.6</span></div>
+        <input type="range" id="coeffKIISlider" min="0.1" max="0.9" value="0.6" step="0.05"
+               oninput="updateExpandedCoeffs()" style="width:100%;accent-color:#3fb950;">
+        <div class="desc" style="font-size:12px;">Units of &tau; consumed to produce one unit of &sigma;. Dept II&rsquo;s dependence on Dept I: higher values mean Dept II must buy more &tau; each cycle.</div>
+      </div>
+      <div style="border-top:1px solid #30363d;margin:4px 0;padding-top:4px;">
+        <div class="desc" style="font-size:12px;color:#8b949e;margin-bottom:6px;">Technical change (&sect;22.6.5). Capitalists adopt more capital-intensive techniques to raise productivity, increasing &tau; coefficients over time. This drives rising organic composition c/v and the tendency of the profit rate to fall.</div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            <input type="checkbox" id="techChangeToggle" onchange="toggleTechChange()" style="accent-color:#ffa060;">
+            Technical change
+          </label>
+          <span id="tech-change-status" style="font-size:11px;color:#8b949e;">off</span>
+        </div>
+        <div id="techChangeRateGroup" style="margin-top:6px;display:none;">
+          <div class="group-label" style="font-size:13px;">&Delta;a per &theta;-cycle &mdash; <span id="tech-change-rate-val">0.005</span></div>
+          <input type="range" id="techChangeRateSlider" min="0.001" max="0.02" value="0.005" step="0.001"
+                 oninput="updateTechChangeRate()" style="width:100%;accent-color:#ffa060;">
+          <div class="desc" style="font-size:12px;">Absolute increase in both a<sub>&tau;&tau;</sub> and a<sub>&sigma;&tau;</sub> each cycle. At 0.005/tick from defaults (0.4, 0.6), coefficients reach 0.9 in ~60&ndash;100 ticks.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // DYNAMIC MODEL: CC, Depletion, Stabilizer, Capital, Expanded Reproduction
@@ -920,12 +967,44 @@ let expandedParams = {
   rateExploitation: 1.0,
   wagePerWorker: 5.0,
   numCapitalists: 2,
+  techChangeEnabled: false,
+  techChangeRate: 0.005,  // coefficient increase per tick (absolute)
 };
 
 let deptAccounting = {
   I:  { c:0, v:0, s:0, output:0 },
   II: { c:0, v:0, s:0, output:0 },
 };
+
+// Value-based prices for expanded mode (derived from Leontief coefficients + wages)
+let expandedPrices = { '\u03C4': 5, '\u03C3': 5 };  // τ, σ
+let organicCompHistory = [];  // c/v ratio history for chart
+let kappaHistory = [];  // accumulation rate κ = λε history
+
+function getCoeffs() {
+  // Source of truth: LEONTIEF_RECIPES (updated by sliders and technical change)
+  const rK = (typeof LEONTIEF_RECIPES !== 'undefined') && LEONTIEF_RECIPES.find(r=>r.output==='\u03C4');
+  const rC = (typeof LEONTIEF_RECIPES !== 'undefined') && LEONTIEF_RECIPES.find(r=>r.output==='\u03C3');
+  return {
+    a_tt: rK ? rK.coeffs[0] : 0.4,   // a_ττ (Dept I)
+    a_st: rC ? rC.coeffs[0] : 0.6,   // a_στ (Dept II)
+  };
+}
+function computeExpandedPrices() {
+  const w = expandedParams.wagePerWorker;
+  const e = expandedParams.rateExploitation;
+  const { a_tt, a_st } = getCoeffs();
+  // p(τ) = w(1+ε) / (1 - a_ττ)
+  // p(σ) = a_στ · p(τ) + w(1+ε)
+  const laborCost = w * (1 + e);
+  expandedPrices['\u03C4'] = (1 - a_tt) > 0.01 ? laborCost / (1 - a_tt) : laborCost * 10;
+  expandedPrices['\u03C3'] = a_st * expandedPrices['\u03C4'] + laborCost;
+}
+
+function goodPrice(sym) {
+  if (mode === 'expanded' && expandedPrices[sym] !== undefined) return expandedPrices[sym];
+  return UNIT_PRICE;
+}
 
 let deptIOutputHistory = [];
 let deptIIOutputHistory = [];
@@ -953,10 +1032,12 @@ const CHART_SERIES = [
   { key:'merchant', color:'#ff9f43', legendLabel:'Merchant',    modes:['cc','simple'] },
   { key:'usury',    color:'#ffd700', legendLabel:'Usury',       modes:['cc','simple'] },
   { key:'melt',     color:'#58a6ff', legendLabel:'MELT',        modes:['cc','simple','expanded'] },
-  { key:'deptI',    color:'#e06c75', legendLabel:'Dept I (K)',   modes:['expanded'] },
-  { key:'deptII',   color:'#3fb950', legendLabel:'Dept II (C)', modes:['expanded'] },
-  { key:'profRate', color:'#d2a8ff', legendLabel:'Profit rate',  modes:['expanded'] },
-  { key:'capitalStock', color:'#ff9f43', legendLabel:'Capital stock', modes:['expanded'] },
+  { key:'deptI',    color:'#e06c75', legendLabel:'Dept I (\u03C4)',   modes:['expanded'] },
+  { key:'deptII',   color:'#3fb950', legendLabel:'Dept II (\u03C3)', modes:['expanded'] },
+  { key:'profRate', color:'#d2a8ff', legendLabel:'profit rate',  modes:['expanded'] },
+  { key:'capitalStock', color:'#ff9f43', legendLabel:'\u03C4 stock', modes:['expanded'] },
+  { key:'organicComp', color:'#56d4dd', legendLabel:'c/v',   modes:['expanded'] },
+  { key:'kappa',    color:'#ffa060', legendLabel:'\u03BA accum',  modes:['expanded'] },
 ];
 let chartVisible = Object.fromEntries(CHART_SERIES.map(s=>[s.key,true]));
 
@@ -1104,18 +1185,18 @@ class Proprietor {
     return entries[entries.length - 1][0];
   }
   totalValue() {
-    let goodsValue = 0;
+    let goodsVal = 0;
     for (const [sym, qty] of Object.entries(this.inventory)) {
       if (qty < DEATH_THRESHOLD) continue;
       if (sym === FOREIGN_GOOD.sym) {
         const rates = Object.values(merchantExchangeRates);
         const avgRate = rates.length ? rates.reduce((s,r)=>s+r,0)/rates.length : 1.5;
-        goodsValue += qty * UNIT_PRICE * avgRate;
+        goodsVal += qty * goodPrice(sym) * avgRate;
       } else {
-        goodsValue += qty * UNIT_PRICE;
+        goodsVal += qty * goodPrice(sym);
       }
     }
-    return this.money + goodsValue;
+    return this.money + goodsVal;
   }
   goodsValue() {
     let gv = 0;
@@ -1124,9 +1205,9 @@ class Proprietor {
       if (sym === FOREIGN_GOOD.sym) {
         const rates = Object.values(merchantExchangeRates);
         const avgRate = rates.length ? rates.reduce((s,r)=>s+r,0)/rates.length : 1.5;
-        gv += qty * UNIT_PRICE * avgRate;
+        gv += qty * goodPrice(sym) * avgRate;
       } else {
-        gv += qty * UNIT_PRICE;
+        gv += qty * goodPrice(sym);
       }
     }
     return gv;
@@ -1159,7 +1240,7 @@ function init() {
   gHistory=[]; vHistory=[]; mHistory=[]; ownerValueHistories=[];
   prodPerTickHistory=[]; consPerTickHistory=[]; arbCumHistory=[]; surplusCumHistory=[];
   loans=[]; merchantCumHistory=[]; usuryCumHistory=[]; mevHistory=[];
-  deptIOutputHistory=[]; deptIIOutputHistory=[]; profitRateHistory=[]; capitalStockHistory=[];
+  deptIOutputHistory=[]; deptIIOutputHistory=[]; profitRateHistory=[]; capitalStockHistory=[]; organicCompHistory=[]; kappaHistory=[];
   deptAccounting = { I:{c:0,v:0,s:0,output:0}, II:{c:0,v:0,s:0,output:0} };
   merchantExchangeRates = {};
   for (const t of TYPES) merchantExchangeRates[t.sym] = 1.5;
@@ -1191,33 +1272,41 @@ function init() {
     laborMode = 'commodity';
     prodMode = 'conservative';
     TYPES = [
-      { name:'capital goods', color:'#e06c75', sym:'K' },
-      { name:'consumption goods', color:'#3fb950', sym:'C' },
+      { name:'means of production', color:'#e06c75', sym:'\u03C4' },
+      { name:'means of subsistence', color:'#3fb950', sym:'\u03C3' },
     ];
+    // Read coefficients from modal sliders (or use defaults)
+    const kiSlider = document.getElementById('coeffKISlider');
+    const kiiSlider = document.getElementById('coeffKIISlider');
+    const coeffKI = kiSlider ? +kiSlider.value : 0.4;
+    const coeffKII = kiiSlider ? +kiiSlider.value : 0.6;
     LEONTIEF_RECIPES = [
-      { output:'K', inputs:['K'], coeffs:[0.4] },
-      { output:'C', inputs:['K'], coeffs:[0.3] },
+      { output:'\u03C4', inputs:['\u03C4'], coeffs:[coeffKI] },
+      { output:'\u03C3', inputs:['\u03C4'], coeffs:[coeffKII] },
     ];
     rebuildLeontief();
+    computeExpandedPrices();
 
-    const nCap = expandedParams.numCapitalists;
-    const nDeptI = Math.ceil(nCap / 2);
-    // Assign classes
+    const nCap = expandedParams.numCapitalists; // always 2
+    // Initial endowment scaled to value-prices so capitalists can afford ~2 production cycles
+    const initK = 4;
+    const initCapMoney = initK * expandedPrices['\u03C4'] + expandedParams.wagePerWorker * 4;
+    const initWorkerMoney = expandedParams.wagePerWorker * 2;
+    // Assign classes: 1 capitalist per department, workers are a shared labor pool
     for (let i = 0; i < proprietors.length; i++) {
       const p = proprietors[i];
       if (i < nCap) {
         p.agentClass = 'capitalist';
         p.isCapitalist = true;
-        p.department = i < nDeptI ? 1 : 2;
-        p.money = 200;
-        p.inventory = { K: 8 };
+        p.department = i === 0 ? 1 : 2; // O\u2081 = Dept I, O\u2082 = Dept II
+        p.money = initCapMoney;
+        p.inventory = { '\u03C4': initK };
       } else {
         p.agentClass = 'worker';
         p.isCapitalist = false;
-        // Split workers across departments
-        p.department = ((i - nCap) % 2 === 0) ? 1 : 2;
-        p.money = 10;
-        p.inventory = { C: 2 };
+        p.department = 0; // shared pool — hired by either department each tick
+        p.money = initWorkerMoney;
+        p.inventory = { '\u03C3': 2 };
       }
     }
     targetG = Infinity;
@@ -1265,97 +1354,170 @@ function stepExpanded(){
   stepMerchantProfit = 0;
   stepLoanInterest = 0;
 
+  // Technical change (§22.6.5): coefficients rise each θ-cycle
+  if (expandedParams.techChangeEnabled) {
+    const rate = expandedParams.techChangeRate;
+    const maxCoeff = 0.95;
+    const rK = LEONTIEF_RECIPES.find(r=>r.output==='\u03C4');
+    const rC = LEONTIEF_RECIPES.find(r=>r.output==='\u03C3');
+    if (rK) {
+      const newKI = Math.min(maxCoeff, rK.coeffs[0] + rate);
+      rK.coeffs[0] = newKI;
+      const kiSlider = document.getElementById('coeffKISlider');
+      if (kiSlider) kiSlider.value = newKI;
+      document.getElementById('coeff-ki-val').textContent = newKI.toFixed(3);
+    }
+    if (rC) {
+      const newKII = Math.min(maxCoeff, rC.coeffs[0] + rate);
+      rC.coeffs[0] = newKII;
+      const kiiSlider = document.getElementById('coeffKIISlider');
+      if (kiiSlider) kiiSlider.value = newKII;
+      document.getElementById('coeff-kii-val').textContent = newKII.toFixed(3);
+    }
+  }
+
+  // Recompute value-based prices each tick (in case params changed)
+  computeExpandedPrices();
+  const pTau = expandedPrices['\u03C4'];
+  const pSigma = expandedPrices['\u03C3'];
+
   // Reset per-step accounting
   deptAccounting = { I:{c:0,v:0,s:0,output:0}, II:{c:0,v:0,s:0,output:0} };
-  for (const p of proprietors) { p.wageIncome = 0; p.profitIncome = 0; }
+  for (const p of proprietors) { p.wageIncome = 0; p.profitIncome = 0; p._tauConsumedThisTick = 0; }
 
   const alive = proprietors.filter(p => !p.dead);
   const capitalists = alive.filter(p => p.agentClass === 'capitalist');
   const workers = alive.filter(p => p.agentClass === 'worker');
 
-  // ── Phase 1: Production ──
-  for (const cap of capitalists) {
-    const deptKey = cap.department === 1 ? 'I' : 'II';
-    const outputSym = cap.department === 1 ? 'K' : 'C';
-    const kAvail = cap.inventory['K'] || 0;
-    if (kAvail < DEATH_THRESHOLD) continue;
+  // ── Phase 1: Production (§15, §22.1) ──
+  // Workers are a shared labor pool — each node is a "collective" hired by either dept.
+  // Allocate workers proportionally to each capitalist's τ-constrained demand,
+  // then produce. Physical output from Leontief coefficients, not value.
+  {
+    // 1a. Compute each capitalist's raw demand for workers (bounded by τ and money)
+    const demands = [];
+    for (const cap of capitalists) {
+      const outputSym = cap.department === 1 ? '\u03C4' : '\u03C3';
+      const tauAvail = cap.inventory['\u03C4'] || 0;
+      const recipe = LEONTIEF_RECIPES.find(r => r.output === outputSym);
+      if (!recipe || tauAvail < DEATH_THRESHOLD) { demands.push(0); continue; }
+      const tauCoeff = recipe.coeffs[0];
+      let maxScale = tauAvail / tauCoeff;
+      // Also bound by affordable wages
+      const affordable = Math.floor(cap.money / expandedParams.wagePerWorker);
+      maxScale = Math.min(maxScale, affordable);
+      demands.push(Math.max(0, Math.ceil(maxScale)));
+    }
+    const totalDemand = demands.reduce((s, d) => s + d, 0);
+    const totalWorkers = workers.filter(w => !w.dead).length;
 
-    const recipe = LEONTIEF_RECIPES.find(r => r.output === outputSym);
-    if (!recipe) continue;
-    const kCoeff = recipe.coeffs[0]; // K input coefficient
-
-    // Scale by available K, capped
-    let scale = Math.min(kAvail / kCoeff, PROD_SCALE_MAX);
-    if (scale < DEATH_THRESHOLD) continue;
-
-    // Hire workers from this department
-    const deptWorkers = workers.filter(w => w.department === cap.department && !w.dead);
-    const numHired = Math.min(deptWorkers.length, Math.ceil(scale));
-    if (numHired === 0) continue;
-
-    // Value components
-    const kConsumed = scale * kCoeff;
-    const c = kConsumed * UNIT_PRICE;
-    const v = numHired * expandedParams.wagePerWorker;
-    const s = v * expandedParams.rateExploitation;
-
-    // Check capitalist has money for wages
-    if (cap.money < v) continue;
-
-    // Execute production
-    cap.removeGoods('K', kConsumed);
-    cap.money -= v;
-
-    // Pay wages to workers
-    const wageEach = expandedParams.wagePerWorker;
-    const hired = deptWorkers.slice(0, numHired);
-    for (const w of hired) {
-      w.money += wageEach;
-      w.wageIncome += wageEach;
-      // Wage animation
-      animations.push({type:'exchange_arrow', progress:0,
-        from:{x:cap.x,y:cap.y}, to:{x:w.x,y:w.y},
-        label:`w=${wageEach.toFixed(0)}`, color:'#3fb950'});
+    // 1b. Allocate workers proportionally; shuffle to break ties fairly
+    const shuffledWorkers = [...workers.filter(w => !w.dead)].sort(() => Math.random() - 0.5);
+    const allocated = demands.map(() => []);
+    if (totalDemand > 0 && totalWorkers > 0) {
+      // Proportional with largest-remainder method
+      const rawShares = demands.map(d => totalDemand > 0 ? d / totalDemand * totalWorkers : 0);
+      const floors = rawShares.map(s => Math.floor(s));
+      let remaining = totalWorkers - floors.reduce((s, f) => s + f, 0);
+      // Sort by fractional part descending to distribute remainder
+      const order = floors.map((_, i) => i).sort((a, b) => (rawShares[b] - floors[b]) - (rawShares[a] - floors[a]));
+      for (const i of order) {
+        if (remaining <= 0) break;
+        if (demands[i] > 0) { floors[i]++; remaining--; }
+      }
+      let wIdx = 0;
+      for (let ci = 0; ci < capitalists.length; ci++) {
+        const n = Math.min(floors[ci], demands[ci]); // don't exceed demand
+        allocated[ci] = shuffledWorkers.slice(wIdx, wIdx + n);
+        wIdx += n;
+      }
     }
 
-    // Produce output: quantity = (c + v + s) / UNIT_PRICE
-    const outputQty = (c + v + s) / UNIT_PRICE;
-    cap.addGoods(outputSym, outputQty);
-    cap.profitIncome += s;
-    stepProducedQty += outputQty;
-    productionCount++;
+    // 1c. Execute production for each capitalist with their allocated workers
+    for (let ci = 0; ci < capitalists.length; ci++) {
+      const cap = capitalists[ci];
+      const hiredWorkers = allocated[ci];
+      if (hiredWorkers.length === 0) continue;
 
-    // Record accounting
-    deptAccounting[deptKey].c += c;
-    deptAccounting[deptKey].v += v;
-    deptAccounting[deptKey].s += s;
-    deptAccounting[deptKey].output += outputQty;
+      const deptKey = cap.department === 1 ? 'I' : 'II';
+      const outputSym = cap.department === 1 ? '\u03C4' : '\u03C3';
+      const tauAvail = cap.inventory['\u03C4'] || 0;
+      const recipe = LEONTIEF_RECIPES.find(r => r.output === outputSym);
+      if (!recipe || tauAvail < DEATH_THRESHOLD) continue;
+      const tauCoeff = recipe.coeffs[0];
 
-    // Production animation
-    animations.push({type:'production', x:cap.x, y:cap.y, progress:0});
-    const outType = typeBySymbol(outputSym);
-    animations.push({type:'produce_label', ownerId:cap.id, progress:0,
-      label:`\u2191${outputQty.toFixed(1)}${outputSym}`, color:outType?.color||'#3fb950'});
-    logEntry('production',`${cap.label} Dept ${deptKey}: ${kConsumed.toFixed(1)}K \u2192 ${outputQty.toFixed(1)}${outputSym}, c=${c.toFixed(0)} v=${v.toFixed(0)} s=${s.toFixed(0)}`);
+      // Scale bounded by τ and allocated labor
+      let scale = Math.min(tauAvail / tauCoeff, hiredWorkers.length);
+      const numHired = Math.min(hiredWorkers.length, Math.ceil(scale));
+
+      // Check money for wages, scale down if needed
+      const v = numHired * expandedParams.wagePerWorker;
+      if (cap.money < v) {
+        const affordable = Math.floor(cap.money / expandedParams.wagePerWorker);
+        if (affordable === 0) continue;
+        scale = Math.min(tauAvail / tauCoeff, affordable);
+      }
+      if (scale < DEATH_THRESHOLD) continue;
+
+      const finalNumHired = Math.min(hiredWorkers.length, Math.ceil(scale));
+      const finalTauConsumed = scale * tauCoeff;
+      cap._tauConsumedThisTick = finalTauConsumed;
+      const finalConstCap = finalTauConsumed * pTau;  // constant capital c valued at p(τ)
+      const finalV = finalNumHired * expandedParams.wagePerWorker;
+      const finalDelta = finalV * expandedParams.rateExploitation;  // surplus δ
+      if (cap.money < finalV) continue;
+
+      // Execute
+      cap.removeGoods('\u03C4', finalTauConsumed);
+      cap.money -= finalV;
+
+      const wageEach = expandedParams.wagePerWorker;
+      for (let wi = 0; wi < finalNumHired; wi++) {
+        const w = hiredWorkers[wi];
+        w.money += wageEach;
+        w.wageIncome += wageEach;
+        animations.push({type:'exchange_arrow', progress:0,
+          from:{x:cap.x,y:cap.y}, to:{x:w.x,y:w.y},
+          label:`m\u2098=${wageEach.toFixed(0)}`, color:'#3fb950'});
+      }
+
+      const outputQty = scale;
+      cap.addGoods(outputSym, outputQty);
+      cap.profitIncome += finalDelta;
+      stepProducedQty += outputQty;
+      productionCount++;
+
+      deptAccounting[deptKey].c += finalConstCap;
+      deptAccounting[deptKey].v += finalV;
+      deptAccounting[deptKey].s += finalDelta;
+      deptAccounting[deptKey].output += outputQty;
+
+      animations.push({type:'production', x:cap.x, y:cap.y, progress:0});
+      const outType = typeBySymbol(outputSym);
+      animations.push({type:'produce_label', ownerId:cap.id, progress:0,
+        label:`\u2191${outputQty.toFixed(1)}${outputSym}`, color:outType?.color||'#3fb950'});
+      logEntry('production',`${cap.label} Dept ${deptKey}: ${finalTauConsumed.toFixed(1)}\u03C4 \u2192 ${outputQty.toFixed(1)}${outputSym}, c=${finalConstCap.toFixed(0)} v=${finalV.toFixed(0)} \u03B4=${finalDelta.toFixed(0)}`);
+    }
   }
 
-  // ── Phase 2: Worker Consumption ──
+  // ── Phase 2: Worker Consumption (§21.3) ──
+  // Workers buy σ at value-price p(σ)
   for (const w of workers) {
     if (w.money < DEATH_THRESHOLD) continue;
     const spendBudget = w.money * 0.9;
-    // Find C sellers (primarily Dept II capitalists)
-    const cSellers = alive.filter(p => (p.inventory['C'] || 0) > DEATH_THRESHOLD && p !== w);
-    if (!cSellers.length) continue;
+    // Find σ sellers (primarily Dept II capitalists)
+    const sigmaSellers = alive.filter(p => (p.inventory['\u03C3'] || 0) > DEATH_THRESHOLD && p !== w);
+    if (!sigmaSellers.length) continue;
 
     let spent = 0;
-    for (const seller of cSellers) {
+    for (const seller of sigmaSellers) {
       if (spent >= spendBudget) break;
-      const avail = seller.inventory['C'] || 0;
+      const avail = seller.inventory['\u03C3'] || 0;
       if (avail < DEATH_THRESHOLD) continue;
-      const maxQty = Math.min(avail, (spendBudget - spent) / UNIT_PRICE);
+      const maxQty = Math.min(avail, (spendBudget - spent) / pSigma);
       if (maxQty < DEATH_THRESHOLD) continue;
-      const price = maxQty * UNIT_PRICE;
-      seller.removeGoods('C', maxQty);
+      const price = maxQty * pSigma;
+      seller.removeGoods('\u03C3', maxQty);
       w.money -= price;
       seller.money += price;
       spent += price;
@@ -1364,83 +1526,113 @@ function stepExpanded(){
       const consumed = maxQty * 0.8;
       stepConsumedQty += consumed;
       // Worker keeps a small buffer
-      w.addGoods('C', maxQty - consumed);
-      logEntry('exchange',`${w.label} buys ${maxQty.toFixed(1)}C from ${seller.label} @ ${price.toFixed(0)}`);
+      w.addGoods('\u03C3', maxQty - consumed);
+      logEntry('exchange',`${w.label} buys ${maxQty.toFixed(1)}\u03C3 from ${seller.label} @ ${price.toFixed(0)}`);
     }
   }
 
-  // ── Phase 3: Capitalist Investment & Consumption ──
-  for (const cap of capitalists) {
-    const surplus = cap.profitIncome;
-    if (surplus < DEATH_THRESHOLD) continue;
-
-    const investAmt = surplus * expandedParams.accumRate;
-    const luxuryAmt = surplus * (1 - expandedParams.accumRate);
-
-    // Reinvestment: buy K
-    if (investAmt > DEATH_THRESHOLD) {
-      const kSellers = alive.filter(p => (p.inventory['K'] || 0) > DEATH_THRESHOLD && p !== cap);
-      let investSpent = 0;
-      for (const seller of kSellers) {
-        if (investSpent >= investAmt) break;
-        const avail = seller.inventory['K'] || 0;
-        if (avail < DEATH_THRESHOLD) continue;
-        const maxQty = Math.min(avail, (investAmt - investSpent) / UNIT_PRICE, cap.money / UNIT_PRICE);
-        if (maxQty < DEATH_THRESHOLD) continue;
-        const price = maxQty * UNIT_PRICE;
-        seller.removeGoods('K', maxQty);
-        cap.addGoods('K', maxQty);
-        cap.money -= price;
-        seller.money += price;
-        investSpent += price;
-        exchangeCount++;
-        logEntry('capital',`${cap.label} invests: buys ${maxQty.toFixed(1)}K from ${seller.label}`);
-      }
-    }
-
-    // Luxury consumption: buy and consume C
-    if (luxuryAmt > DEATH_THRESHOLD) {
-      const cSellers = alive.filter(p => (p.inventory['C'] || 0) > DEATH_THRESHOLD && p !== cap);
-      let luxSpent = 0;
-      for (const seller of cSellers) {
-        if (luxSpent >= luxuryAmt) break;
-        const avail = seller.inventory['C'] || 0;
-        if (avail < DEATH_THRESHOLD) continue;
-        const maxQty = Math.min(avail, (luxuryAmt - luxSpent) / UNIT_PRICE, cap.money / UNIT_PRICE);
-        if (maxQty < DEATH_THRESHOLD) continue;
-        const price = maxQty * UNIT_PRICE;
-        seller.removeGoods('C', maxQty);
-        cap.money -= price;
-        seller.money += price;
-        luxSpent += price;
-        stepConsumedQty += maxQty; // luxury consumed
-        exchangeCount++;
-        logEntry('exchange',`${cap.label} luxury: ${maxQty.toFixed(1)}C from ${seller.label}`);
-      }
-    }
-  }
-
-  // ── Phase 4: Inter-Department Exchange ──
-  // Dept II capitalists buy K from Dept I for next period's production
-  const deptII_caps = capitalists.filter(c => c.department === 2);
+  // ── Phase 3: Allocation α^k (§22.1.4) ──
+  // The allocation configuration: m'_n → r_n + c_{n+1} + v_{n+1}
+  //   c_{n+1}: replacement of consumed τ + expansion (Leontief-proportional share of λ·δ)
+  //   v_{n+1}: wages for next period (stays as money, spent in next tick's Phase 1)
+  //   r_n = (1-λ)·δ: revenue, consumed privately
+  // Inter-department exchange realizes the allocation:
+  //   Dept II buys τ from Dept I (replacement + expansion)
+  //   Dept I retains own τ (replacement + expansion implicit in inventory)
+  //   Revenue: Dept II self-consumes σ; Dept I buys σ from Dept II
+  const lambda = expandedParams.accumRate;
   const deptI_caps = capitalists.filter(c => c.department === 1);
+  const deptII_caps = capitalists.filter(c => c.department === 2);
+
+  // Helper: compute expansion τ for a capitalist using Leontief proportions
+  // Reinvestment λ·δ buys additional scale; unit cost = tauCoeff·p(τ) + m_w
+  // Additional τ = Δscale · tauCoeff
+  function expansionTau(cap) {
+    const delta = cap.profitIncome || 0;
+    const outputSym = cap.department === 1 ? '\u03C4' : '\u03C3';
+    const recipe = LEONTIEF_RECIPES.find(r => r.output === outputSym);
+    const tauCoeff = recipe ? recipe.coeffs[0] : 0.5;
+    const unitCost = tauCoeff * pTau + expandedParams.wagePerWorker;
+    const deltaScale = (lambda * delta) / unitCost;
+    return deltaScale * tauCoeff;
+  }
+
+  // 3a. Compute Dept I reserves: replacement + expansion (what they keep for next period)
+  const deptI_reserves = new Map();
+  for (const cap1 of deptI_caps) {
+    const replacement = cap1._tauConsumedThisTick || 0;
+    deptI_reserves.set(cap1, replacement + expansionTau(cap1));
+  }
+
+  // 3b. Dept II: buy τ from Dept I (replacement of consumed + expansion from λ·δ)
   for (const cap2 of deptII_caps) {
-    const kNeeded = 4; // target K holding
-    const kHave = cap2.inventory['K'] || 0;
-    if (kHave >= kNeeded) continue;
-    const deficit = kNeeded - kHave;
-    for (const cap1 of deptI_caps) {
-      const avail = cap1.inventory['K'] || 0;
+    const replacement = cap2._tauConsumedThisTick || 0;
+    const expansion = expansionTau(cap2);
+    const totalNeeded = replacement + expansion;
+    const tauHave = cap2.inventory['\u03C4'] || 0;
+    const tauToBuy = Math.max(0, totalNeeded - tauHave);
+
+    if (tauToBuy > DEATH_THRESHOLD) {
+      let bought = 0;
+      for (const cap1 of deptI_caps) {
+        if (bought >= tauToBuy) break;
+        const reserve = deptI_reserves.get(cap1) || 0;
+        const avail = Math.max(0, (cap1.inventory['\u03C4'] || 0) - reserve);
+        if (avail < DEATH_THRESHOLD) continue;
+        const qty = Math.min(avail, tauToBuy - bought, cap2.money / pTau);
+        if (qty < DEATH_THRESHOLD) continue;
+        const price = qty * pTau;
+        cap1.removeGoods('\u03C4', qty);
+        cap2.addGoods('\u03C4', qty);
+        cap2.money -= price;
+        cap1.money += price;
+        bought += qty;
+        exchangeCount++;
+        const tag = expansion > DEATH_THRESHOLD
+          ? `\u03B1\u1D4F: ${qty.toFixed(1)}\u03C4 (c\u2099\u208A\u2081=${replacement.toFixed(1)} + \u0394c=${expansion.toFixed(1)})`
+          : `\u03B1\u1D4F: ${qty.toFixed(1)}\u03C4 (replacement c\u2099\u208A\u2081)`;
+        logEntry('capital',`Dept II ${cap2.label} ${tag} from ${cap1.label}`);
+        animations.push({type:'exchange_arrow', progress:0,
+          from:{x:cap1.x,y:cap1.y}, to:{x:cap2.x,y:cap2.y},
+          label:`${qty.toFixed(1)}\u03C4`, color:'#e06c75'});
+      }
+    }
+
+    // Dept II revenue r = (1-λ)·δ: self-consume own σ
+    const revenueAmt = (1 - lambda) * (cap2.profitIncome || 0);
+    if (revenueAmt > DEATH_THRESHOLD) {
+      const ownSigma = cap2.inventory['\u03C3'] || 0;
+      const rQty = Math.min(ownSigma, revenueAmt / pSigma);
+      if (rQty > DEATH_THRESHOLD) {
+        cap2.removeGoods('\u03C3', rQty);
+        stepConsumedQty += rQty;
+        logEntry('exchange',`${cap2.label} revenue r: consumes ${rQty.toFixed(1)}\u03C3`);
+      }
+    }
+  }
+
+  // 3c. Dept I revenue r = (1-λ)·δ: buys σ from Dept II
+  for (const cap1 of deptI_caps) {
+    const rBudget = (cap1.profitIncome || 0) * (1 - lambda);
+    if (rBudget < DEATH_THRESHOLD) continue;
+    let spent = 0;
+    for (const cap2 of deptII_caps) {
+      if (spent >= rBudget) break;
+      const avail = cap2.inventory['\u03C3'] || 0;
       if (avail < DEATH_THRESHOLD) continue;
-      const qty = Math.min(avail, deficit, cap2.money / UNIT_PRICE);
-      if (qty < DEATH_THRESHOLD) continue;
-      const price = qty * UNIT_PRICE;
-      cap1.removeGoods('K', qty);
-      cap2.addGoods('K', qty);
-      cap2.money -= price;
-      cap1.money += price;
+      const maxQty = Math.min(avail, (rBudget - spent) / pSigma, cap1.money / pSigma);
+      if (maxQty < DEATH_THRESHOLD) continue;
+      const price = maxQty * pSigma;
+      cap2.removeGoods('\u03C3', maxQty);
+      cap1.money -= price;
+      cap2.money += price;
+      spent += price;
+      stepConsumedQty += maxQty;
       exchangeCount++;
-      logEntry('exchange',`Dept II ${cap2.label} buys ${qty.toFixed(1)}K from Dept I ${cap1.label}`);
+      logEntry('exchange',`Dept I ${cap1.label} revenue r: buys ${maxQty.toFixed(1)}\u03C3 from Dept II ${cap2.label}`);
+      animations.push({type:'exchange_arrow', progress:0,
+        from:{x:cap1.x,y:cap1.y}, to:{x:cap2.x,y:cap2.y},
+        label:`${maxQty.toFixed(1)}\u03C3`, color:'#3fb950'});
     }
   }
 
@@ -1476,7 +1668,11 @@ function stepExpanded(){
   const totalV = deptAccounting.I.v + deptAccounting.II.v;
   const totalS = deptAccounting.I.s + deptAccounting.II.s;
   profitRateHistory.push((totalC + totalV) > DEATH_THRESHOLD ? totalS / (totalC + totalV) : 0);
-  capitalStockHistory.push(proprietors.filter(p=>p.agentClass==='capitalist').reduce((s,p)=>s+(p.inventory['K']||0),0));
+  capitalStockHistory.push(proprietors.filter(p=>p.agentClass==='capitalist').reduce((s,p)=>s+(p.inventory['\u03C4']||0),0));
+  organicCompHistory.push(totalV > DEATH_THRESHOLD ? totalC / totalV : 0);
+  // κ = λε (§22.2.4) from actual accounting
+  const actualEps = totalV > DEATH_THRESHOLD ? totalS / totalV : 0;
+  kappaHistory.push(expandedParams.accumRate * actualEps);
 
   recipeTimer = Math.max(0, recipeTimer-1);
   if (recipeTimer===0) document.getElementById('recipeToast').classList.remove('visible');
@@ -2199,19 +2395,22 @@ function draw(){
   ctx.textAlign='center'; ctx.textBaseline='middle';
   if (mode==='cc'){
     ctx.font='26px Georgia'; ctx.fillStyle='#c6cdd5';
-    ctx.fillText('CC \u2014 Stabilized Commodity Region', cx, cy-20);
+    ctx.fillText('Circulation \u00A79', cx, cy-20);
     ctx.font='italic 33px Georgia'; ctx.fillStyle='#8b949eaa';
     ctx.fillText('C \u2192 M \u2192 C\u2032', cx, cy+20);
   } else if (mode==='expanded'){
     ctx.font='26px Georgia'; ctx.fillStyle='#ffa060';
-    ctx.fillText('Expanded Reproduction', cx, cy-28);
-    ctx.font='20px Georgia'; ctx.fillStyle='#ffa060aa';
-    ctx.fillText('Dept I (K)  \u00B7  Dept II (C)', cx, cy+4);
-    ctx.font='16px "SF Mono",Consolas,monospace'; ctx.fillStyle='#ffa06088';
-    ctx.fillText(`accum=${Math.round(expandedParams.accumRate*100)}%  s/v=${Math.round(expandedParams.rateExploitation*100)}%`, cx, cy+30);
+    ctx.fillText('Reproduction \u00A722', cx, cy-36);
+    ctx.font='italic 20px Georgia'; ctx.fillStyle='#ffa060bb';
+    ctx.fillText('m \u2192 C \u2192 \u03A0(\u2113,\u03C4) \u2192 C\u2032 \u2192 m\u2032', cx, cy-8);
+    ctx.font='18px Georgia'; ctx.fillStyle='#ffa060aa';
+    ctx.fillText('Dept I (\u03C4)  \u00B7  Dept II (\u03C3)', cx, cy+16);
+    ctx.font='14px "SF Mono",Consolas,monospace'; ctx.fillStyle='#ffa06088';
+    const kappa = expandedParams.accumRate * expandedParams.rateExploitation;
+    ctx.fillText(`\u03BB=${Math.round(expandedParams.accumRate*100)}%  \u03B5=${Math.round(expandedParams.rateExploitation*100)}%  \u03BA=${Math.round(kappa*100)}%`, cx, cy+38);
   } else {
     ctx.font='26px Georgia'; ctx.fillStyle='#bfa0d4';
-    ctx.fillText('Capital Circuit', cx, cy-20);
+    ctx.fillText('Capital \u00A711\u201315', cx, cy-20);
     ctx.font='italic 33px Georgia'; ctx.fillStyle='#bfa0d4aa';
     ctx.fillText('M \u2192 C \u2192 \u2026 \u2192 M\u2032', cx, cy+20);
   }
@@ -2398,11 +2597,19 @@ function draw(){
 
       // Class+dept label in expanded mode
       if (mode==='expanded' && p.department > 0) {
-        const classLabel = p.agentClass==='capitalist' ? 'Cap' : 'Wkr';
-        const deptLabel = p.department===1 ? 'DI' : 'DII';
+        const deptLabel = p.department===1 ? 'Dept I' : 'Dept II';
         ctx.font=`${Math.max(11,R*0.28)}px "SF Mono",Consolas,monospace`;
         ctx.fillStyle = p.agentClass==='capitalist' ? '#ff9f43' : '#56d4dd';
-        ctx.fillText(`${classLabel} ${deptLabel}`, p.x, p.y+R*0.55);
+        ctx.fillText(deptLabel, p.x, p.y+R*0.55);
+      }
+      // Means of production indicator above capitalist nodes
+      if (mode==='expanded' && p.agentClass==='capitalist') {
+        const kQty = p.inventory['\u03C4'] || 0;
+        if (kQty > DEATH_THRESHOLD) {
+          ctx.font=`bold ${Math.max(18,R*0.44)}px "SF Mono",Consolas,monospace`;
+          ctx.fillStyle='#e06c75'; ctx.textBaseline='bottom'; ctx.textAlign='center';
+          ctx.fillText(`\u2699 ${kQty.toFixed(1)}\u03C4`, p.x, p.y-R-8);
+        }
       }
 
       // Inventory arc segments (colored arcs proportional to share of each type)
@@ -2477,10 +2684,12 @@ function drawChart(){
     { key:'merchant', data: merchantCumHistory, color: '#ff9f43', label: 'Merchant \u03A3',   fmt: 1 },
     { key:'usury',    data: usuryCumHistory,    color: '#ffd700', label: 'Usury interest \u03A3', fmt: 1 },
     { key:'melt',     data: mevHistory,         color: '#58a6ff', label: 'MELT (V/M)',          fmt: 3 },
-    { key:'deptI',    data: deptIOutputHistory,  color: '#e06c75', label: 'Dept I K/t',    fmt: 1 },
-    { key:'deptII',   data: deptIIOutputHistory, color: '#3fb950', label: 'Dept II C/t',   fmt: 1 },
-    { key:'profRate', data: profitRateHistory,   color: '#d2a8ff', label: 'Profit rate',   fmt: 3 },
-    { key:'capitalStock', data: capitalStockHistory, color: '#ff9f43', label: 'K stock', fmt: 1 },
+    { key:'deptI',    data: deptIOutputHistory,  color: '#e06c75', label: 'Dept I \u03C4/t',    fmt: 1 },
+    { key:'deptII',   data: deptIIOutputHistory, color: '#3fb950', label: 'Dept II \u03C3/t',   fmt: 1 },
+    { key:'profRate', data: profitRateHistory,   color: '#d2a8ff', label: 'profit rate',   fmt: 3 },
+    { key:'capitalStock', data: capitalStockHistory, color: '#ff9f43', label: '\u03C4 stock', fmt: 1 },
+    { key:'organicComp', data: organicCompHistory, color: '#56d4dd', label: 'c/v', fmt: 2 },
+    { key:'kappa',    data: kappaHistory,        color: '#ffa060', label: '\u03BA accum', fmt: 3 },
   ];
   const modeFilter = CHART_SERIES.filter(cs => !cs.modes || cs.modes.includes(mode)).map(cs => cs.key);
   const series = allSeries.filter(s => chartVisible[s.key] && modeFilter.includes(s.key));
@@ -2635,14 +2844,20 @@ function updateStats(){
     document.getElementById('dept-II-v').textContent = deptAccounting.II.v.toFixed(0);
     document.getElementById('dept-II-s').textContent = deptAccounting.II.s.toFixed(0);
     document.getElementById('dept-II-out').textContent = deptAccounting.II.output.toFixed(1);
-    document.getElementById('dept-W1').textContent = deptAccounting.I.v.toFixed(0);
-    // Q = Dept II profit realized = Dept II surplus
-    document.getElementById('dept-Q').textContent = deptAccounting.II.s.toFixed(0);
     const tc = deptAccounting.I.c + deptAccounting.II.c;
     const tv = deptAccounting.I.v + deptAccounting.II.v;
     const ts = deptAccounting.I.s + deptAccounting.II.s;
-    const pr = (tc + tv) > DEATH_THRESHOLD ? (ts / (tc + tv) * 100) : 0;
-    document.getElementById('dept-profrate').textContent = pr.toFixed(1);
+    document.getElementById('dept-lambda').textContent = Math.round(expandedParams.accumRate * 100);
+    // ε = δ/v (§17.5): surplus per unit variable capital (exploitation rate)
+    const eps = tv > DEATH_THRESHOLD ? (ts / tv * 100) : 0;
+    document.getElementById('dept-epsilon').textContent = eps.toFixed(1);
+    // κ = λε (§22.2.4): actual accumulation rate from accounting data
+    const kap = tv > DEATH_THRESHOLD ? (expandedParams.accumRate * ts / tv * 100) : 0;
+    document.getElementById('dept-kappa').textContent = kap.toFixed(1);
+    const oc = tv > DEATH_THRESHOLD ? (tc / tv) : 0;
+    document.getElementById('dept-organic').textContent = oc.toFixed(2);
+    document.getElementById('dept-pK').textContent = expandedPrices['\u03C4'].toFixed(1);
+    document.getElementById('dept-pC').textContent = expandedPrices['\u03C3'].toFixed(1);
   }
 }
 
@@ -2778,6 +2993,15 @@ function toggleLog(){
   o.classList.toggle('collapsed');
   document.getElementById('logToggle').textContent = o.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
 }
+function copyLog(){
+  const entries = document.querySelectorAll('#log .log-entry');
+  const text = Array.from(entries).map(e => e.textContent).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('logCopy');
+    btn.textContent = '\u2713';
+    setTimeout(() => { btn.innerHTML = '\u2398'; }, 1200);
+  });
+}
 function toggleLegend(){
   const o = document.getElementById('legendOverlay');
   o.classList.toggle('collapsed');
@@ -2798,14 +3022,14 @@ function setMode(m){
   document.getElementById('btn-mode-simple').className = m==='simple'?'active':'';
   document.getElementById('btn-mode-expanded').className = m==='expanded'?'active':'';
   const badge = document.getElementById('modeBadge');
-  if (m==='cc'){ badge.className='mode-badge cc'; badge.textContent='CC \u2014 Simple Circulation'; }
-  else if (m==='simple'){ badge.className='mode-badge simple'; badge.textContent='Simple Capital \u2014 M\u2192C\u2192M\u2032'; }
-  else { badge.className='mode-badge expanded'; badge.textContent='Expanded Reproduction'; }
+  if (m==='cc'){ badge.className='mode-badge cc'; badge.textContent='Circulation \u00A79'; }
+  else if (m==='simple'){ badge.className='mode-badge simple'; badge.textContent='Capital \u00A711\u201315'; }
+  else { badge.className='mode-badge expanded'; badge.textContent='Reproduction \u00A722'; }
   document.getElementById('mode-desc').textContent = m==='cc'
-    ? 'Stabilized commodity region: circulation + value-conserving production. §9.14'
+    ? 'Commodity circulation C\u2192M\u2192C\u2032 with value-conserving production. \u00A79'
     : m==='simple'
-    ? 'Capital circuit: M \u2192 C \u2192 ... \u2192 M\u2032 with surplus extraction. §11.1'
-    : 'Two-sector reproduction: Dept I (K) + Dept II (C). Robinson\u2019s identity.';
+    ? 'Capital circuit M\u2192C\u2192\u2026\u2192M\u2032 with surplus extraction \u03B4. \u00A711\u201315'
+    : 'Total social capital \ud835\udca6 reproducing across Dept I (\u03C4) and Dept II (\u03C3). \u03B8-cycles. \u00A722';
   if (m==='simple') setProd('conservative');
 
   // Capital Forms group visibility
@@ -2817,30 +3041,28 @@ function setMode(m){
   const showExpanded = m==='expanded';
   document.getElementById('section-expanded-params').style.display = showExpanded?'flex':'none';
   document.getElementById('expanded-params-divider').style.display = showExpanded?'block':'none';
-  if (showExpanded) document.getElementById('section-expanded-params').classList.remove('section-collapsed');
 
-  // Hide/show sections based on mode
-  document.getElementById('section-production').style.display = showExpanded?'none':'flex';
-  document.getElementById('section-coupling').style.display = showExpanded?'none':'flex';
-  document.getElementById('section-labor').style.display = showExpanded?'none':'flex';
-  // Hide Leontief edit button in expanded mode
-  const leontiefBtns = document.querySelectorAll('.group > button[onclick="openLeontiefEditor()"]');
-  leontiefBtns.forEach(b => b.style.display = showExpanded?'none':'inline-block');
+  // Hide/show sections and their dividers based on mode
+  const expandedHidden = ['section-arbitrage','divider-arbitrage','section-production','divider-production',
+    'section-coupling','divider-coupling','section-labor','divider-labor',
+    'section-leontief','divider-leontief'];
+  for (const id of expandedHidden) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = showExpanded ? 'none' : (id.startsWith('divider') ? 'block' : 'flex');
+  }
 
-  // Force-disable controls in expanded mode
+  // Reset controls when entering/leaving expanded mode
   if (showExpanded) {
     setArbitrage(false);
-    document.getElementById('btn-arb-on').disabled = true;
-    document.getElementById('btn-arb-on').style.opacity = '0.4';
-    document.getElementById('btn-labor-implicit').disabled = true;
-    document.getElementById('btn-labor-implicit').style.opacity = '0.4';
-  } else {
-    document.getElementById('btn-arb-on').disabled = false;
-    document.getElementById('btn-arb-on').style.opacity = '1';
-    if (!capitalSubModes.industrial) {
-      document.getElementById('btn-labor-implicit').disabled = false;
-      document.getElementById('btn-labor-implicit').style.opacity = '1';
+    // Enforce minimum 4 proprietors (2 capitalists + at least 2 workers)
+    const propSlider = document.getElementById('numProprietors');
+    if (+propSlider.value < 4) {
+      propSlider.value = 4;
+      document.getElementById('prop-count').textContent = '4';
     }
+    propSlider.min = 4;
+  } else {
+    document.getElementById('numProprietors').min = 3;
   }
 
   // Disable all sub-modes when leaving simple/capital
@@ -2928,11 +3150,51 @@ function updateWage(){
   document.getElementById('wage-val').textContent = v;
   markPresetDirty();
 }
-function updateNumCap(){
-  const v = +document.getElementById('numCapSlider').value;
-  expandedParams.numCapitalists = v;
-  document.getElementById('num-cap-val').textContent = v;
+function openExpandedParamsModal(){
+  document.getElementById('expandedParamsModal').classList.remove('hidden');
+  // Sync slider values
+  document.getElementById('accumRateSlider').value = Math.round(expandedParams.accumRate * 100);
+  document.getElementById('accum-rate-pct').textContent = Math.round(expandedParams.accumRate * 100);
+  document.getElementById('exploitRateSlider').value = Math.round(expandedParams.rateExploitation * 100);
+  document.getElementById('exploit-rate-pct').textContent = Math.round(expandedParams.rateExploitation * 100);
+  document.getElementById('wageSlider').value = expandedParams.wagePerWorker;
+  document.getElementById('wage-val').textContent = expandedParams.wagePerWorker;
+  // Sync coefficient sliders from current recipes
+  const rK = LEONTIEF_RECIPES.find(r=>r.output==='\u03C4');
+  const rC = LEONTIEF_RECIPES.find(r=>r.output==='\u03C3');
+  if (rK) { document.getElementById('coeffKISlider').value = rK.coeffs[0]; document.getElementById('coeff-ki-val').textContent = rK.coeffs[0]; }
+  if (rC) { document.getElementById('coeffKIISlider').value = rC.coeffs[0]; document.getElementById('coeff-kii-val').textContent = rC.coeffs[0]; }
+}
+function closeExpandedParamsModal(){
+  document.getElementById('expandedParamsModal').classList.add('hidden');
   if (mode === 'expanded') resetSim();
+}
+function updateExpandedCoeffs(){
+  const ki = +document.getElementById('coeffKISlider').value;
+  const kii = +document.getElementById('coeffKIISlider').value;
+  document.getElementById('coeff-ki-val').textContent = ki.toFixed(2);
+  document.getElementById('coeff-kii-val').textContent = kii.toFixed(2);
+  const rK = LEONTIEF_RECIPES.find(r=>r.output==='\u03C4');
+  const rC = LEONTIEF_RECIPES.find(r=>r.output==='\u03C3');
+  if (rK) rK.coeffs[0] = ki;
+  if (rC) rC.coeffs[0] = kii;
+  computeExpandedPrices();
+  markPresetDirty();
+}
+
+function toggleTechChange(){
+  const on = document.getElementById('techChangeToggle').checked;
+  expandedParams.techChangeEnabled = on;
+  document.getElementById('tech-change-status').textContent = on ? 'on' : 'off';
+  document.getElementById('techChangeRateGroup').style.display = on ? 'block' : 'none';
+  // Lock coefficient sliders when technical change drives them
+  document.getElementById('coeffKISlider').disabled = on;
+  document.getElementById('coeffKIISlider').disabled = on;
+}
+function updateTechChangeRate(){
+  const v = +document.getElementById('techChangeRateSlider').value;
+  expandedParams.techChangeRate = v;
+  document.getElementById('tech-change-rate-val').textContent = v.toFixed(3);
 }
 
 function togglePlay(){
@@ -2951,6 +3213,14 @@ function resetSim(){
   document.getElementById('btn-play').innerHTML='\u25B6 Play';
   document.getElementById('btn-play').className='primary';
   document.getElementById('log').innerHTML='';
+  // Reset technical change and coefficient sliders to defaults
+  expandedParams.techChangeEnabled = false;
+  const tcCb = document.getElementById('techChangeToggle');
+  if (tcCb) { tcCb.checked = false; toggleTechChange(); }
+  const kiSl = document.getElementById('coeffKISlider');
+  const kiiSl = document.getElementById('coeffKIISlider');
+  if (kiSl) { kiSl.value = kiSl.defaultValue; document.getElementById('coeff-ki-val').textContent = (+kiSl.defaultValue).toFixed(2); }
+  if (kiiSl) { kiiSl.value = kiiSl.defaultValue; document.getElementById('coeff-kii-val').textContent = (+kiiSl.defaultValue).toFixed(2); }
   resize(); init();
   if (!_loadingPreset) markPresetDirty();
 }
@@ -3022,7 +3292,7 @@ function getPresetState(){
     usuryInstallmentRatio,
     chartVisible: {...chartVisible},
     expandedParams: {...expandedParams},
-    collapsedSections: ['section-stats','section-production','section-labor','section-presets','section-expanded-params']
+    collapsedSections: ['section-stats','section-production','section-labor','section-presets']
       .filter(id => document.getElementById(id)?.classList.contains('section-collapsed')),
   };
 }
@@ -3058,14 +3328,13 @@ function loadPreset(name){
   // Restore expanded params
   if (s.expandedParams) {
     expandedParams = {...expandedParams, ...s.expandedParams};
+    expandedParams.numCapitalists = 2; // always fixed at 2
     document.getElementById('accumRateSlider').value = Math.round(expandedParams.accumRate * 100);
     document.getElementById('accum-rate-pct').textContent = Math.round(expandedParams.accumRate * 100);
     document.getElementById('exploitRateSlider').value = Math.round(expandedParams.rateExploitation * 100);
     document.getElementById('exploit-rate-pct').textContent = Math.round(expandedParams.rateExploitation * 100);
     document.getElementById('wageSlider').value = expandedParams.wagePerWorker;
     document.getElementById('wage-val').textContent = expandedParams.wagePerWorker;
-    document.getElementById('numCapSlider').value = expandedParams.numCapitalists;
-    document.getElementById('num-cap-val').textContent = expandedParams.numCapitalists;
   }
 
   // Restore TYPES and recipes before anything else (setMode may trigger resetSim)
@@ -3179,6 +3448,26 @@ renderPresetList();
 renderChartLegend();
 
 rebuildLeontief();
+// Force-reset all modal inputs to HTML defaults (browser may cache form state)
+(function syncFormState(){
+  // Coefficient sliders
+  const kiSl = document.getElementById('coeffKISlider');
+  const kiiSl = document.getElementById('coeffKIISlider');
+  if (kiSl) { kiSl.value = kiSl.defaultValue; document.getElementById('coeff-ki-val').textContent = (+kiSl.defaultValue).toFixed(2); }
+  if (kiiSl) { kiiSl.value = kiiSl.defaultValue; document.getElementById('coeff-kii-val').textContent = (+kiiSl.defaultValue).toFixed(2); }
+  // Accumulation, exploitation, wage sliders
+  const accSl = document.getElementById('accumRateSlider');
+  if (accSl) { accSl.value = accSl.defaultValue; updateAccumRate(); }
+  const expSl = document.getElementById('exploitRateSlider');
+  if (expSl) { expSl.value = expSl.defaultValue; updateExploitRate(); }
+  const wageSl = document.getElementById('wageSlider');
+  if (wageSl) { wageSl.value = wageSl.defaultValue; updateWage(); }
+  // Technical change
+  const tcCb = document.getElementById('techChangeToggle');
+  if (tcCb) { tcCb.checked = false; toggleTechChange(); }
+  const tcRate = document.getElementById('techChangeRateSlider');
+  if (tcRate) { tcRate.value = tcRate.defaultValue; updateTechChangeRate(); }
+})();
 resize(); init();
 requestAnimationFrame(loop);
 

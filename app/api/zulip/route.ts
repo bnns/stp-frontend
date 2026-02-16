@@ -77,10 +77,10 @@ const zulipMessage = (
 };
 
 export async function POST(req: NextRequest) {
-  const headersList = headers();
+  const headersList = await headers();
   const authorization = headersList.get("authorization");
   if (authorization?.trim() === process.env.WEBHOOK_TOKEN?.trim()) {
-    revalidateTag('strapi')
+    revalidateTag('strapi', 'default')
     const zulipClient = await zulipInit({
       username: process.env.ZULIP_USERNAME,
       apiKey: process.env.ZULIP_API_KEY,
