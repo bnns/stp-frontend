@@ -1081,12 +1081,9 @@ const CHART_SERIES = [
   { key:'capitalStock', color:'#ff9f43', legendLabel:'\u03C4 stock', modes:['expanded'] },
   { key:'organicComp', color:'#56d4dd', legendLabel:'c/v',   modes:['expanded'] },
   { key:'kappa',    color:'#ffa060', legendLabel:'\u03BA accum',  modes:['expanded'] },
-  { key:'profRateI',  color:'#e06c75', legendLabel:'r\u2081 Dept I',   modes:['expanded'] },
-  { key:'profRateII', color:'#3fb950', legendLabel:'r\u2082 Dept II',  modes:['expanded'] },
-  { key:'priceDevTau', color:'#ff69b4', legendLabel:'pp/val \u03C4', modes:['expanded'] },
-  { key:'priceDevSig', color:'#bc8cff', legendLabel:'pp/val \u03C3', modes:['expanded'] },
-  { key:'normDevTau', color:'#ff69b4', legendLabel:'redist \u03C4', modes:['expanded'] },
-  { key:'normDevSig', color:'#bc8cff', legendLabel:'redist \u03C3', modes:['expanded'] },
+  { key:'deptProfRates', color:'#d2a8ff', legendLabel:'r\u2081 vs r\u2082', modes:['expanded'] },
+  { key:'priceDev', color:'#ff69b4', legendLabel:'pp/val', modes:['expanded'] },
+  { key:'redist', color:'#bc8cff', legendLabel:'redist', modes:['expanded'] },
 ];
 let chartVisible = Object.fromEntries(CHART_SERIES.map(s=>[s.key,true]));
 
@@ -2738,7 +2735,7 @@ function drawChart(){
   const COLS = 3;
   const pad = {l:6, r:6, t:4, b:14};
   const cellPadL = 36; // left padding inside each cell for value label
-  const cellPadR = 20; // right padding inside each cell for owner labels
+  const cellPadR = 44; // right padding inside each cell for dual/owner labels
   const gapX = 8, gapY = 4;
 
   const allSeries = [
@@ -2758,12 +2755,12 @@ function drawChart(){
     { key:'capitalStock', data: capitalStockHistory, color: '#ff9f43', label: '\u03C4 stock', fmt: 1 },
     { key:'organicComp', data: organicCompHistory, color: '#56d4dd', label: 'c/v', fmt: 2 },
     { key:'kappa',    data: kappaHistory,        color: '#ffa060', label: '\u03BA accum', fmt: 3 },
-    { key:'profRateI',  data: profitRateIHistory,  color: '#e06c75', label: 'r\u2081 Dept I', fmt: 3 },
-    { key:'profRateII', data: profitRateIIHistory, color: '#3fb950', label: 'r\u2082 Dept II', fmt: 3 },
-    { key:'priceDevTau', data: priceDevTauHistory, color: '#ff69b4', label: 'pp/val \u03C4', fmt: 3 },
-    { key:'priceDevSig', data: priceDevSigHistory, color: '#bc8cff', label: 'pp/val \u03C3', fmt: 3 },
-    { key:'normDevTau', data: normDevTauHistory, color: '#ff69b4', label: 'redist \u03C4', fmt: 3 },
-    { key:'normDevSig', data: normDevSigHistory, color: '#bc8cff', label: 'redist \u03C3', fmt: 3 },
+    { key:'deptProfRates', dual: true, datasets: [profitRateIHistory, profitRateIIHistory],
+      dualColors: ['#e06c75', '#3fb950'], dualLabels: ['r\u2081', 'r\u2082'], label: 'r\u2081 vs r\u2082', fmt: 3 },
+    { key:'priceDev', dual: true, datasets: [priceDevTauHistory, priceDevSigHistory],
+      dualColors: ['#ff69b4', '#bc8cff'], dualLabels: ['\u03C4', '\u03C3'], label: 'pp/val', fmt: 3, refLine: 1.0 },
+    { key:'redist', dual: true, datasets: [normDevTauHistory, normDevSigHistory],
+      dualColors: ['#ff69b4', '#bc8cff'], dualLabels: ['\u03C4', '\u03C3'], label: 'redist', fmt: 3, refLine: 1.0 },
   ];
   const modeFilter = CHART_SERIES.filter(cs => !cs.modes || cs.modes.includes(mode)).map(cs => cs.key);
   const series = allSeries.filter(s => chartVisible[s.key] && modeFilter.includes(s.key));
@@ -2834,6 +2831,64 @@ function drawChart(){
       const mPts = datasets[0].slice(-window);
       const mStep = plotW / Math.max(mPts.length - 1, 1);
       chartCells.push({ plotL, plotR, cy, cellH, pts: mPts, step: mStep, label: entry.label, color: '#8b949e', fmt: entry.fmt, dataLen: datasets[0].length });
+    } else if (entry.dual) {
+      // Dual-line chart: two series on shared y-axis with optional reference line
+      const { datasets: dualDs, dualColors, dualLabels, refLine } = entry;
+      if (!dualDs[0].length || dualDs[0].length < 2) {
+        drawCellLabel(entry.label, '#8b949e', cx, cy, cellW);
+        continue;
+      }
+      const dualWin = Math.floor(plotW);
+      // Compute shared min/max across both series
+      let dMin = Infinity, dMax = -Infinity;
+      const dualPts = [];
+      for (const ds of dualDs) {
+        const sl = ds.slice(-dualWin);
+        dualPts.push(sl);
+        for (const v of sl) { if (v < dMin) dMin = v; if (v > dMax) dMax = v; }
+      }
+      if (refLine !== undefined) { dMin = Math.min(dMin, refLine); dMax = Math.max(dMax, refLine); }
+      const range = dMax - dMin || 0.001;
+      // Add 5% padding
+      dMin -= range * 0.05; dMax += range * 0.05;
+      const dRange = dMax - dMin;
+
+      // Reference line
+      if (refLine !== undefined) {
+        const ry = cy + margin + plotH - ((refLine - dMin) / dRange) * plotH;
+        chartCtx.strokeStyle = '#30363d'; chartCtx.lineWidth = 1;
+        chartCtx.setLineDash([3, 3]);
+        chartCtx.beginPath(); chartCtx.moveTo(plotL, ry); chartCtx.lineTo(plotR, ry); chartCtx.stroke();
+        chartCtx.setLineDash([]);
+      }
+
+      // Draw each line
+      for (let d = 0; d < dualDs.length; d++) {
+        const pts = dualPts[d];
+        const step = plotW / Math.max(pts.length - 1, 1);
+        const clr = dualColors[d];
+        chartCtx.beginPath();
+        for (let i = 0; i < pts.length; i++) {
+          const x = plotL + i * step;
+          const y = cy + margin + plotH - ((pts[i] - dMin) / dRange) * plotH;
+          i === 0 ? chartCtx.moveTo(x, y) : chartCtx.lineTo(x, y);
+        }
+        chartCtx.strokeStyle = clr; chartCtx.lineWidth = 1.3; chartCtx.stroke();
+        // Value label + series label at right
+        const lastVal = pts[pts.length - 1];
+        const lastY = cy + margin + plotH - ((lastVal - dMin) / dRange) * plotH;
+        chartCtx.font = '9px "SF Mono",Consolas,monospace';
+        chartCtx.fillStyle = clr;
+        chartCtx.textAlign = 'left'; chartCtx.textBaseline = 'middle';
+        const dly = Math.max(cy + 5, Math.min(cy + cellH - 5, lastY));
+        const dValStr = entry.fmt === 0 ? String(Math.round(lastVal)) : lastVal.toFixed(entry.fmt);
+        chartCtx.fillText(dualLabels[d] + ' ' + dValStr, plotR + 2, dly);
+      }
+      drawCellLabel(entry.label, '#8b949e', cx, cy, cellW);
+      // Tooltip: store both datasets for dual display
+      const dStep = plotW / Math.max(dualPts[0].length - 1, 1);
+      chartCells.push({ plotL, plotR, cy, cellH, pts: dualPts[0], step: dStep, label: entry.label, color: '#8b949e', fmt: entry.fmt, dataLen: dualDs[0].length,
+        dual: true, dualPts, dualColors, dualLabels });
     } else {
       const {data, color, label} = entry;
       if (data.length < 2) {
@@ -2909,16 +2964,28 @@ let chartCells = [];  // populated by drawChart each frame
       if (lx >= cell.plotL && lx <= cell.plotR && ly >= cell.cy && ly <= cell.cy + cell.cellH) {
         const i = Math.round((lx - cell.plotL) / cell.step);
         const idx = Math.max(0, Math.min(cell.pts.length - 1, i));
-        const val = cell.pts[idx];
-        const tick = cell.dataLen - cell.pts.length + idx;
+        const tickNum = cell.dataLen - cell.pts.length + idx;
         const fmt = cell.fmt;
-        const valStr = fmt === 0 ? String(Math.round(val)) : val.toFixed(fmt);
-        tooltip.textContent = `${cell.label}: ${valStr}  t=${tick}`;
-        tooltip.style.color = cell.color;
+        if (cell.dual) {
+          // Show both values with colored labels
+          let html = `<span style="color:#8b949e">${cell.label} t=${tickNum}</span>`;
+          for (let d = 0; d < cell.dualPts.length; d++) {
+            const dIdx = Math.max(0, Math.min(cell.dualPts[d].length - 1, idx));
+            const dVal = cell.dualPts[d][dIdx];
+            const dStr = fmt === 0 ? String(Math.round(dVal)) : dVal.toFixed(fmt);
+            html += `<br><span style="color:${cell.dualColors[d]}">${cell.dualLabels[d]} ${dStr}</span>`;
+          }
+          tooltip.innerHTML = html;
+        } else {
+          const val = cell.pts[idx];
+          const valStr = fmt === 0 ? String(Math.round(val)) : val.toFixed(fmt);
+          tooltip.textContent = `${cell.label}: ${valStr}  t=${tickNum}`;
+          tooltip.style.color = cell.color;
+        }
         // Position in CSS coords, clamped to chart bounds
         const tx = e.clientX - rect.left + 12;
         const ty = e.clientY - rect.top - 20;
-        tooltip.style.left = Math.min(tx, rect.width - 140) + 'px';
+        tooltip.style.left = Math.min(tx, rect.width - 160) + 'px';
         tooltip.style.top = Math.max(0, ty) + 'px';
         tooltip.style.display = '';
         return;
