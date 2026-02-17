@@ -616,7 +616,9 @@
           <div style="color:#3fb950;">Dept II (&sigma;): c&#x2082;=<span id="dept-II-c">0</span> v&#x2082;=<span id="dept-II-v">0</span> &delta;&#x2082;=<span id="dept-II-s">0</span> out=<span id="dept-II-out">0</span></div>
           <div style="color:#b1bac4;">&lambda;=<span id="dept-lambda">0</span>% &epsilon;=<span id="dept-epsilon">0</span>% &kappa;=<span id="dept-kappa">0</span>%</div>
           <div style="color:#56d4dd;">c/v=<span id="dept-organic">0</span></div>
+          <div style="color:#ff69b4;font-size:10px;" id="dept-profit-rates">r&#x2081;=0% r&#x2082;=0% r&#x304;=0%</div>
           <div style="color:#8b949e;font-size:10px;">p(&tau;)=<span id="dept-pK">0</span> p(&sigma;)=<span id="dept-pC">0</span></div>
+          <div style="color:#8b949e;font-size:10px;display:none;" id="dept-val-prices"></div>
         </div>
       </div>
     </div>
@@ -727,6 +729,9 @@
 
     <div class="chart-strip">
       <canvas id="chart"></canvas>
+      <div id="chartTooltip" style="display:none;position:absolute;pointer-events:none;
+        background:#161b22ee;border:1px solid #30363d;border-radius:4px;padding:3px 7px;
+        font:11px 'SF Mono',Consolas,monospace;color:#e6edf3;white-space:nowrap;z-index:10;"></div>
     </div>
   </div>
 </div>
@@ -886,6 +891,18 @@
           <div class="desc" style="font-size:12px;">Absolute increase in both a<sub>&tau;&tau;</sub> and a<sub>&sigma;&tau;</sub> each cycle. At 0.005/tick from defaults (0.4, 0.6), coefficients reach 0.9 in ~60&ndash;100 ticks.</div>
         </div>
       </div>
+      <div style="border-top:1px solid #30363d;margin:4px 0;padding-top:4px;">
+        <div class="desc" style="font-size:12px;color:#8b949e;margin-bottom:6px;">Prices of production (&sect;Vol. III). Competition redistributes surplus so all departments earn a uniform profit rate r&#x304;, causing prices to deviate from labor values.</div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            <input type="checkbox" id="prodPricesToggle" onchange="toggleProdPrices()" style="accent-color:#ff69b4;">
+            Prices of production
+          </label>
+          <span id="prod-prices-status" style="font-size:11px;color:#8b949e;">off</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -969,6 +986,7 @@ let expandedParams = {
   numCapitalists: 2,
   techChangeEnabled: false,
   techChangeRate: 0.005,  // coefficient increase per tick (absolute)
+  prodPricesEnabled: false,
 };
 
 let deptAccounting = {
@@ -978,8 +996,15 @@ let deptAccounting = {
 
 // Value-based prices for expanded mode (derived from Leontief coefficients + wages)
 let expandedPrices = { '\u03C4': 5, '\u03C3': 5 };  // τ, σ
+let valuePrices = { '\u03C4': 5, '\u03C3': 5 };  // always tracks labor-value prices for comparison
 let organicCompHistory = [];  // c/v ratio history for chart
 let kappaHistory = [];  // accumulation rate κ = λε history
+let profitRateIHistory = [];   // per-dept profit rate Dept I
+let profitRateIIHistory = [];  // per-dept profit rate Dept II
+let priceDevTauHistory = [];   // pp(τ)/value(τ) ratio
+let priceDevSigHistory = [];   // pp(σ)/value(σ) ratio
+let normDevTauHistory = [];    // normalized: pp/val(τ) ÷ mean(pp/val), redistribution component
+let normDevSigHistory = [];    // normalized: pp/val(σ) ÷ mean(pp/val), redistribution component
 
 function getCoeffs() {
   // Source of truth: LEONTIEF_RECIPES (updated by sliders and technical change)
@@ -994,11 +1019,29 @@ function computeExpandedPrices() {
   const w = expandedParams.wagePerWorker;
   const e = expandedParams.rateExploitation;
   const { a_tt, a_st } = getCoeffs();
-  // p(τ) = w(1+ε) / (1 - a_ττ)
-  // p(σ) = a_στ · p(τ) + w(1+ε)
+  // Value prices: p(τ) = w(1+ε) / (1 - a_ττ), p(σ) = a_στ · p(τ) + w(1+ε)
   const laborCost = w * (1 + e);
-  expandedPrices['\u03C4'] = (1 - a_tt) > 0.01 ? laborCost / (1 - a_tt) : laborCost * 10;
-  expandedPrices['\u03C3'] = a_st * expandedPrices['\u03C4'] + laborCost;
+  valuePrices['\u03C4'] = (1 - a_tt) > 0.01 ? laborCost / (1 - a_tt) : laborCost * 10;
+  valuePrices['\u03C3'] = a_st * valuePrices['\u03C4'] + laborCost;
+
+  if (expandedParams.prodPricesEnabled && profitRateHistory.length > 0) {
+    // Production prices: pp(τ) = (1+r̄)·w / (1 - (1+r̄)·a_ττ)
+    // pp(σ) = (1+r̄)·(a_στ · pp(τ) + w)
+    const rBar = profitRateHistory[profitRateHistory.length - 1];
+    const denom = 1 - (1 + rBar) * a_tt;
+    if (denom > 0.01) {
+      expandedPrices['\u03C4'] = (1 + rBar) * w / denom;
+      expandedPrices['\u03C3'] = (1 + rBar) * (a_st * expandedPrices['\u03C4'] + w);
+    } else {
+      // Fallback to value prices if denominator too small
+      expandedPrices['\u03C4'] = valuePrices['\u03C4'];
+      expandedPrices['\u03C3'] = valuePrices['\u03C3'];
+    }
+  } else {
+    // Use value prices
+    expandedPrices['\u03C4'] = valuePrices['\u03C4'];
+    expandedPrices['\u03C3'] = valuePrices['\u03C3'];
+  }
 }
 
 function goodPrice(sym) {
@@ -1022,22 +1065,28 @@ let mevHistory = [];  // monetary expression of value: M/V
 
 // Chart series visibility (all on by default)
 const CHART_SERIES = [
-  { key:'goods',    color:'#f0883e', legendLabel:'Goods',       modes:['cc','simple','expanded'] },
-  { key:'value',    color:'#79c0ff', legendLabel:'Value',       modes:['cc','simple','expanded'] },
-  { key:'share',    color:'#8b949e', legendLabel:'Value share', modes:['cc','simple','expanded'] },
+  { key:'goods',    color:'#f0883e', legendLabel:'Goods',       modes:['cc','simple'] },
+  { key:'value',    color:'#79c0ff', legendLabel:'Value',       modes:['cc','simple'] },
+  { key:'share',    color:'#8b949e', legendLabel:'Value share', modes:['cc','simple'] },
   { key:'produced', color:'#3fb950', legendLabel:'Production',  modes:['cc','simple'] },
   { key:'consumed', color:'#da3633', legendLabel:'Consumption', modes:['cc','simple'] },
   { key:'arbitrage',color:'#d2a8ff', legendLabel:'Arbitrage',   modes:['cc','simple'] },
   { key:'surplus',  color:'#e06c75', legendLabel:'Surplus',     modes:['cc','simple'] },
   { key:'merchant', color:'#ff9f43', legendLabel:'Merchant',    modes:['cc','simple'] },
   { key:'usury',    color:'#ffd700', legendLabel:'Usury',       modes:['cc','simple'] },
-  { key:'melt',     color:'#58a6ff', legendLabel:'MELT',        modes:['cc','simple','expanded'] },
+  { key:'melt',     color:'#58a6ff', legendLabel:'MELT',        modes:['cc','simple'] },
   { key:'deptI',    color:'#e06c75', legendLabel:'Dept I (\u03C4)',   modes:['expanded'] },
   { key:'deptII',   color:'#3fb950', legendLabel:'Dept II (\u03C3)', modes:['expanded'] },
   { key:'profRate', color:'#d2a8ff', legendLabel:'profit rate',  modes:['expanded'] },
   { key:'capitalStock', color:'#ff9f43', legendLabel:'\u03C4 stock', modes:['expanded'] },
   { key:'organicComp', color:'#56d4dd', legendLabel:'c/v',   modes:['expanded'] },
   { key:'kappa',    color:'#ffa060', legendLabel:'\u03BA accum',  modes:['expanded'] },
+  { key:'profRateI',  color:'#e06c75', legendLabel:'r\u2081 Dept I',   modes:['expanded'] },
+  { key:'profRateII', color:'#3fb950', legendLabel:'r\u2082 Dept II',  modes:['expanded'] },
+  { key:'priceDevTau', color:'#ff69b4', legendLabel:'pp/val \u03C4', modes:['expanded'] },
+  { key:'priceDevSig', color:'#bc8cff', legendLabel:'pp/val \u03C3', modes:['expanded'] },
+  { key:'normDevTau', color:'#ff69b4', legendLabel:'redist \u03C4', modes:['expanded'] },
+  { key:'normDevSig', color:'#bc8cff', legendLabel:'redist \u03C3', modes:['expanded'] },
 ];
 let chartVisible = Object.fromEntries(CHART_SERIES.map(s=>[s.key,true]));
 
@@ -1241,6 +1290,8 @@ function init() {
   prodPerTickHistory=[]; consPerTickHistory=[]; arbCumHistory=[]; surplusCumHistory=[];
   loans=[]; merchantCumHistory=[]; usuryCumHistory=[]; mevHistory=[];
   deptIOutputHistory=[]; deptIIOutputHistory=[]; profitRateHistory=[]; capitalStockHistory=[]; organicCompHistory=[]; kappaHistory=[];
+  profitRateIHistory=[]; profitRateIIHistory=[]; priceDevTauHistory=[]; priceDevSigHistory=[]; normDevTauHistory=[]; normDevSigHistory=[];
+  valuePrices = { '\u03C4': 5, '\u03C3': 5 };
   deptAccounting = { I:{c:0,v:0,s:0,output:0}, II:{c:0,v:0,s:0,output:0} };
   merchantExchangeRates = {};
   for (const t of TYPES) merchantExchangeRates[t.sym] = 1.5;
@@ -1673,6 +1724,22 @@ function stepExpanded(){
   // κ = λε (§22.2.4) from actual accounting
   const actualEps = totalV > DEATH_THRESHOLD ? totalS / totalV : 0;
   kappaHistory.push(expandedParams.accumRate * actualEps);
+  // Per-department profit rates
+  const rI = (deptAccounting.I.c + deptAccounting.I.v) > DEATH_THRESHOLD
+    ? deptAccounting.I.s / (deptAccounting.I.c + deptAccounting.I.v) : 0;
+  const rII = (deptAccounting.II.c + deptAccounting.II.v) > DEATH_THRESHOLD
+    ? deptAccounting.II.s / (deptAccounting.II.c + deptAccounting.II.v) : 0;
+  profitRateIHistory.push(rI);
+  profitRateIIHistory.push(rII);
+  // Price deviation: expandedPrices / valuePrices
+  const devTau = valuePrices['\u03C4'] > DEATH_THRESHOLD ? expandedPrices['\u03C4'] / valuePrices['\u03C4'] : 1;
+  const devSig = valuePrices['\u03C3'] > DEATH_THRESHOLD ? expandedPrices['\u03C3'] / valuePrices['\u03C3'] : 1;
+  priceDevTauHistory.push(devTau);
+  priceDevSigHistory.push(devSig);
+  // Normalized: divide by mean so redistribution is symmetric around 1.0
+  const devMean = (devTau + devSig) / 2;
+  normDevTauHistory.push(devMean > DEATH_THRESHOLD ? devTau / devMean : 1);
+  normDevSigHistory.push(devMean > DEATH_THRESHOLD ? devSig / devMean : 1);
 
   recipeTimer = Math.max(0, recipeTimer-1);
   if (recipeTimer===0) document.getElementById('recipeToast').classList.remove('visible');
@@ -2664,6 +2731,7 @@ function draw(){
 function drawChart(){
   const W = chartCanvas.width/DPR, H = chartCanvas.height/DPR;
   chartCtx.clearRect(0,0,W,H);
+  chartCells = [];
   if (gHistory.length<2) return;
 
   // Dynamic grid layout
@@ -2690,6 +2758,12 @@ function drawChart(){
     { key:'capitalStock', data: capitalStockHistory, color: '#ff9f43', label: '\u03C4 stock', fmt: 1 },
     { key:'organicComp', data: organicCompHistory, color: '#56d4dd', label: 'c/v', fmt: 2 },
     { key:'kappa',    data: kappaHistory,        color: '#ffa060', label: '\u03BA accum', fmt: 3 },
+    { key:'profRateI',  data: profitRateIHistory,  color: '#e06c75', label: 'r\u2081 Dept I', fmt: 3 },
+    { key:'profRateII', data: profitRateIIHistory, color: '#3fb950', label: 'r\u2082 Dept II', fmt: 3 },
+    { key:'priceDevTau', data: priceDevTauHistory, color: '#ff69b4', label: 'pp/val \u03C4', fmt: 3 },
+    { key:'priceDevSig', data: priceDevSigHistory, color: '#bc8cff', label: 'pp/val \u03C3', fmt: 3 },
+    { key:'normDevTau', data: normDevTauHistory, color: '#ff69b4', label: 'redist \u03C4', fmt: 3 },
+    { key:'normDevSig', data: normDevSigHistory, color: '#bc8cff', label: 'redist \u03C3', fmt: 3 },
   ];
   const modeFilter = CHART_SERIES.filter(cs => !cs.modes || cs.modes.includes(mode)).map(cs => cs.key);
   const series = allSeries.filter(s => chartVisible[s.key] && modeFilter.includes(s.key));
@@ -2756,6 +2830,10 @@ function drawChart(){
         chartCtx.fillText('O'+(o+1), plotR + 2, cly);
       }
       drawCellLabel(entry.label, '#8b949e', cx, cy, cellW);
+      // Record cell for tooltip (use first dataset)
+      const mPts = datasets[0].slice(-window);
+      const mStep = plotW / Math.max(mPts.length - 1, 1);
+      chartCells.push({ plotL, plotR, cy, cellH, pts: mPts, step: mStep, label: entry.label, color: '#8b949e', fmt: entry.fmt, dataLen: datasets[0].length });
     } else {
       const {data, color, label} = entry;
       if (data.length < 2) {
@@ -2786,6 +2864,7 @@ function drawChart(){
       chartCtx.fillText(valStr, plotL - 3, clampedY);
 
       drawCellLabel(label, color, cx, cy, cellW);
+      chartCells.push({ plotL, plotR, cy, cellH, pts, step, label, color, fmt: entry.fmt, dataLen: data.length });
     }
   }
 
@@ -2813,6 +2892,41 @@ function drawCellLabel(label, color, cx, cy, cellW){
   chartCtx.fillStyle = color;
   chartCtx.textAlign = 'left'; chartCtx.textBaseline = 'top';
   chartCtx.fillText(label, cx + 4, cy + 2);
+}
+
+// ── Chart tooltip ──
+let chartCells = [];  // populated by drawChart each frame
+{
+  const tooltip = document.getElementById('chartTooltip');
+  chartCanvas.addEventListener('mousemove', (e) => {
+    if (!chartCells.length) { tooltip.style.display = 'none'; return; }
+    const rect = chartCanvas.getBoundingClientRect();
+    // CSS px → canvas logical coords (drawChart uses canvas.width/DPR)
+    const lx = (e.clientX - rect.left) * (chartCanvas.width / DPR) / rect.width;
+    const ly = (e.clientY - rect.top) * (chartCanvas.height / DPR) / rect.height;
+
+    for (const cell of chartCells) {
+      if (lx >= cell.plotL && lx <= cell.plotR && ly >= cell.cy && ly <= cell.cy + cell.cellH) {
+        const i = Math.round((lx - cell.plotL) / cell.step);
+        const idx = Math.max(0, Math.min(cell.pts.length - 1, i));
+        const val = cell.pts[idx];
+        const tick = cell.dataLen - cell.pts.length + idx;
+        const fmt = cell.fmt;
+        const valStr = fmt === 0 ? String(Math.round(val)) : val.toFixed(fmt);
+        tooltip.textContent = `${cell.label}: ${valStr}  t=${tick}`;
+        tooltip.style.color = cell.color;
+        // Position in CSS coords, clamped to chart bounds
+        const tx = e.clientX - rect.left + 12;
+        const ty = e.clientY - rect.top - 20;
+        tooltip.style.left = Math.min(tx, rect.width - 140) + 'px';
+        tooltip.style.top = Math.max(0, ty) + 'px';
+        tooltip.style.display = '';
+        return;
+      }
+    }
+    tooltip.style.display = 'none';
+  });
+  chartCanvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
 }
 
 // ── Stats ──
@@ -2858,6 +2972,22 @@ function updateStats(){
     document.getElementById('dept-organic').textContent = oc.toFixed(2);
     document.getElementById('dept-pK').textContent = expandedPrices['\u03C4'].toFixed(1);
     document.getElementById('dept-pC').textContent = expandedPrices['\u03C3'].toFixed(1);
+    // Per-department profit rates
+    const rI = (deptAccounting.I.c + deptAccounting.I.v) > DEATH_THRESHOLD
+      ? deptAccounting.I.s / (deptAccounting.I.c + deptAccounting.I.v) : 0;
+    const rII = (deptAccounting.II.c + deptAccounting.II.v) > DEATH_THRESHOLD
+      ? deptAccounting.II.s / (deptAccounting.II.c + deptAccounting.II.v) : 0;
+    const rBar = (tc + tv) > DEATH_THRESHOLD ? ts / (tc + tv) : 0;
+    document.getElementById('dept-profit-rates').textContent =
+      'r\u2081=' + (rI*100).toFixed(1) + '% r\u2082=' + (rII*100).toFixed(1) + '% r\u0304=' + (rBar*100).toFixed(1) + '%';
+    // Value prices for comparison when production prices are on
+    const valLine = document.getElementById('dept-val-prices');
+    if (expandedParams.prodPricesEnabled) {
+      valLine.textContent = 'val: ' + valuePrices['\u03C4'].toFixed(1) + '/' + valuePrices['\u03C3'].toFixed(1);
+      valLine.style.display = '';
+    } else {
+      valLine.style.display = 'none';
+    }
   }
 }
 
@@ -3197,6 +3327,12 @@ function updateTechChangeRate(){
   document.getElementById('tech-change-rate-val').textContent = v.toFixed(3);
 }
 
+function toggleProdPrices(){
+  const on = document.getElementById('prodPricesToggle').checked;
+  expandedParams.prodPricesEnabled = on;
+  document.getElementById('prod-prices-status').textContent = on ? 'on' : 'off';
+}
+
 function togglePlay(){
   playing=!playing;
   document.getElementById('btn-play').innerHTML = playing ? '\u23F8 Pause' : '\u25B6 Play';
@@ -3464,6 +3600,9 @@ rebuildLeontief();
   if (tcCb) { tcCb.checked = false; toggleTechChange(); }
   const tcRate = document.getElementById('techChangeRateSlider');
   if (tcRate) { tcRate.value = tcRate.defaultValue; updateTechChangeRate(); }
+  // Prices of production
+  const ppCb = document.getElementById('prodPricesToggle');
+  if (ppCb) { ppCb.checked = false; toggleProdPrices(); }
 })();
 resize(); init();
 requestAnimationFrame(loop);
