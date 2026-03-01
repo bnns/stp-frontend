@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Presheaf Topos — A Geometric Metaphor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Georgia', serif;
+  background: #0d1117;
+  color: #e6edf3;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+#sidebar {
+  width: 360px;
+  padding: 24px;
+  border-right: 1px solid #21262d;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+#sidebar h1 {
+  font-size: 20px;
+  color: #f0f6fc;
+  margin-bottom: 4px;
+}
+#sidebar .subtitle {
+  font-size: 13px;
+  color: #8b949e;
+  margin-bottom: 20px;
+}
+#stage-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #1f6feb;
+  color: #fff;
+  margin-bottom: 16px;
+}
+#stage-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #f0f6fc;
+  margin-bottom: 12px;
+  line-height: 1.3;
+}
+#stage-text {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #c9d1d9;
+  flex: 1;
+}
+#stage-text em { color: #7ee787; font-style: italic; }
+#stage-text strong { color: #ffa657; font-weight: 600; }
+#stage-text .math { font-family: 'Cambria Math','Times New Roman',serif; color: #d2a8ff; }
+
+.nav-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  flex-shrink: 0;
+}
+.nav-row button {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #21262d;
+  color: #e6edf3;
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.nav-row button:hover { background: #30363d; border-color: #484f58; }
+.nav-row button:disabled { opacity: 0.3; cursor: default; }
+.nav-row button:disabled:hover { background: #21262d; border-color: #30363d; }
+
+#canvas-container {
+  flex: 1;
+  position: relative;
+}
+canvas { display: block; }
+
+.cohom-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 13px;
+}
+.cohom-table th, .cohom-table td {
+  padding: 5px 8px;
+  border: 1px solid #30363d;
+  text-align: left;
+}
+.cohom-table th {
+  background: #161b22;
+  color: #8b949e;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h1>The Presheaf Topos</h1>
+  <div class="subtitle">A Geometric Metaphor</div>
+  <div id="stage-badge"></div>
+  <div id="stage-title"></div>
+  <div id="stage-text"></div>
+  <div class="nav-row">
+    <button id="btn-prev" disabled>&larr; Previous</button>
+    <button id="btn-next">Next &rarr;</button>
+  </div>
+</div>
+
+<div id="canvas-container"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ═══════════════════════════════════════════════════════════════
+// SCENE SETUP
+// ═══════════════════════════════════════════════════════════════
+const container = document.getElementById('canvas-container');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x0d1117);
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+camera.position.set(0, 2, 18);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(0, 1.5, 0);
+
+const targetCamPos = new THREE.Vector3().copy(camera.position);
+const targetCamTarget = new THREE.Vector3().copy(controls.target);
+let camLerp = 0.04;
+
+function resize() {
+  const w = container.clientWidth, h = container.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Ambient particles
+const starGeo = new THREE.BufferGeometry();
+const starPos = new Float32Array(300 * 3);
+for (let i = 0; i < 300 * 3; i++) starPos[i] = (Math.random() - 0.5) * 60;
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x333344, size: 0.08 })));
+
+// Persistent faint grid
+const gridHelper = new THREE.GridHelper(30, 30, 0x30363d, 0x252a33);
+gridHelper.position.y = -0.01;
+scene.add(gridHelper);
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function makeTube(points, radius, color, opacity = 1) {
+  const curve = new THREE.CatmullRomCurve3(points);
+  const geo = new THREE.TubeGeometry(curve, Math.max(points.length * 4, 64), radius, 8, false);
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity });
+  return new THREE.Mesh(geo, mat);
+}
+
+function makeLine(points, color, opacity = 1) {
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+  return new THREE.Line(geo, mat);
+}
+
+function makeDashedLine(points, color, dashSize = 0.3, gapSize = 0.15) {
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const mat = new THREE.LineDashedMaterial({ color, dashSize, gapSize, transparent: true, opacity: 0.7 });
+  const line = new THREE.Line(geo, mat);
+  line.computeLineDistances();
+  return line;
+}
+
+function makeSphere(pos, radius, color) {
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(radius, 16, 12),
+    new THREE.MeshBasicMaterial({ color })
+  );
+  m.position.copy(pos);
+  return m;
+}
+
+function makeFilledRegion(shapePts, color, opacity = 0.15) {
+  const shape = new THREE.Shape();
+  shape.moveTo(shapePts[0].x, shapePts[0].y);
+  for (let i = 1; i < shapePts.length; i++) shape.lineTo(shapePts[i].x, shapePts[i].y);
+  shape.closePath();
+  const geo = new THREE.ShapeGeometry(shape);
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide });
+  return new THREE.Mesh(geo, mat);
+}
+
+function makeLabel(text, position, color = '#e6edf3', size = 1.45) {
+  const canvas = document.createElement('canvas');
+  // Measure text to size canvas appropriately
+  const tempCtx = canvas.getContext('2d');
+  tempCtx.font = 'bold 48px Georgia';
+  const measured = tempCtx.measureText(text);
+  const textWidth = Math.ceil(measured.width) + 40;
+  canvas.width = Math.max(256, textWidth);
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.font = 'bold 48px Georgia';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, canvas.width / 2, 64);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+  const s = new THREE.Sprite(mat);
+  s.position.copy(position);
+  const aspect = canvas.width / canvas.height;
+  s.scale.set(size * aspect, size, 1);
+  return s;
+}
+
+function makeWall(x, height, color = 0xf85149, opacity = 0.35) {
+  const geo = new THREE.PlaneGeometry(0.06, height);
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide });
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x, height / 2, 0);
+  return m;
+}
+
+function sampleCurve(fn, xMin, xMax, steps = 120) {
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const x = xMin + (xMax - xMin) * i / steps;
+    pts.push(new THREE.Vector3(x, fn(x), 0));
+  }
+  return pts;
+}
+
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+// Animated dashed curve: custom ShaderMaterial for reliable marching-ants animation
+function makeAnimatedDash(fn, xMin, xMax, color, opacity = 0.85, dashSize = 0.4, gapSize = 0.25) {
+  const pts = sampleCurve(fn, xMin, xMax, 200);
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  // Compute cumulative line distances as attribute
+  const distances = new Float32Array(pts.length);
+  distances[0] = 0;
+  for (let i = 1; i < pts.length; i++) {
+    distances[i] = distances[i - 1] + pts[i].distanceTo(pts[i - 1]);
+  }
+  geo.setAttribute('lineDistance', new THREE.BufferAttribute(distances, 1));
+  const c = new THREE.Color(color);
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    uniforms: {
+      uColor: { value: c },
+      uOpacity: { value: opacity },
+      uDashSize: { value: dashSize },
+      uGapSize: { value: gapSize },
+      uOffset: { value: 0 },
+    },
+    vertexShader: `
+      attribute float lineDistance;
+      varying float vDist;
+      void main() {
+        vDist = lineDistance;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uColor;
+      uniform float uOpacity;
+      uniform float uDashSize;
+      uniform float uGapSize;
+      uniform float uOffset;
+      varying float vDist;
+      void main() {
+        float d = mod(vDist + uOffset, uDashSize + uGapSize);
+        if (d > uDashSize) discard;
+        gl_FragColor = vec4(uColor, uOpacity);
+      }
+    `,
+  });
+  return new THREE.Line(geo, mat);
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+// ═══════════════════════════════════════════════════════════════
+// CURVE FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+const dinnerPrice = x => 2.2 + 0.5 * Math.sin(x * 0.55) + 0.25 * Math.cos(x * 1.1) + 0.15 * Math.sin(x * 1.8);
+const BUDGET = 2.8;
+
+const cc1Fn = x => 1.8 + 0.3 * Math.sin(x * 0.7);
+const cc2Fn = x => 3.3 + 0.2 * Math.cos(x * 0.8);
+const cc3Fn = x => 2.1 + 0.25 * Math.sin(x * 0.6 + 1);
+
+const CC_BOUNDS = [[-8, -2], [-2, 3], [3, 8]];
+const CC_COLORS = [0x58a6ff, 0x3fb950, 0xbc8cff];
+const CC_FNS = [cc1Fn, cc2Fn, cc3Fn];
+
+
+// ═══════════════════════════════════════════════════════════════
+// SHARED CONSTANTS & CLOUD HELPERS
+// ═══════════════════════════════════════════════════════════════
+const FIBER_COLORS = [0xf85149, 0xffa657, 0x7ee787, 0x58a6ff, 0xbc8cff, 0xe6edf3];
+const FIBER_NAMES = ['bread', 'iron', 'cloth', 'labor', 'tools', 'grain'];
+const FIBER_POSITIONS = [-6, -3, 0, 3, 6];
+const rng = n => Math.sin(n * 127.1 + 311.7) * 0.5 + 0.5;
+
+function makeBaseLine(g, opacity = 1) {
+  g.add(makeTube([new THREE.Vector3(-8, 0, 0), new THREE.Vector3(8, 0, 0)], 0.04, 0x58a6ff, opacity));
+}
+
+function makeYAxis(g, opacity = 1) {
+  g.add(makeTube([new THREE.Vector3(-8.5, 0, 0), new THREE.Vector3(-8.5, 5, 0)], 0.025, 0x484f58, opacity));
+  g.add(makeLabel('magnitude', new THREE.Vector3(-8.5, 5.6, 0), '#8b949e', 0.8));
+}
+
+// Creates an InstancedMesh cloud of dots. Returns { instancedMesh, dotData, TOTAL_DOTS, tmpMatrix }.
+// fiberXs: array of x positions for fibers (or single-element for one fiber)
+// dotsPerFiber: dots per fiber
+// opts: { radius, spread, yRange, showFiberLines, fiberLineOpacity }
+function makeCloud(g, fiberXs, dotsPerFiber, opts = {}) {
+  const radius = opts.radius || 0.09;
+  const spread = opts.spread || 0.8;
+  const yMin = opts.yMin || 0.4;
+  const yRange = opts.yRange || 4.2;
+  const showFiberLines = opts.showFiberLines !== false;
+  const fiberLineOpacity = opts.fiberLineOpacity || 0.4;
+  const fiberLineHeight = opts.fiberLineHeight || 5.5;
+
+  const TOTAL_DOTS = fiberXs.length * dotsPerFiber;
+  const sphereGeo = new THREE.SphereGeometry(radius, 8, 6);
+  const instancedMesh = new THREE.InstancedMesh(
+    sphereGeo,
+    new THREE.MeshBasicMaterial({ color: 0xffffff }),
+    TOTAL_DOTS
+  );
+  instancedMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(TOTAL_DOTS * 3), 3);
+  g.add(instancedMesh);
+
+  const dotData = new Array(TOTAL_DOTS);
+  const fibers = {};
+  const fiberLines = [];
+  const tmpMatrix = new THREE.Matrix4();
+  const tmpColor = new THREE.Color();
+  let idx = 0;
+
+  for (const fx of fiberXs) {
+    fibers[fx] = [];
+    if (showFiberLines) {
+      const fl = makeLine([new THREE.Vector3(fx, 0, 0), new THREE.Vector3(fx, fiberLineHeight, 0)], 0x30363d, fiberLineOpacity);
+      g.add(fl);
+      fiberLines.push(fl);
+    }
+    for (let i = 0; i < dotsPerFiber; i++) {
+      const baseY = yMin + rng(fx * 13 + i * 37) * yRange;
+      const ci = Math.floor(rng(fx * 11 + i * 23) * FIBER_COLORS.length);
+      const ni = Math.floor(rng(fx * 29 + i * 31) * FIBER_NAMES.length);
+      const phase = rng(fx * 17 + i * 41) * Math.PI * 2;
+      const ampY = 0.15 + rng(fx * 19 + i * 43) * 0.4;
+      const ampX = 0.08 + rng(fx * 23 + i * 47) * 0.25;
+      const baseX = fx + (rng(fx * 31 + i * 53) - 0.5) * spread;
+
+      dotData[idx] = {
+        baseY, baseX, fiberX: fx, phase, ampY, ampX,
+        name: FIBER_NAMES[ni], color: FIBER_COLORS[ci],
+        orderedY: 0, curX: baseX, curY: baseY, scale: 1,
+      };
+      fibers[fx].push(idx);
+
+      tmpMatrix.makeTranslation(baseX, baseY, 0);
+      instancedMesh.setMatrixAt(idx, tmpMatrix);
+      tmpColor.set(FIBER_COLORS[ci]);
+      instancedMesh.instanceColor.setXYZ(idx, tmpColor.r, tmpColor.g, tmpColor.b);
+      idx++;
+    }
+  }
+  instancedMesh.instanceMatrix.needsUpdate = true;
+  instancedMesh.instanceColor.needsUpdate = true;
+
+  return { instancedMesh, dotData, fibers, fiberLines, TOTAL_DOTS, tmpMatrix: new THREE.Matrix4() };
+}
+
+// Animate a cloud: wobble dots freely or snap to ordered positions if fixated
+function updateCloud(cloud, t, fixated = false) {
+  const mat = cloud.tmpMatrix;
+  for (let i = 0; i < cloud.TOTAL_DOTS; i++) {
+    const dd = cloud.dotData[i];
+    if (fixated) {
+      dd.curY = lerp(dd.curY, dd.orderedY, 0.07);
+      dd.curX = lerp(dd.curX, dd.fiberX, 0.07);
+    } else {
+      const targetY = dd.baseY + Math.sin(t * 1.2 + dd.phase) * dd.ampY;
+      const targetX = dd.baseX + Math.sin(t * 0.8 + dd.phase * 1.3) * dd.ampX;
+      dd.curY = lerp(dd.curY, targetY, 0.07);
+      dd.curX = lerp(dd.curX, targetX, 0.07);
+    }
+    const s = dd.scale;
+    mat.makeScale(s, s, s);
+    mat.setPosition(dd.curX, dd.curY, 0);
+    cloud.instancedMesh.setMatrixAt(i, mat);
+  }
+  cloud.instancedMesh.instanceMatrix.needsUpdate = true;
+}
+
+// Shaded region helper (for sections/budget stages)
+function flushSegment(g, xs) {
+  if (xs.length < 3) return;
+  const pts = [];
+  for (const x of xs) pts.push(new THREE.Vector2(x, dinnerPrice(x)));
+  pts.push(new THREE.Vector2(xs[xs.length - 1], BUDGET));
+  pts.push(new THREE.Vector2(xs[0], BUDGET));
+  g.add(makeFilledRegion(pts, 0x7ee787, 0.12));
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// STAGE DEFINITIONS
+// ═══════════════════════════════════════════════════════════════
+const stageGroup = new THREE.Group();
+scene.add(stageGroup);
+
+const STAGES = [
+  // ─── STAGE 0: THE EVALUATION FUNCTION ───
+  {
+    id: 'evaluation',
+    title: 'The Evaluation Function',
+    text: `Before anything else, there is a single point on the line and a cloud of <em>useful things</em> above it. These are qualitatively different — bread, iron, cloth, labor — with no common measure. The <em>evaluation function</em> <span class="math">e : D × D → T</span> asks: to what degree can one thing be exchanged for another? This is not a price. It is a relation of substitutability, producing a value in the locale <span class="math">T</span>. The fiber above each point is the raw material that <span class="math">e</span> will eventually organize.`,
+    cam: { pos: [0, 2.5, 12], target: [0, 2, 0] },
+    stageData: {},
+    setup(g) {
+      // Single point on base
+      const baseX = 0;
+      g.add(makeSphere(new THREE.Vector3(baseX, 0, 0), 0.12, 0x58a6ff));
+      g.add(makeTube([new THREE.Vector3(-1, 0, 0), new THREE.Vector3(1, 0, 0)], 0.04, 0x58a6ff, 0.3));
+      g.add(makeLabel('one value condition', new THREE.Vector3(0, -0.7, 0), '#8b949e', 0.65));
+
+      // Faint vertical fiber line
+      const fl = makeLine([new THREE.Vector3(baseX, 0, 0), new THREE.Vector3(baseX, 5.5, 0)], 0x30363d, 0.4);
+      g.add(fl);
+
+      const cloud = makeCloud(g, [baseX], 60, { spread: 1.2 });
+      g.add(makeLabel('D — useful things', new THREE.Vector3(0, 5.5, 0), '#8b949e', 0.8));
+      g.add(makeLabel('e : D × D → T', new THREE.Vector3(0, -1.5, 0), '#d2a8ff', 0.8));
+      // Name labels for a few representative dots
+      for (let i = 0; i < 6; i++) {
+        const dd = cloud.dotData[i * 9];
+        if (dd) g.add(makeLabel(dd.name, new THREE.Vector3(dd.baseX + 0.5, dd.baseY, 0), '#8b949e', 0.35));
+      }
+      this.stageData = { cloud };
+    },
+    update(t) {
+      if (this.stageData.cloud) updateCloud(this.stageData.cloud, t);
+    }
+  },
+
+  // ─── STAGE 1: BASE SPACE ───
+  {
+    id: 'base-space',
+    title: 'The Base Space',
+    text: `Each point on the line represents a <em>value condition</em> — a configuration of exchange relations, prices, and institutional arrangements. Where you stand determines what economic statements you can make. This is the locale <span class="math">T</span> of value conditions (\u00a710).`,
+    cam: { pos: [0, 2, 16], target: [0, 1.5, 0] },
+    setup(g) {
+      // Base line
+      const pts = [new THREE.Vector3(-8, 0, 0), new THREE.Vector3(8, 0, 0)];
+      g.add(makeTube(pts, 0.045, 0x58a6ff));
+      // Glow
+      g.add(makeTube(pts, 0.12, 0x58a6ff, 0.15));
+      // Position markers
+      for (let x = -6; x <= 6; x += 3) {
+        g.add(makeSphere(new THREE.Vector3(x, 0, 0), 0.09, 0x79c0ff));
+      }
+      // Label
+      g.add(makeLabel('T — value conditions', new THREE.Vector3(0, -1.0, 0), '#8b949e', 1.2));
+      const cloud = makeCloud(g, FIBER_POSITIONS, 12, { radius: 0.07, spread: 0.5, yMin: 0.5, yRange: 3.5, fiberLineOpacity: 0.15, fiberLineHeight: 4.5 });
+      this.stageData = { cloud };
+      // X-axis ticks
+      for (let x = -8; x <= 8; x += 1) {
+        g.add(makeLine([new THREE.Vector3(x, -0.1, 0), new THREE.Vector3(x, 0.1, 0)], 0x30363d, 0.3));
+      }
+    },
+    stageData: {},
+    update(t) {
+      if (this.stageData.cloud) updateCloud(this.stageData.cloud, t);
+    }
+  },
+
+  // ─── STAGE 1b: FIBERS — USEFUL THINGS TO COMMODITIES ───
+  {
+    id: 'fibers',
+    title: 'Fibers: From Useful Things to Commodities',
+    text: `Above each point on the line sits a <em>fiber</em> — the collection of useful things <span class="math"><i>D</i></span> evaluable at that condition. These are heterogeneous: bread, iron, cloth, labor, at different qualitative levels, with no common scale.<br><br><strong>Click a dot</strong> to impose a value axis — the clicked commodity is maximally equivalent to itself (rises to the top), and the others order below it. Click again to release. The evaluation function <span class="math">e</span> stabilizes things into <em>commodities</em> <span class="math"><i>C</i></span>; the money-form collapses fibers onto a single magnitude axis. That structure is imposed, not given.`,
+    cam: { pos: [0, 2.5, 16], target: [0, 2, 0] },
+    stageData: {},
+    setup(g) {
+      makeBaseLine(g);
+      const cloud = makeCloud(g, FIBER_POSITIONS, 40);
+      const { instancedMesh, dotData, fibers, fiberLines, TOTAL_DOTS } = cloud;
+      const fiberPositions = FIBER_POSITIONS;
+
+      // Y-axis (hidden initially, shown on click)
+      const yAxis = makeTube([new THREE.Vector3(-8.5, 0, 0), new THREE.Vector3(-8.5, 5, 0)], 0.025, 0x484f58, 0);
+      g.add(yAxis);
+      const yLabel = makeLabel('magnitude', new THREE.Vector3(-8.5, 5.6, 0), '#8b949e', 0.65);
+      yLabel.material.opacity = 0;
+      g.add(yLabel);
+
+      // State label
+      const stateLabel = makeLabel('click a dot to impose value axis', new THREE.Vector3(0, -0.8, 0), '#8b949e', 0.55);
+      g.add(stateLabel);
+      const topLabel = makeLabel('D — useful things', new THREE.Vector3(0, 5.5, 0), '#8b949e', 0.8);
+      g.add(topLabel);
+
+      // Click handler using InstancedMesh raycasting
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+      let fixated = false;
+      let transitionStart = -1;
+
+      const onClick = (event) => {
+        if (STAGES[currentStage]?.id !== 'fibers') return;
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObject(instancedMesh);
+
+        if (fixated) {
+          fixated = false;
+          transitionStart = performance.now() / 1000;
+          stateLabel.material.map.dispose();
+          Object.assign(stateLabel, makeLabel('click a dot to impose value axis', stateLabel.position.clone(), '#8b949e', 0.55));
+          topLabel.material.map.dispose();
+          Object.assign(topLabel, makeLabel('D — useful things', topLabel.position.clone(), '#8b949e', 0.8));
+          for (let ii = 0; ii < TOTAL_DOTS; ii++) dotData[ii].scale = 1;
+          return;
+        }
+
+        if (hits.length === 0) return;
+        const clickedIdx = hits[0].instanceId;
+        const clickedData = dotData[clickedIdx];
+        fixated = true;
+        transitionStart = performance.now() / 1000;
+
+        // For each fiber, assign ordered Y positions
+        for (const fx of fiberPositions) {
+          const fiberIndices = fibers[fx];
+          const shuffled = [...fiberIndices].sort(() => rng(fx + Math.random()) - 0.5);
+          const isClickedFiber = (fx === clickedData.fiberX);
+          let rank = 0;
+          const spacing = 4.0 / fiberIndices.length;
+          for (const di of shuffled) {
+            if (di === clickedIdx) continue;
+            dotData[di].orderedY = 0.5 + rank * spacing;
+            dotData[di].scale = 1;
+            rank++;
+          }
+          if (isClickedFiber) {
+            clickedData.orderedY = 4.5;
+            clickedData.scale = 1.8;
+          }
+        }
+
+        stateLabel.material.map.dispose();
+        const newState = makeLabel('value axis imposed — click to release', stateLabel.position.clone(), '#7ee787', 0.55);
+        stateLabel.material = newState.material;
+        stateLabel.scale.copy(newState.scale);
+
+        topLabel.material.map.dispose();
+        const newTop = makeLabel(clickedData.name + ' = universal equivalent', topLabel.position.clone(), '#7ee787', 0.8);
+        topLabel.material = newTop.material;
+        topLabel.scale.copy(newTop.scale);
+      };
+      renderer.domElement.addEventListener('click', onClick);
+
+      this.stageData = {
+        cloud, yAxis, yLabel,
+        fixated: () => fixated,
+        transitionStart: () => transitionStart,
+        onClick,
+      };
+    },
+    update(t) {
+      const d = this.stageData;
+      if (!d.cloud) return;
+      const fixated = d.fixated();
+      const targetAxisOpacity = fixated ? 0.8 : 0;
+      d.yAxis.material.opacity = lerp(d.yAxis.material.opacity, targetAxisOpacity, 0.06);
+      d.yLabel.material.opacity = lerp(d.yLabel.material.opacity, targetAxisOpacity, 0.06);
+      updateCloud(d.cloud, t, fixated);
+      const lineOpacity = fixated ? 0.7 : 0.4;
+      for (const fl of d.cloud.fiberLines) {
+        fl.material.opacity = lerp(fl.material.opacity, lineOpacity, 0.05);
+      }
+    },
+    teardown() {
+      if (this.stageData.onClick) {
+        renderer.domElement.removeEventListener('click', this.stageData.onClick);
+      }
+    }
+  },
+  // ─── STAGE 2b: KERNEL STABILIZATION ───
+  {
+    id: 'kernel',
+    title: 'Kernel Stabilization',
+    text: `In the previous stage, clicking different dots produced different orderings. But the evaluation function <span class="math">e</span> has a <em>kernel</em>: things that are equally exchangeable get identified. The kernel <span class="math">ker(e)</span> partitions the fiber into equivalence classes. <strong>Click any dot</strong> — now the same buckets form every time, and the buckets are ordered the same way, regardless of which dot you pick. The structure is no longer observer-dependent. This is the passage from <span class="math"><i>D</i></span> (useful things) to <span class="math"><i>C</i></span> (commodities): the kernel quotient that makes value objective.`,
+    cam: { pos: [0, 2.5, 16], target: [0, 2, 0] },
+    stageData: {},
+    setup(g) {
+      makeBaseLine(g);
+
+      // Use makeCloud, then override colors and orderedY for bucket assignment
+      const NUM_BUCKETS = 5;
+      const cloud = makeCloud(g, FIBER_POSITIONS, 40);
+      const { instancedMesh, dotData, TOTAL_DOTS } = cloud;
+      const tmpColor = new THREE.Color();
+
+      // Stable bucket Y positions
+      const bucketYs = [];
+      for (let b = 0; b < NUM_BUCKETS; b++) {
+        bucketYs.push(0.6 + b * (4.0 / (NUM_BUCKETS - 1)));
+      }
+
+      // Override: assign deterministic bucket, recolor by bucket, set stable orderedY
+      for (let i = 0; i < TOTAL_DOTS; i++) {
+        const dd = dotData[i];
+        const bucket = Math.floor(rng(dd.fiberX * 7 + (i % 40) * 59) * NUM_BUCKETS);
+        dd.bucket = bucket;
+        dd.color = FIBER_COLORS[bucket];
+        dd.orderedY = bucketYs[bucket] + (rng(dd.fiberX * 41 + (i % 40) * 67) - 0.5) * 0.15;
+        tmpColor.set(FIBER_COLORS[bucket]);
+        instancedMesh.instanceColor.setXYZ(i, tmpColor.r, tmpColor.g, tmpColor.b);
+      }
+      instancedMesh.instanceColor.needsUpdate = true;
+
+      // Bucket labels (shown when fixated)
+      const bucketLabels = [];
+      for (let b = 0; b < NUM_BUCKETS; b++) {
+        const lbl = makeLabel('[' + FIBER_NAMES[b] + ']', new THREE.Vector3(-8.5, bucketYs[b], 0), '#8b949e', 0.45);
+        lbl.material.opacity = 0;
+        g.add(lbl);
+        bucketLabels.push(lbl);
+      }
+
+      // Y-axis
+      const yAxis = makeTube([new THREE.Vector3(-8.5, 0, 0), new THREE.Vector3(-8.5, 5, 0)], 0.025, 0x484f58, 0);
+      g.add(yAxis);
+      const yLabel = makeLabel('magnitude', new THREE.Vector3(-8.5, 5.6, 0), '#8b949e', 0.65);
+      yLabel.material.opacity = 0;
+      g.add(yLabel);
+
+      const stateLabel = makeLabel('click any dot — same buckets every time', new THREE.Vector3(0, -0.8, 0), '#8b949e', 0.55);
+      g.add(stateLabel);
+      const topLabel = makeLabel('ker(e): stable equivalence classes', new THREE.Vector3(0, 5.5, 0), '#d2a8ff', 0.8);
+      g.add(topLabel);
+
+      // Click handler
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+      let fixated = false;
+      let transitionStart = -1;
+
+      const onClick = (event) => {
+        if (STAGES[currentStage]?.id !== 'kernel') return;
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObject(instancedMesh);
+
+        if (fixated) {
+          fixated = false;
+          transitionStart = performance.now() / 1000;
+          for (let ii = 0; ii < TOTAL_DOTS; ii++) dotData[ii].scale = 1;
+          stateLabel.material.map.dispose();
+          Object.assign(stateLabel, makeLabel('click any dot — same buckets every time', stateLabel.position.clone(), '#8b949e', 0.55));
+          return;
+        }
+
+        if (hits.length === 0) return;
+        const clickedIdx = hits[0].instanceId;
+        fixated = true;
+        transitionStart = performance.now() / 1000;
+
+        // Highlight clicked dot (but ordering doesn't change!)
+        dotData[clickedIdx].scale = 1.8;
+
+        stateLabel.material.map.dispose();
+        const newState = makeLabel('same partition regardless of choice — click to release', stateLabel.position.clone(), '#7ee787', 0.55);
+        stateLabel.material = newState.material;
+        stateLabel.scale.copy(newState.scale);
+      };
+      renderer.domElement.addEventListener('click', onClick);
+
+      this.stageData = {
+        cloud, yAxis, yLabel, bucketLabels,
+        fixated: () => fixated,
+        transitionStart: () => transitionStart,
+        onClick,
+      };
+    },
+    update(t) {
+      const d = this.stageData;
+      if (!d.cloud) return;
+      const fixated = d.fixated();
+      const targetOpacity = fixated ? 0.8 : 0;
+      d.yAxis.material.opacity = lerp(d.yAxis.material.opacity, targetOpacity, 0.06);
+      d.yLabel.material.opacity = lerp(d.yLabel.material.opacity, targetOpacity, 0.06);
+      for (const lbl of d.bucketLabels) {
+        lbl.material.opacity = lerp(lbl.material.opacity, targetOpacity, 0.06);
+      }
+      updateCloud(d.cloud, t, fixated);
+      const lineOpacity = fixated ? 0.7 : 0.4;
+      for (const fl of d.cloud.fiberLines) {
+        fl.material.opacity = lerp(fl.material.opacity, lineOpacity, 0.05);
+      }
+    },
+    teardown() {
+      if (this.stageData.onClick) {
+        renderer.domElement.removeEventListener('click', this.stageData.onClick);
+      }
+    }
+  },
+
+
+
+  // ─── STAGE 2: SECTIONS OVER OPENS ───
+  {
+    id: 'sections',
+    title: 'Sections Over Opens',
+    text: `The vertical axis measures value magnitude. A <em>section</em> over a region is a value assignment valid under those conditions. The green curve shows the price of dinner as a function of position. The shaded area marks where <strong>"I can afford dinner"</strong> — where purchasing power exceeds price. This region is a <em>subobject</em>, classified by the truth-value object <span class="math">\u03A9</span>.`,
+    cam: { pos: [0, 2.5, 16], target: [0, 1.8, 0] },
+    stageData: {},
+    setup(g) {
+      makeBaseLine(g);
+      makeYAxis(g);
+      // Section curve (animated dashes)
+      const secLine = makeAnimatedDash(dinnerPrice, -8, 8, 0x7ee787);
+      g.add(secLine);
+      g.add(makeLabel('price of dinner', new THREE.Vector3(5, dinnerPrice(5) - 0.6, 0), '#7ee787', 0.8));
+      // Budget line
+      g.add(makeDashedLine([new THREE.Vector3(-8, BUDGET, 0), new THREE.Vector3(8, BUDGET, 0)], 0xffa657));
+      g.add(makeLabel('my budget', new THREE.Vector3(-5.5, BUDGET + 0.6, 0), '#ffa657', 0.8));
+      // Shaded valid region
+      let segment = [];
+      for (let x = -8; x <= 8; x += 0.08) {
+        const p = dinnerPrice(x);
+        if (p < BUDGET) {
+          segment.push(x);
+        } else if (segment.length > 0) {
+          flushSegment(g, segment);
+          segment = [];
+        }
+      }
+      if (segment.length > 0) flushSegment(g, segment);
+      this.stageData.lines = [secLine];
+    },
+    update(t) {
+      const speed = 0.8;
+      for (const line of this.stageData.lines || []) {
+        line.material.uniforms.uOffset.value = -t * speed;
+      }
+    }
+  },
+
+  // ─── STAGE 2: COMPATIBLE AND INCOMPATIBLE SECTIONS ───
+  {
+    id: 'compatible',
+    title: 'Compatible and Incompatible Sections',
+    text: `Multiple sections can coexist over the same region. Two sections are <em>compatible</em> if they agree on their overlap — they assign the same values wherever both are defined. Compatible sections can potentially be <em>glued</em> into a larger section. <strong>Incompatible</strong> sections disagree on their overlap: they describe different value assignments for the same conditions. A <em>sheaf</em> is a presheaf where all compatible families glue. A <em>presheaf that isn't a sheaf</em> has compatible families that refuse to glue — the obstruction that capital exploits.`,
+    cam: { pos: [0, 2.8, 16], target: [0, 2, 0] },
+    stageData: {},
+    setup(g) {
+      makeBaseLine(g);
+      makeYAxis(g);
+
+      // --- LEFT SIDE: compatible sections ---
+      // Section A (green): defined on [-7, 0]
+      const secAFn = x => 2.0 + 0.5 * Math.sin(x * 0.7) + 0.2 * Math.cos(x * 1.3);
+      // Section B (cyan): defined on [-3, 4], AGREES with A on overlap [-3, 0]
+      const secBFn = x => {
+        if (x <= 0) return secAFn(x); // exact agreement on overlap
+        return secAFn(0) + 0.4 * Math.sin(x * 0.9) + 0.15 * x; // continues smoothly
+      };
+      const secA = makeAnimatedDash(secAFn, -7, 0, 0x7ee787);
+      const secB = makeAnimatedDash(secBFn, -3, 4, 0x58a6ff);
+      g.add(secA); g.add(secB);
+      // Overlap highlight [-3, 0]
+      const overlapPts = [];
+      for (let x = -3; x <= 0; x += 0.05) overlapPts.push(new THREE.Vector2(x, 0));
+      for (let x = 0; x >= -3; x -= 0.05) overlapPts.push(new THREE.Vector2(x, secAFn(x)));
+      if (overlapPts.length > 4) g.add(makeFilledRegion(overlapPts, 0x7ee787, 0.08));
+      // Region brackets
+      g.add(makeTube([new THREE.Vector3(-7, -0.15, 0), new THREE.Vector3(0, -0.15, 0)], 0.02, 0x7ee787, 0.5));
+      g.add(makeTube([new THREE.Vector3(-3, -0.35, 0), new THREE.Vector3(4, -0.35, 0)], 0.02, 0x58a6ff, 0.5));
+      g.add(makeLabel('section A', new THREE.Vector3(-5, 3.5, 0), '#7ee787', 0.65));
+      g.add(makeLabel('section B', new THREE.Vector3(2, 3.5, 0), '#58a6ff', 0.65));
+      g.add(makeLabel('compatible \u2713', new THREE.Vector3(-1.5, 0.8, 0), '#7ee787', 0.65));
+      g.add(makeLabel('(agree on overlap)', new THREE.Vector3(-1.5, 0.3, 0), '#8b949e', 0.45));
+
+      // --- RIGHT SIDE: incompatible sections ---
+      // Section C (orange): defined on [2, 8], high
+      const secCFn = x => 3.8 + 0.4 * Math.sin(x * 0.6);
+      // Section D (red-ish): defined on [5, 8], low — clear disagreement with C
+      const secDFn = x => 1.2 + 0.3 * Math.cos(x * 0.5);
+      const secC = makeAnimatedDash(secCFn, 2, 8, 0xffa657);
+      const secD = makeAnimatedDash(secDFn, 5, 8, 0xf85149);
+      g.add(secC); g.add(secD);
+      // Clash zone [5, 8] — shaded region between the two curves
+      const clashPts = [];
+      for (let x = 5; x <= 8; x += 0.05) clashPts.push(new THREE.Vector2(x, secCFn(x)));
+      for (let x = 8; x >= 5; x -= 0.05) clashPts.push(new THREE.Vector2(x, secDFn(x)));
+      if (clashPts.length > 4) g.add(makeFilledRegion(clashPts, 0xf85149, 0.1));
+      // Region brackets
+      g.add(makeTube([new THREE.Vector3(2, -0.15, 0), new THREE.Vector3(8, -0.15, 0)], 0.02, 0xffa657, 0.5));
+      g.add(makeTube([new THREE.Vector3(5, -0.35, 0), new THREE.Vector3(8, -0.35, 0)], 0.02, 0xf85149, 0.5));
+      g.add(makeLabel('section C', new THREE.Vector3(3.5, 4.6, 0), '#ffa657', 0.65));
+      g.add(makeLabel('section D', new THREE.Vector3(7, 0.6, 0), '#f85149', 0.65));
+      g.add(makeLabel('incompatible \u2717', new THREE.Vector3(6.5, 2.5, 0), '#f85149', 0.65));
+      g.add(makeLabel('(disagree on overlap)', new THREE.Vector3(6.5, 2.0, 0), '#8b949e', 0.45));
+
+      // Store all dashed lines for animation
+      this.stageData = { lines: [secA, secB, secC, secD] };
+    },
+    update(t) {
+      const speed = 0.8;
+      for (const line of this.stageData.lines || []) {
+        line.material.uniforms.uOffset.value = -t * speed;
+      }
+    }
+  },
+
+  // ─── STAGE 3: RESTRICTION ───
+  {
+    id: 'restriction',
+    title: 'Restriction Preserves Validity',
+    text: `If a statement is valid over region <span class="math">U</span>, restricting to any sub-region <span class="math">V \u2286 U</span> preserves validity. This is the defining property of a <em>presheaf</em>: data over opens restricts coherently. Zooming in never breaks a valid statement. This is what makes our picture a "pre-bundle" — a presheaf of evaluations <span class="math">\u2130(U)</span>.`,
+    cam: { pos: [2, 2.5, 12], target: [2, 1.8, 0] },
+    setup(g) {
+      // Base line
+      g.add(makeTube([new THREE.Vector3(-8, 0, 0), new THREE.Vector3(8, 0, 0)], 0.04, 0x58a6ff, 0.25));
+      // Section curve (dim outside V)
+      const dimPts = sampleCurve(dinnerPrice, -8, 8);
+      g.add(makeTube(dimPts, 0.03, 0x7ee787, 0.15));
+      // Budget (dim)
+      g.add(makeDashedLine([new THREE.Vector3(-8, BUDGET, 0), new THREE.Vector3(8, BUDGET, 0)], 0xffa657));
+      // Bright base in V
+      const V_A = -1, V_B = 6;
+      g.add(makeTube([new THREE.Vector3(V_A, 0, 0), new THREE.Vector3(V_B, 0, 0)], 0.06, 0x58a6ff));
+      // Bright section in V
+      const vPts = sampleCurve(dinnerPrice, V_A, V_B);
+      g.add(makeTube(vPts, 0.05, 0x7ee787));
+      // Brackets
+      for (const x of [V_A, V_B]) {
+        g.add(makeTube([
+          new THREE.Vector3(x, -0.3, 0), new THREE.Vector3(x, 0, 0)
+        ], 0.03, 0xffa657));
+      }
+      // Shaded valid region in V only
+      let seg = [];
+      for (let x = V_A; x <= V_B; x += 0.08) {
+        if (dinnerPrice(x) < BUDGET) seg.push(x);
+        else if (seg.length > 0) { flushSegment(g, seg); seg = []; }
+      }
+      if (seg.length > 0) flushSegment(g, seg);
+      // Labels
+      g.add(makeLabel('V \u2286 U', new THREE.Vector3((V_A + V_B) / 2, -1.0, 0), '#ffa657', 0.95));
+      g.add(makeLabel('section restricts \u2713', new THREE.Vector3((V_A + V_B) / 2, 3.8, 0), '#7ee787', 0.95));
+    }
+  },
+
+  // ─── STAGE 3: CIRCULATION SPACES ───
+  {
+    id: 'circulation',
+    title: 'Multiple Circulation Spaces',
+    text: `The line fragments into circulation spaces <span class="math">CC\u2081, CC\u2082, CC\u2083</span> — each with its own money-commodity and price system. Within each, sections are locally coherent. At the boundaries (red walls), heights disagree. These are <em>circulation gaps</em>: the presheaf <span class="math">\u2130</span> is separated but not a sheaf.`,
+    cam: { pos: [0, 2.8, 16], target: [0, 2, 0] },
+    setup(g) {
+      const names = ['CC\u2081', 'CC\u2082', 'CC\u2083'];
+      for (let i = 0; i < 3; i++) {
+        const [a, b] = CC_BOUNDS[i];
+        // Colored segment
+        g.add(makeTube([new THREE.Vector3(a, 0, 0), new THREE.Vector3(b, 0, 0)], 0.05, CC_COLORS[i]));
+        // Glow
+        g.add(makeTube([new THREE.Vector3(a, 0, 0), new THREE.Vector3(b, 0, 0)], 0.13, CC_COLORS[i], 0.12));
+        // Section curve
+        const pts = sampleCurve(CC_FNS[i], a + 0.1, b - 0.1);
+        g.add(makeTube(pts, 0.04, CC_COLORS[i]));
+        // Label
+        g.add(makeLabel(names[i], new THREE.Vector3((a + b) / 2, -0.8, 0), '#8b949e', 0.8));
+      }
+      // Walls
+      g.add(makeWall(-2, 5.5));
+      g.add(makeWall(3, 5.5));
+      // Gap indicators
+      g.add(makeLabel('\u0394', new THREE.Vector3(-2, (CC_FNS[0](-2.1) + CC_FNS[1](-1.9)) / 2, 0), '#f85149', 0.8));
+      g.add(makeLabel('\u0394', new THREE.Vector3(3, (CC_FNS[1](2.9) + CC_FNS[2](3.1)) / 2, 0), '#f85149', 0.8));
+      // Y-axis
+      g.add(makeTube([new THREE.Vector3(-8.5, 0, 0), new THREE.Vector3(-8.5, 5, 0)], 0.02, 0x484f58));
+    }
+  },
+
+  // ─── STAGE 4: ARBITRAGE VS CAPITAL ───
+  {
+    id: 'arbitrage',
+    title: 'Arbitrage vs. Capital',
+    text: `Within a CC, competitive arbitrage contracts prices toward social value — the fiber is <em>contractible</em> (<span class="math">H\u2070 = 0</span>). Watch the individual prices (orange dots) spring toward the social value curve. But at CC boundaries, the gap is topological: different monetary topologies <span class="math">j<sub>m\u2081</sub>, j<sub>m\u2082</sub></span> can't be smoothed away. Capital profits from these walls (<strong>H\u00B9 \u2260 0</strong>). The wall isn't a market inefficiency — it's a topological invariant.`,
+    cam: { pos: [0, 2.8, 16], target: [0, 2, 0] },
+    stageData: {},
+    setup(g) {
+      const names = ['CC\u2081', 'CC\u2082', 'CC\u2083'];
+      for (let i = 0; i < 3; i++) {
+        const [a, b] = CC_BOUNDS[i];
+        g.add(makeTube([new THREE.Vector3(a, 0, 0), new THREE.Vector3(b, 0, 0)], 0.05, CC_COLORS[i]));
+        const pts = sampleCurve(CC_FNS[i], a + 0.1, b - 0.1);
+        g.add(makeTube(pts, 0.04, CC_COLORS[i], 0.5));
+        g.add(makeLabel(names[i], new THREE.Vector3((a + b) / 2, -0.8, 0), '#8b949e', 0.8));
+      }
+      g.add(makeWall(-2, 5.5));
+      g.add(makeWall(3, 5.5));
+
+      // "Social value" label on the CC₂ section curve
+      g.add(makeLabel('social value', new THREE.Vector3(0.5, cc2Fn(0.5) + 0.6, 0), '#3fb950', 0.65));
+
+      // Scattered price points in CC₂ that will spring toward the section
+      this.stageData.dots = [];
+      const rng = n => Math.sin(n * 127.1 + 311.7) * 0.5 + 0.5;
+      for (let i = 0; i < 12; i++) {
+        const x = -1.5 + rng(i) * 4;
+        const targetY = cc2Fn(x);
+        const startY = targetY + (rng(i + 50) - 0.5) * 2.8;
+        const dot = makeSphere(new THREE.Vector3(x, startY, 0), 0.1, 0xffa657);
+        // Each dot gets a slightly different spring frequency for organic feel
+        const freq = 2.5 + rng(i + 80) * 1.5;    // 2.5–4.0 Hz
+        const damping = 3.0 + rng(i + 90) * 1.5;  // 3.0–4.5 damping
+        const delay = rng(i + 70) * 1.0;            // 0–1s stagger
+        dot.userData = { startY, targetY, x, freq, damping, delay };
+        g.add(dot);
+        this.stageData.dots.push(dot);
+        // Spring line connecting dot to target
+        const spring = makeLine([new THREE.Vector3(x, startY, 0), new THREE.Vector3(x, targetY, 0)], 0x484f58, 0.3);
+        dot.userData.spring = spring;
+        g.add(spring);
+      }
+      // "Individual prices" label near the dots
+      g.add(makeLabel('individual prices', new THREE.Vector3(0.5, 5.0, 0), '#ffa657', 0.65));
+
+      // H⁰ / H¹ labels
+      g.add(makeLabel('H\u2070 = 0', new THREE.Vector3(0.5, 5.8, 0), '#7ee787', 0.95));
+      g.add(makeLabel('arbitrage contracts', new THREE.Vector3(0.5, 5.2, 0), '#7ee787', 0.55));
+      g.add(makeLabel('H\u00B9 \u2260 0', new THREE.Vector3(-2, 5.8, 0), '#f85149', 0.95));
+      g.add(makeLabel('H\u00B9 \u2260 0', new THREE.Vector3(3, 5.8, 0), '#f85149', 0.95));
+
+      // Capital arrow across the wall
+      const arrTopY = CC_FNS[1](-1.9);
+      const arrBotY = CC_FNS[0](-2.1);
+      g.add(makeTube([new THREE.Vector3(-2.5, arrBotY, 0), new THREE.Vector3(-1.5, arrTopY, 0)], 0.035, 0xffa657));
+      g.add(makeLabel('capital exploits gap', new THREE.Vector3(-4.5, (arrTopY + arrBotY) / 2 + 0.5, 0), '#ffa657', 0.55));
+    },
+    update(t) {
+      if (!this.stageData.dots) return;
+      for (const dot of this.stageData.dots) {
+        const { startY, targetY, freq, damping, delay } = dot.userData;
+        const elapsed = Math.max(t - delay, 0);
+        // Damped spring: x(t) = target + (start - target) * e^(-d*t) * cos(2π*f*t)
+        const displacement = (startY - targetY) * Math.exp(-damping * elapsed) * Math.cos(2 * Math.PI * freq * elapsed);
+        const y = targetY + displacement;
+        dot.position.y = y;
+        // Update spring line
+        const sp = dot.userData.spring;
+        if (sp) {
+          const posArr = sp.geometry.attributes.position.array;
+          posArr[1] = y;
+          sp.geometry.attributes.position.needsUpdate = true;
+        }
+      }
+    }
+  },
+
+  // ─── STAGE 5: VALORIZATION CIRCUIT ───
+  {
+    id: 'valorization',
+    title: 'The Valorization Circuit',
+    text: `Capital traces a loop: <span class="math">M → C → P → C\u2019 → M\u2019</span>. This circuit bounds a <em>production disk</em>. We now ask: when you parallel-transport value around this loop, does the section close? If the connection is flat (value-preserving), the path closes. If curved (value-expanding), it doesn't.`,
+    cam: { pos: [6, 5, 10], target: [0, 2, 0] },
+    setup(g) {
+      // Build the loop in XZ plane
+      const loopPts = [];
+      const N = 120;
+      for (let i = 0; i <= N; i++) {
+        const t = (i / N) * Math.PI * 2;
+        loopPts.push(new THREE.Vector3(3.5 * Math.cos(t), 2, 2.5 * Math.sin(t)));
+      }
+      g.add(makeTube(loopPts, 0.05, 0xbc8cff));
+      g.add(makeTube(loopPts, 0.15, 0xbc8cff, 0.1));
+      // Production disk
+      const diskGeo = new THREE.CircleGeometry(2.8, 64);
+      const diskMat = new THREE.MeshBasicMaterial({ color: 0xbc8cff, transparent: true, opacity: 0.08, side: THREE.DoubleSide });
+      const disk = new THREE.Mesh(diskGeo, diskMat);
+      disk.rotation.x = -Math.PI / 2;
+      disk.position.y = 2;
+      disk.scale.set(1.25, 0.9, 1);
+      g.add(disk);
+      // Labels around the loop
+      const labelData = [
+        ['M', 0], ['C', 0.25], ['P', 0.5], ["C'", 0.75]
+      ];
+      for (const [name, frac] of labelData) {
+        const t = frac * Math.PI * 2;
+        const lx = 4.2 * Math.cos(t), lz = 3.1 * Math.sin(t);
+        g.add(makeLabel(name, new THREE.Vector3(lx, 2, lz), '#d2a8ff', 0.95));
+      }
+      g.add(makeLabel('production disk', new THREE.Vector3(0, 1.4, 0), '#8b949e', 0.7));
+    }
+  },
+
+  // ─── STAGE 6: HOLONOMY / SPLIT COMPONENT ───
+  {
+    id: 'split',
+    title: 'The Split Component',
+    text: `Constant capital (<span style="color:#58a6ff">\u03C4, cyan</span>) transports flatly — value in equals value out, the path closes. Labor power (<span style="color:#ffa657">\u2113, orange</span>) has a <em>double inscription</em>: purchased at <span class="math">t<sub>r</sub></span> but contributing <span class="math">t<sub>r</sub> + t<sub>s</sub></span> in production. The fiber jumps by <span class="math">t<sub>s</sub></span> — the path doesn't close. This <strong>holonomy</strong> is surplus value. The curvature lives on the production disk (<strong>H\u00B2 \u2260 0</strong>).`,
+    cam: { pos: [7, 5.5, 9], target: [0, 2.5, 0] },
+    stageData: {},
+    setup(g) {
+      const SURPLUS = 1.5;
+      const BASE_Y = 2;
+      const N = 120;
+      // Constant capital path (closed, flat)
+      const constPts = [];
+      for (let i = 0; i <= N; i++) {
+        const t = (i / N) * Math.PI * 2;
+        constPts.push(new THREE.Vector3(3.5 * Math.cos(t), BASE_Y, 2.5 * Math.sin(t)));
+      }
+      g.add(makeTube(constPts, 0.035, 0x58a6ff, 0.6));
+      // Labor power path (open, jumps at production)
+      const laborPts = [];
+      for (let i = 0; i <= N; i++) {
+        const frac = i / N;
+        const t = frac * Math.PI * 2;
+        let y = BASE_Y;
+        if (frac > 0.4 && frac < 0.6) {
+          y = BASE_Y + SURPLUS * smoothstep((frac - 0.4) / 0.2);
+        } else if (frac >= 0.6) {
+          y = BASE_Y + SURPLUS;
+        }
+        laborPts.push(new THREE.Vector3(3.5 * Math.cos(t), y, 2.5 * Math.sin(t)));
+      }
+      g.add(makeTube(laborPts, 0.045, 0xffa657));
+      g.add(makeTube(laborPts, 0.13, 0xffa657, 0.12));
+      // Production disk
+      const diskGeo = new THREE.CircleGeometry(2.8, 64);
+      const diskMat = new THREE.MeshBasicMaterial({ color: 0xffa657, transparent: true, opacity: 0.06, side: THREE.DoubleSide });
+      const disk = new THREE.Mesh(diskGeo, diskMat);
+      disk.rotation.x = -Math.PI / 2;
+      disk.position.y = BASE_Y;
+      disk.scale.set(1.25, 0.9, 1);
+      g.add(disk);
+      // Vertical gap arrow at M/M'
+      const mx = 3.5, mz = 0;
+      g.add(makeTube([
+        new THREE.Vector3(mx + 0.3, BASE_Y, mz),
+        new THREE.Vector3(mx + 0.3, BASE_Y + SURPLUS, mz)
+      ], 0.03, 0xf85149));
+      g.add(makeLabel('\u03B4 = t\u209B', new THREE.Vector3(mx + 1.5, BASE_Y + SURPLUS / 2, mz), '#f85149', 0.8));
+      // Start dot (M)
+      g.add(makeSphere(new THREE.Vector3(mx, BASE_Y, mz), 0.12, 0x58a6ff));
+      // End dot (M') — higher
+      g.add(makeSphere(new THREE.Vector3(mx, BASE_Y + SURPLUS, mz), 0.12, 0xffa657));
+      g.add(makeLabel('M', new THREE.Vector3(mx + 0.8, BASE_Y - 0.4, mz), '#58a6ff', 0.8));
+      g.add(makeLabel("M'", new THREE.Vector3(mx + 0.8, BASE_Y + SURPLUS + 0.4, mz), '#ffa657', 0.8));
+      // Labels around the loop
+      const labelData = [['C', 0.25], ['P', 0.5], ["C'", 0.75]];
+      for (const [name, frac] of labelData) {
+        const t = frac * Math.PI * 2;
+        g.add(makeLabel(name, new THREE.Vector3(4.5 * Math.cos(t), BASE_Y, 3.3 * Math.sin(t)), '#d2a8ff', 0.95));
+      }
+      // Animated transport spheres
+      const constSphere = makeSphere(new THREE.Vector3(3.5, BASE_Y, 0), 0.12, 0x58a6ff);
+      const laborSphere = makeSphere(new THREE.Vector3(3.5, BASE_Y, 0), 0.12, 0xffa657);
+      g.add(constSphere);
+      g.add(laborSphere);
+      this.stageData.constSphere = constSphere;
+      this.stageData.laborSphere = laborSphere;
+      this.stageData.surplus = SURPLUS;
+      this.stageData.baseY = BASE_Y;
+      // Legend
+      g.add(makeLabel('\u03C4 constant capital (flat)', new THREE.Vector3(-4.5, 4.8, 0), '#58a6ff', 0.7));
+      g.add(makeLabel('\u2113 labor power (curved)', new THREE.Vector3(-4.5, 4.2, 0), '#ffa657', 0.7));
+      g.add(makeLabel('H\u00B2 \u2260 0', new THREE.Vector3(0, 4.8, 0), '#f85149', 0.95));
+    },
+    update(t) {
+      const d = this.stageData;
+      if (!d.constSphere) return;
+      const speed = 0.15;
+      const frac = (t * speed) % 1;
+      const angle = frac * Math.PI * 2;
+      const x = 3.5 * Math.cos(angle);
+      const z = 2.5 * Math.sin(angle);
+      d.constSphere.position.set(x, d.baseY, z);
+      let ly = d.baseY;
+      if (frac > 0.4 && frac < 0.6) {
+        ly = d.baseY + d.surplus * smoothstep((frac - 0.4) / 0.2);
+      } else if (frac >= 0.6) {
+        ly = d.baseY + d.surplus;
+      }
+      d.laborSphere.position.set(x, ly, z);
+    }
+  },
+
+  // ─── STAGE 7: FULL PICTURE ───
+  {
+    id: 'obstruction',
+    title: 'The Capital-Obstruction Theorem',
+    text: `Capital operates precisely in the gap between presheaf and sheaf. If <span class="math">\u2130</span> were a sheaf — all compatible sections gluing globally — no capital relation <span class="math">k</span> could have <span class="math">\u03B4 > 0</span>.
+    <table class="cohom-table">
+      <tr><th>Dim</th><th>Obstruction</th><th>Capital form</th><th>Geometry</th></tr>
+      <tr><td><span class="math">H\u2070</span></td><td>Price deviation</td><td>None (arbitrage)</td><td>Fiber contracts</td></tr>
+      <tr><td><span class="math">H\u00B9</span></td><td>Circulation gaps</td><td>Merchant / usury</td><td>Walls between charts</td></tr>
+      <tr><td><span class="math">H\u00B2</span></td><td>Surplus value</td><td>Industrial</td><td>Curvature on disk</td></tr>
+    </table>
+    The line integral around the circuit (what the capitalist observes) equals the surface integral over production (where surplus is created). Circulation surplus is the shadow of production surplus.`,
+    cam: { pos: [8, 6, 14], target: [0, 2, 0] },
+    stageData: {},
+    setup(g) {
+      const BASE_Y = 2, SURPLUS = 1.5;
+      // CC segments (shifted left)
+      const offset = -6;
+      for (let i = 0; i < 3; i++) {
+        const [a, b] = CC_BOUNDS[i];
+        const sa = a * 0.6 + offset, sb = b * 0.6 + offset;
+        g.add(makeTube([new THREE.Vector3(sa, 0, -3), new THREE.Vector3(sb, 0, -3)], 0.04, CC_COLORS[i], 0.6));
+        const pts = sampleCurve(x => CC_FNS[i]((x - offset) / 0.6), sa + 0.1, sb - 0.1, 60);
+        pts.forEach(p => p.z = -3);
+        g.add(makeTube(pts, 0.03, CC_COLORS[i], 0.5));
+      }
+      // Walls
+      const w1x = CC_BOUNDS[0][1] * 0.6 + offset;
+      const w2x = CC_BOUNDS[1][1] * 0.6 + offset;
+      const wall1 = makeWall(0, 4.5, 0xf85149, 0.25);
+      wall1.position.set(w1x, 2.25, -3);
+      g.add(wall1);
+      const wall2 = makeWall(0, 4.5, 0xf85149, 0.25);
+      wall2.position.set(w2x, 2.25, -3);
+      g.add(wall2);
+      // Valorization loop (shifted right)
+      const loopOff = 4;
+      const N = 120;
+      // Labor path
+      const laborPts = [];
+      for (let i = 0; i <= N; i++) {
+        const frac = i / N;
+        const t = frac * Math.PI * 2;
+        let y = BASE_Y;
+        if (frac > 0.4 && frac < 0.6) y = BASE_Y + SURPLUS * smoothstep((frac - 0.4) / 0.2);
+        else if (frac >= 0.6) y = BASE_Y + SURPLUS;
+        laborPts.push(new THREE.Vector3(loopOff + 3 * Math.cos(t), y, 2 * Math.sin(t)));
+      }
+      g.add(makeTube(laborPts, 0.04, 0xffa657));
+      g.add(makeTube(laborPts, 0.12, 0xffa657, 0.1));
+      // Production disk
+      const diskGeo = new THREE.CircleGeometry(2.4, 64);
+      const diskMat = new THREE.MeshBasicMaterial({ color: 0xffa657, transparent: true, opacity: 0.06, side: THREE.DoubleSide });
+      const disk = new THREE.Mesh(diskGeo, diskMat);
+      disk.rotation.x = -Math.PI / 2;
+      disk.position.set(loopOff, BASE_Y, 0);
+      disk.scale.set(1.25, 1, 1);
+      g.add(disk);
+      // Gap arrow
+      g.add(makeTube([
+        new THREE.Vector3(loopOff + 3.4, BASE_Y, 0),
+        new THREE.Vector3(loopOff + 3.4, BASE_Y + SURPLUS, 0)
+      ], 0.025, 0xf85149));
+      g.add(makeLabel('\u03B4', new THREE.Vector3(loopOff + 4.2, BASE_Y + SURPLUS / 2, 0), '#f85149', 0.8));
+      // Labels
+      g.add(makeLabel('H\u2070=0', new THREE.Vector3(offset, 4.8, -3), '#7ee787', 0.8));
+      g.add(makeLabel('H\u00B9\u22600', new THREE.Vector3(w1x, 4.8, -3), '#f85149', 0.8));
+      g.add(makeLabel('H\u00B2\u22600', new THREE.Vector3(loopOff, 4.8, 0), '#ffa657', 0.8));
+      // Animated sphere
+      const sphere = makeSphere(new THREE.Vector3(loopOff + 3, BASE_Y, 0), 0.1, 0xffa657);
+      g.add(sphere);
+      this.stageData = { sphere, loopOff, baseY: BASE_Y, surplus: SURPLUS };
+    },
+    update(t) {
+      const d = this.stageData;
+      if (!d.sphere) return;
+      const frac = (t * 0.15) % 1;
+      const angle = frac * Math.PI * 2;
+      let y = d.baseY;
+      if (frac > 0.4 && frac < 0.6) y = d.baseY + d.surplus * smoothstep((frac - 0.4) / 0.2);
+      else if (frac >= 0.6) y = d.baseY + d.surplus;
+      d.sphere.position.set(d.loopOff + 3 * Math.cos(angle), y, 2 * Math.sin(angle));
+    }
+  }
+];
+
+
+
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+let currentStage = -1;
+let stageTime = 0;
+const badge = document.getElementById('stage-badge');
+const title = document.getElementById('stage-title');
+const text = document.getElementById('stage-text');
+const btnPrev = document.getElementById('btn-prev');
+const btnNext = document.getElementById('btn-next');
+
+function goToStage(idx) {
+  if (idx < 0 || idx >= STAGES.length) return;
+
+  // Teardown previous stage if it has cleanup
+  if (currentStage >= 0 && STAGES[currentStage] && STAGES[currentStage].teardown) {
+    STAGES[currentStage].teardown();
+  }
+
+  currentStage = idx;
+  stageTime = 0;
+  const s = STAGES[idx];
+
+  // Update sidebar
+  badge.textContent = `Stage ${idx + 1} of ${STAGES.length}`;
+  title.textContent = s.title;
+  text.innerHTML = s.text;
+  btnPrev.disabled = idx === 0;
+  btnNext.disabled = idx === STAGES.length - 1;
+
+  // Clear stage group
+  while (stageGroup.children.length) {
+    const c = stageGroup.children[0];
+    stageGroup.remove(c);
+    disposeObject(c);
+  }
+
+  // Setup new stage
+  s.setup(stageGroup);
+
+  // Camera target
+  targetCamPos.set(...s.cam.pos);
+  targetCamTarget.set(...s.cam.target);
+}
+
+function disposeObject(obj) {
+  if (obj.geometry) obj.geometry.dispose();
+  if (obj.material) {
+    if (obj.material.map) obj.material.map.dispose();
+    obj.material.dispose();
+  }
+  if (obj.children) obj.children.forEach(disposeObject);
+}
+
+btnPrev.addEventListener('click', () => goToStage(currentStage - 1));
+btnNext.addEventListener('click', () => goToStage(currentStage + 1));
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goToStage(currentStage + 1);
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goToStage(currentStage - 1);
+});
+
+// Start
+goToStage(0);
+
+// ═══════════════════════════════════════════════════════════════
+// ANIMATION LOOP
+// ═══════════════════════════════════════════════════════════════
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  stageTime += dt;
+
+  // Smooth camera
+  camera.position.lerp(targetCamPos, camLerp);
+  controls.target.lerp(targetCamTarget, camLerp);
+  controls.update();
+
+  // Stage-specific updates
+  const s = STAGES[currentStage];
+  if (s && s.update) s.update(stageTime);
+
+  renderer.render(scene, camera);
+}
+animate();
+
+</script>
+<script src="https://cdn.counter.dev/script.js" data-id="594404c5-6814-4476-a5af-d35ddc284e98" data-utcoffset="-5"></script>
+</body>
+</html>
