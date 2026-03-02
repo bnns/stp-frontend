@@ -129,14 +129,51 @@ canvas { display: block; }
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
   }
 }
 </script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// Fuzzy disc texture (radial Gaussian for predicate visualization)
+function makeRadialGradientTex(size = 64) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const rg = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  rg.addColorStop(0, 'rgba(255,255,255,0.45)');
+  rg.addColorStop(0.5, 'rgba(255,255,255,0.25)');
+  rg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = rg;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(c);
+}
+// Fuzzy band texture (vertical Gaussian + horizontal edge fade)
+function makeBandGradientTex(w = 128, h = 64) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  const vg = ctx.createLinearGradient(0, 0, 0, h);
+  vg.addColorStop(0, 'rgba(255,255,255,0)');
+  vg.addColorStop(0.3, 'rgba(255,255,255,0.35)');
+  vg.addColorStop(0.5, 'rgba(255,255,255,0.35)');
+  vg.addColorStop(0.7, 'rgba(255,255,255,0.35)');
+  vg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = 'destination-in';
+  const hg = ctx.createLinearGradient(0, 0, w, 0);
+  hg.addColorStop(0, 'rgba(255,255,255,0)');
+  hg.addColorStop(0.15, 'rgba(255,255,255,1)');
+  hg.addColorStop(0.85, 'rgba(255,255,255,1)');
+  hg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = hg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = 'source-over';
+  return new THREE.CanvasTexture(c);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // SCENE SETUP
@@ -551,7 +588,7 @@ const STAGES = [
   {
     id: 'eval-plane',
     title: 'The Evaluation Function',
-    text: `Everything begins with a space of <em>value conditions</em> <span class="math">T</span> — the plane below. Above it floats a cloud of <em>useful things</em> <span class="math">D</span>: bread, iron, cloth, labor. The <em>evaluation function</em> <span class="math">e : D × D → T</span> asks: to what degree can one thing substitute for another? <strong>Click two dots</strong> to see which region of <span class="math">T</span> lights up — the value conditions under which that pair is exchangeable. Click again to reset.`,
+    text: `Everything begins with the <em>locale of value conditions</em> <span class="math">T</span> — the plane below (§10). Above it floats a cloud of <em>useful things</em> <span class="math">𝒟</span>: bread, iron, cloth, labor-power. The <em>evaluation function</em> <span class="math">e : 𝒟 × 𝒟 → T</span> returns the degree to which one thing relates to another (§2.4.2). <strong>Click two dots</strong> to see which region of <span class="math">T</span> lights up — the value conditions under which that pair is exchangeable. Click again to reset.`,
     cam: { pos: [10, 8, 10], target: [0, 1.5, 0] },
     stageData: {},
     setup(g) {
@@ -611,7 +648,6 @@ const STAGES = [
           if (vLine1) { g.remove(vLine1); vLine1 = null; }
           if (vLine2) { g.remove(vLine2); vLine2 = null; }
           for (const cell of cells) cell.material.opacity = 0;
-          stateLabel.material.map.dispose();
           const ns = makeLabel('click two dots to evaluate', stateLabel.position.clone(), '#57606a', 0.55);
           stateLabel.material = ns.material;
           stateLabel.scale.copy(ns.scale);
@@ -632,7 +668,6 @@ const STAGES = [
             new THREE.Vector3(dd.curX, 0, dd.curZ)
           ], 0x58a6ff);
           g.add(vLine1);
-          stateLabel.material.map.dispose();
           const ns = makeLabel('click a second dot', stateLabel.position.clone(), '#1a7f37', 0.55);
           stateLabel.material = ns.material;
           stateLabel.scale.copy(ns.scale);
@@ -666,7 +701,6 @@ const STAGES = [
             }
           }
 
-          stateLabel.material.map.dispose();
           const ns = makeLabel('e(d\u2081,d\u2082) \u2208 T — click to reset', stateLabel.position.clone(), '#8250df', 0.55);
           stateLabel.material = ns.material;
           stateLabel.scale.copy(ns.scale);
@@ -688,7 +722,7 @@ const STAGES = [
   {
     id: 'single-fiber',
     title: 'A Single Fiber',
-    text: `Pick one point in the <em>value space</em> <span class="math">T</span>. Above it rises a <em>fiber</em> — the set of <em>sections</em> passing through that point. Each section is a different evaluation function (<span class="math">e₁, e₂, e₃</span>), and they may assign different magnitudes to the same commodity at this condition. The vertical spread shows their <em>disagreement</em>. If all evaluators agreed, the fiber would collapse to a single height — that would be the sheaf condition.`,
+    text: `Pick one point in the <em>locale of value conditions</em> <span class="math">T</span>. Above it rises a <em>stalk</em> — the elements of <span class="math">𝒟</span> evaluated at this condition. Each evaluation function (<span class="math">e₁, e₂, e₃</span>) may assign a different magnitude to the same useful thing at this point, so the dots spread vertically: the spread <em>is</em> the disagreement between evaluators. If all evaluators agreed, the stalk would collapse to a single height — that would be <em>kernel-coherence</em> (§5.3.3).<br><br><strong>Click a dot</strong> to fix it as an <em>equivalent form</em> — the fuzzy disc is the predicate <span class="math">e<sub>b</sub></span> it generates (§2.6.1), assigning a degree to every other element.`,
     cam: { pos: [6, 5, 8], target: [0, 2.5, 0] },
     stageData: {},
     setup(g) {
@@ -734,6 +768,8 @@ const STAGES = [
       const evalYs = [1.5, 3.0, 4.2];
       const evalNames = ['e₁', 'e₂', 'e₃'];
       const evalLabelColors = ['#3fb950', '#ffa657', '#bc8cff'];
+      const evaluatorLines = [];
+      const evaluatorLabels = [];
       for (let i = 0; i < 3; i++) {
         const pts = [new THREE.Vector3(-0.8, evalYs[i], 0), new THREE.Vector3(0.8, evalYs[i], 0)];
         const geo = new THREE.BufferGeometry().setFromPoints(pts);
@@ -744,19 +780,145 @@ const STAGES = [
         const line = new THREE.Line(geo, mat);
         line.computeLineDistances();
         g.add(line);
+        evaluatorLines.push(line);
         const lbl = makeLabel(evalNames[i], new THREE.Vector3(1.0, evalYs[i], 0), evalLabelColors[i], 0.4);
         lbl.material.opacity = 0.6;
         g.add(lbl);
+        evaluatorLabels.push(lbl);
       }
 
       // Labels
       g.add(makeLabel('T — value space', new THREE.Vector3(3, -0.3, 3), '#57606a', 0.6));
       g.add(makeLabel('stalk Eₜ', new THREE.Vector3(1.5, 3, 0), '#0969da', 0.6));
 
-      this.stageData = { cloud };
+      // Predicate disc (hidden initially)
+      const DISC_RADIUS = 2.5;
+      const discGeo = new THREE.CircleGeometry(DISC_RADIUS, 64);
+      const discMat = new THREE.MeshBasicMaterial({
+        map: makeRadialGradientTex(),
+        color: 0x58a6ff,
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      const disc = new THREE.Mesh(discGeo, discMat);
+      disc.rotation.x = -Math.PI / 2;
+      disc.scale.set(0, 0, 0);
+      g.add(disc);
+
+      // Click handler for predicate visualization
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+      let predicateActive = false;
+      let discTargetScale = 0;
+
+      const predLabel = makeLabel('click a dot to see its predicate eᵦ', new THREE.Vector3(0, -1.5, 0), '#57606a', 0.5);
+      g.add(predLabel);
+
+      const onClick = (event) => {
+        if (STAGES[currentStage]?.id !== 'single-fiber') return;
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+
+        if (predicateActive) {
+          predicateActive = false;
+          discTargetScale = 0;
+          for (let i = 0; i < cloud.count; i++) {
+            cloud.dotData[i].scale = 1;
+            cloud.dotData[i].predicateX = null;
+            cloud.dotData[i].predicateY = null;
+            cloud.dotData[i].predicateZ = null;
+          }
+          const ns = makeLabel('click a dot to see its predicate eᵦ', predLabel.position.clone(), '#57606a', 0.5);
+          predLabel.material = ns.material;
+          predLabel.scale.copy(ns.scale);
+          return;
+        }
+
+        const hits = raycaster.intersectObject(cloud.instancedMesh);
+        if (hits.length === 0) return;
+        const hitIdx = hits[0].instanceId;
+        predicateActive = true;
+        discTargetScale = 1;
+        const dd = cloud.dotData[hitIdx];
+        disc.position.set(dd.curX, dd.curY, dd.curZ);
+        discMat.color.set(dd.color);
+        dd.scale = 0;
+
+        // Project dots onto disc: degree → distance from center
+        // High degree (≈1) = close to center (more equivalent)
+        // Low degree (≈0) = near edge (less equivalent)
+        for (let i = 0; i < cloud.count; i++) {
+          if (i === hitIdx) continue;
+          const degree = rng(hitIdx * 137 + i * 59); // e_b(a) ∈ [0,1]
+          const dist = (1 - degree) * DISC_RADIUS * 0.9;
+          const angle = rng(i * 83 + hitIdx * 29) * Math.PI * 2;
+          cloud.dotData[i].predicateX = dd.curX + dist * Math.cos(angle);
+          cloud.dotData[i].predicateY = dd.curY; // flatten to disc height
+          cloud.dotData[i].predicateZ = dd.curZ + dist * Math.sin(angle);
+        }
+
+        const ns = makeLabel('eᵦ : D → T — click to release', predLabel.position.clone(), '#8250df', 0.5);
+        predLabel.material = ns.material;
+        predLabel.scale.copy(ns.scale);
+      };
+      renderer.domElement.addEventListener('click', onClick);
+
+      this.stageData = {
+        cloud, disc, evaluatorLines, evaluatorLabels,
+        predicateActive: () => predicateActive,
+        discTargetScale: () => discTargetScale,
+        onClick,
+      };
     },
     update(t) {
-      if (this.stageData.cloud) updateCloud3D(this.stageData.cloud, t);
+      const d = this.stageData;
+      if (!d.cloud) return;
+      const cloud = d.cloud;
+      const active = d.predicateActive();
+      const mat = cloud.tmpMatrix;
+
+      for (let i = 0; i < cloud.count; i++) {
+        const dd = cloud.dotData[i];
+        if (active && dd.predicateY != null) {
+          // Lerp toward disc-surface position
+          dd.curX = lerp(dd.curX, dd.predicateX, 0.07);
+          dd.curY = lerp(dd.curY, dd.predicateY, 0.07);
+          dd.curZ = lerp(dd.curZ, dd.predicateZ, 0.07);
+        } else {
+          // Restore to base wobble
+          const targetY = dd.baseY + Math.sin(t * 1.2 + dd.phase) * dd.ampY;
+          dd.curX = lerp(dd.curX, dd.baseX, 0.07);
+          dd.curY = lerp(dd.curY, targetY, 0.07);
+          dd.curZ = lerp(dd.curZ, dd.baseZ, 0.07);
+        }
+        const s = dd.scale;
+        mat.makeScale(s, s, s);
+        mat.setPosition(dd.curX, dd.curY, dd.curZ);
+        cloud.instancedMesh.setMatrixAt(i, mat);
+      }
+      cloud.instancedMesh.instanceMatrix.needsUpdate = true;
+
+      // Lerp disc scale
+      const curS = d.disc.scale.x;
+      const tgtS = d.discTargetScale();
+      const newS = lerp(curS, tgtS, 0.08);
+      d.disc.scale.set(newS, newS, newS);
+
+      // Evaluator line dimming
+      const evalTgt = active ? 0.05 : 0.4;
+      for (const el of d.evaluatorLines) {
+        el.material.opacity = lerp(el.material.opacity, evalTgt, 0.06);
+      }
+      const lblTgt = active ? 0.1 : 0.6;
+      for (const el of d.evaluatorLabels) {
+        el.material.opacity = lerp(el.material.opacity, lblTgt, 0.06);
+      }
+    },
+    teardown() {
+      if (this.stageData.onClick) renderer.domElement.removeEventListener('click', this.stageData.onClick);
     }
   },
 
@@ -764,7 +926,7 @@ const STAGES = [
   {
     id: 'gluing-fibers',
     title: 'Gluing Fibers',
-    text: `A <em>presheaf</em> assigns data to each open region of <span class="math">T</span>. A <em>section</em> over a region is a surface hovering above it — an assignment of value to every point below. Here <span class="math">U\u2081</span> (red) and <span class="math">U\u2082</span> (blue) are two opens that overlap. Each carries a section surface. On the intersection <span class="math">U\u2081 \u2229 U\u2082</span> (purple), the two surfaces meet at exactly the same height: restricting either section to the overlap produces the same data. When all such compatible sections glue into a global section, the presheaf is a <em>sheaf</em>.`,
+    text: `The <em>presheaf of evaluations</em> <span class="math">ℰ</span> assigns data to each open region of <span class="math">T</span> (§10.6). A <em>section</em> <span class="math">s ∈ ℰ(U)</span> over a region is a local evaluation — a value assignment valid under those conditions. Here <span class="math">U\u2081</span> (red) and <span class="math">U\u2082</span> (blue) are two opens that overlap. The restriction maps <span class="math">r<sub>U,V</sub></span> carry each section to the overlap. On the intersection <span class="math">U\u2081 \u2229 U\u2082</span> (purple), the two surfaces meet at exactly the same height: restricting either section produces the same data. When all such compatible sections glue into a global section, the presheaf is a <em>sheaf</em> (§10.6.1).`,
     cam: { pos: [10, 8, 10], target: [0, 1.5, 0] },
     stageData: {},
     setup(g) {
@@ -904,7 +1066,7 @@ const STAGES = [
   {
     id: 'projection',
     title: 'Projection to the Line',
-    text: `The two-dimensional space of value conditions <span class="math">T</span> collapses to a line — the base space used in all subsequent stages. Watch the plane flatten: rectangular regions become intervals, section surfaces become section curves, and the familiar line picture emerges. This projection is a <em>choice</em> of how to parametrize value conditions.`,
+    text: `The two-dimensional locale of value conditions <span class="math">T</span> collapses to a line — the base space used in all subsequent stages. Watch the plane flatten: rectangular regions become intervals, section surfaces become section curves, and the familiar line picture emerges. This projection is a <em>choice</em> of how to parametrize value conditions.`,
     cam: { pos: [10, 8, 10], target: [0, 2, 0] },
     stageData: {},
     setup(g) {
@@ -1164,7 +1326,7 @@ const STAGES = [
   {
     id: 'base-space',
     title: 'The Base Space',
-    text: `Each point on the line represents a <em>value condition</em> — a configuration of exchange relations, prices, and institutional arrangements. Where you stand determines what economic statements you can make. This is the locale <span class="math">T</span> of value conditions (\u00a710).`,
+    text: `Each point on the line represents a <em>value condition</em> — an element of the locale <span class="math">T</span> specifying the degree to which exchange relations hold (§10.2). Opens in <span class="math">T</span> are conditions under which economic statements can be evaluated. Points are completely prime filters: value realizations where every disjunction is decided (§10.2.1).`,
     cam: { pos: [0, 2, 16], target: [0, 1.5, 0] },
     setup(g) {
       // Base line
@@ -1195,7 +1357,7 @@ const STAGES = [
   {
     id: 'fibers',
     title: 'Fibers: From Useful Things to Commodities',
-    text: `Above each point on the line sits a <em>fiber</em> — the set of <em>sections</em> (evaluation functions) passing through that condition. Each evaluator (<span class="math">e₁, e₂, e₃</span>) may assign a different magnitude to the same commodity, so the dots spread vertically: the spread <em>is</em> the disagreement between evaluators.<br><br><strong>Click a dot</strong> to impose a value axis — one evaluator's ordering becomes dominant, and the others fall into line. Click again to release. When the money-form is chosen, it selects a single evaluator and collapses the fiber to one height. That collapse is the passage from presheaf to (attempted) sheaf.`,
+    text: `Above each point on the line sits a <em>stalk</em> — the elements of <span class="math">𝒟</span> evaluated at that condition. Each evaluator (<span class="math">e₁, e₂, e₃</span>) may assign a different magnitude to the same useful thing, so the dots spread vertically: the spread <em>is</em> the disagreement between evaluators.<br><br><strong>Click a dot</strong> to fix it as an <em>equivalent form</em> — its predicate <span class="math">e<sub>b</sub></span> imposes a value axis, and the others fall into line (§2.6.1). Click again to release. When the money-form is chosen (§6), it selects a single evaluation and a <em>monetary topology</em> <span class="math">j<sub>m</sub></span> that collapses the stalk to one height (§16.4.5). That collapse is the passage from presheaf to (attempted) sheaf.`,
     cam: { pos: [0, 2.5, 16], target: [0, 2, 0] },
     stageData: {},
     setup(g) {
@@ -1223,6 +1385,25 @@ const STAGES = [
         }
       }
 
+      // Predicate bands (hidden initially, one per fiber)
+      const bandGeo = new THREE.PlaneGeometry(1.0, 0.5);
+      const bandTex = makeBandGradientTex();
+      const bandMat = new THREE.MeshBasicMaterial({
+        map: bandTex,
+        color: 0x58a6ff,
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      const bands = [];
+      for (const fx of FIBER_POSITIONS) {
+        const band = new THREE.Mesh(bandGeo, bandMat);
+        band.position.set(fx, 0, 0);
+        band.scale.set(0, 0, 0);
+        g.add(band);
+        bands.push(band);
+      }
+
       // Y-axis (hidden initially, shown on click)
       const yAxis = makeTube([new THREE.Vector3(-8.5, 0, 0), new THREE.Vector3(-8.5, 5, 0)], 0.025, 0xafb8c1, 0);
       g.add(yAxis);
@@ -1240,6 +1421,7 @@ const STAGES = [
       const raycaster = new THREE.Raycaster();
       const mouse = new THREE.Vector2();
       let fixated = false;
+      let bandTarget = 0;
       let transitionStart = -1;
 
       const onClick = (event) => {
@@ -1252,10 +1434,9 @@ const STAGES = [
 
         if (fixated) {
           fixated = false;
+          bandTarget = 0;
           transitionStart = performance.now() / 1000;
-          stateLabel.material.map.dispose();
           Object.assign(stateLabel, makeLabel('click a dot to impose value axis', stateLabel.position.clone(), '#57606a', 0.55));
-          topLabel.material.map.dispose();
           Object.assign(topLabel, makeLabel('D — useful things', topLabel.position.clone(), '#57606a', 0.8));
           for (let ii = 0; ii < TOTAL_DOTS; ii++) dotData[ii].scale = 1;
           return;
@@ -1265,42 +1446,44 @@ const STAGES = [
         const clickedIdx = hits[0].instanceId;
         const clickedData = dotData[clickedIdx];
         fixated = true;
+        bandTarget = 1;
         transitionStart = performance.now() / 1000;
 
-        // For each fiber, assign ordered Y positions
+        // Position bands at clicked dot's height, set color
+        bandMat.color.set(clickedData.color);
+        for (const band of bands) {
+          band.position.y = clickedData.curY;
+        }
+
+        // Deterministic degree-based ordering
         for (const fx of fiberPositions) {
           const fiberIndices = fibers[fx];
-          const shuffled = [...fiberIndices].sort(() => rng(fx + Math.random()) - 0.5);
-          const isClickedFiber = (fx === clickedData.fiberX);
-          let rank = 0;
-          const spacing = 4.0 / fiberIndices.length;
-          for (const di of shuffled) {
-            if (di === clickedIdx) continue;
-            dotData[di].orderedY = 0.5 + rank * spacing;
+          for (const di of fiberIndices) {
+            if (di === clickedIdx) {
+              clickedData.orderedY = clickedData.curY;
+              clickedData.scale = 0;
+              continue;
+            }
+            const degree = 0.5 + rng(clickedIdx * 137 + di * 59) * 4.0;
+            dotData[di].orderedY = degree;
             dotData[di].scale = 1;
-            rank++;
-          }
-          if (isClickedFiber) {
-            clickedData.orderedY = 4.5;
-            clickedData.scale = 1.8;
           }
         }
 
-        stateLabel.material.map.dispose();
-        const newState = makeLabel('value axis imposed — click to release', stateLabel.position.clone(), '#1a7f37', 0.55);
+        const newState = makeLabel('predicate imposed — click to release', stateLabel.position.clone(), '#1a7f37', 0.55);
         stateLabel.material = newState.material;
         stateLabel.scale.copy(newState.scale);
 
-        topLabel.material.map.dispose();
-        const newTop = makeLabel(clickedData.name + ' = universal equivalent', topLabel.position.clone(), '#1a7f37', 0.8);
+        const newTop = makeLabel('eᵦ — predicate from ' + clickedData.name, topLabel.position.clone(), '#8250df', 0.8);
         topLabel.material = newTop.material;
         topLabel.scale.copy(newTop.scale);
       };
       renderer.domElement.addEventListener('click', onClick);
 
       this.stageData = {
-        cloud, yAxis, yLabel, evaluatorLines,
+        cloud, yAxis, yLabel, evaluatorLines, bands,
         fixated: () => fixated,
+        bandTarget: () => bandTarget,
         transitionStart: () => transitionStart,
         onClick,
       };
@@ -1322,6 +1505,13 @@ const STAGES = [
       for (const el of d.evaluatorLines) {
         el.material.opacity = lerp(el.material.opacity, evalTarget, 0.06);
       }
+      // Lerp band scales
+      const bt = d.bandTarget();
+      for (const band of d.bands) {
+        const cs = band.scale.x;
+        const ns = lerp(cs, bt, 0.08);
+        band.scale.set(ns, ns, ns);
+      }
     },
     teardown() {
       if (this.stageData.onClick) {
@@ -1333,7 +1523,7 @@ const STAGES = [
   {
     id: 'kernel',
     title: 'Kernel Stabilization',
-    text: `In the previous stage, clicking different dots produced different orderings. But the evaluation function <span class="math">e</span> has a <em>kernel</em>: things that are equally exchangeable get identified. The kernel <span class="math">ker(e)</span> partitions the fiber into equivalence classes. <strong>Click any dot</strong> — now the same buckets form every time, and the buckets are ordered the same way, regardless of which dot you pick. The structure is no longer observer-dependent. This is the passage from <span class="math"><i>D</i></span> (useful things) to <span class="math"><i>C</i></span> (commodities): the kernel quotient that makes value objective.`,
+    text: `In the previous stage, clicking different dots produced different orderings. But the evaluation function <span class="math">e</span> has a <em>kernel</em>: the equivalence <span class="math">ker<sub>b</sub>(p) = {a ∈ 𝒟 | e<sub>b</sub>(a) = p}</span> partitions each stalk into equivalence classes (§5.3.2). <strong>Click any dot</strong> — now the same buckets form every time, regardless of which dot you pick. This is <em>kernel-coherence</em> (§5.3.3): the equivalence is independent of the standard chosen. The Δ-resolution (§5.7) quotients <span class="math">𝒟</span> by this stable equivalence: the passage from useful things to <em>commodities</em> <span class="math">C</span>.`,
     cam: { pos: [0, 2.5, 16], target: [0, 2, 0] },
     stageData: {},
     setup(g) {
@@ -1402,7 +1592,6 @@ const STAGES = [
           fixated = false;
           transitionStart = performance.now() / 1000;
           for (let ii = 0; ii < TOTAL_DOTS; ii++) dotData[ii].scale = 1;
-          stateLabel.material.map.dispose();
           Object.assign(stateLabel, makeLabel('click any dot — same buckets every time', stateLabel.position.clone(), '#57606a', 0.55));
           return;
         }
@@ -1415,7 +1604,6 @@ const STAGES = [
         // Highlight clicked dot (but ordering doesn't change!)
         dotData[clickedIdx].scale = 1.8;
 
-        stateLabel.material.map.dispose();
         const newState = makeLabel('same partition regardless of choice — click to release', stateLabel.position.clone(), '#1a7f37', 0.55);
         stateLabel.material = newState.material;
         stateLabel.scale.copy(newState.scale);
@@ -1458,7 +1646,7 @@ const STAGES = [
   {
     id: 'sections',
     title: 'Sections Over Opens',
-    text: `The vertical axis measures value magnitude. A <em>section</em> over a region is a value assignment valid under those conditions. The green curve shows the price of dinner as a function of position. The shaded area marks where <strong>"I can afford dinner"</strong> — where purchasing power exceeds price. This region is a <em>subobject</em>, classified by the truth-value object <span class="math">\u03A9</span>.`,
+    text: `The vertical axis measures value magnitude (§7). A <em>section</em> <span class="math">s ∈ ℰ(U)</span> over a region is a local evaluation valid under those conditions (§10.6). The green curve shows the price of dinner as a function of position. The shaded area marks where <strong>"I can afford dinner"</strong> — where purchasing power exceeds price. This region is a <em>subobject</em>, classified by the subobject classifier <span class="math">\u03A9</span>: the sieve of conditions under which the statement holds (§16.4).`,
     cam: { pos: [0, 2.5, 16], target: [0, 1.8, 0] },
     stageData: {},
     setup(g) {
@@ -1497,7 +1685,7 @@ const STAGES = [
   {
     id: 'compatible',
     title: 'Compatible and Incompatible Sections',
-    text: `Multiple sections can coexist over the same region. Two sections are <em>compatible</em> if they agree on their overlap — they assign the same values wherever both are defined. Compatible sections can potentially be <em>glued</em> into a larger section. <strong>Incompatible</strong> sections disagree on their overlap: they describe different value assignments for the same conditions. A <em>sheaf</em> is a presheaf where all compatible families glue. A <em>presheaf that isn't a sheaf</em> has compatible families that refuse to glue — the obstruction that capital exploits.`,
+    text: `Multiple sections can coexist over the same region. Two sections are <em>compatible</em> if they agree on their overlap — they assign the same values wherever both are defined (§10.6.1). Compatible sections can potentially be <em>glued</em> into a larger section. <strong>Incompatible</strong> sections disagree on their overlap: different price assignments for the same conditions (§10.6.3). A <em>sheaf</em> is a presheaf where all compatible families glue. A <em>presheaf that isn't a sheaf</em> has compatible families that refuse to glue — the obstruction that capital exploits (§16.5.1).`,
     cam: { pos: [0, 2.8, 16], target: [0, 2, 0] },
     stageData: {},
     setup(g) {
@@ -1564,7 +1752,7 @@ const STAGES = [
   {
     id: 'restriction',
     title: 'Restriction Preserves Validity',
-    text: `If a statement is valid over region <span class="math">U</span>, restricting to any sub-region <span class="math">V \u2286 U</span> preserves validity. This is the defining property of a <em>presheaf</em>: data over opens restricts coherently. Zooming in never breaks a valid statement. This is what makes our picture a "pre-bundle" — a presheaf of evaluations <span class="math">\u2130(U)</span>.`,
+    text: `If a statement is valid over region <span class="math">U</span>, the restriction map <span class="math">r<sub>U,V</sub></span> carries it to any sub-region <span class="math">V \u2286 U</span> while preserving validity (§10.6). This is the defining property of a <em>presheaf</em>: data over opens restricts coherently. Zooming in never breaks a valid statement. This is what makes our picture a presheaf of evaluations <span class="math">\u2130(U)</span>.`,
     cam: { pos: [2, 2.5, 12], target: [2, 1.8, 0] },
     setup(g) {
       // Base line
@@ -1603,7 +1791,7 @@ const STAGES = [
   {
     id: 'circulation',
     title: 'Multiple Circulation Spaces',
-    text: `The line fragments into circulation spaces <span class="math">CC\u2081, CC\u2082, CC\u2083</span> — each with its own money-commodity and price system. Within each, sections are locally coherent. At the boundaries (red walls), heights disagree. These are <em>circulation gaps</em>: the presheaf <span class="math">\u2130</span> is separated but not a sheaf.`,
+    text: `The line fragments into circulation spaces <span class="math">CC\u2081, CC\u2082, CC\u2083</span> — each governed by its own <em>monetary topology</em> <span class="math">j<sub>m<sub>k</sub></sub></span> (§16.4.5), with its own money-commodity and price system. Within each, sections are locally coherent — the kernel is stable (§5.3.3). At the boundaries (red walls), sections disagree. These <em>circulation gaps</em> are Čech 1-cocycles: the presheaf <span class="math">\u2130</span> is separated but not a sheaf.`,
     cam: { pos: [0, 2.8, 16], target: [0, 2, 0] },
     setup(g) {
       const names = ['CC\u2081', 'CC\u2082', 'CC\u2083'];
@@ -1634,7 +1822,7 @@ const STAGES = [
   {
     id: 'arbitrage',
     title: 'Arbitrage vs. Capital',
-    text: `Within a CC, competitive arbitrage contracts prices toward social value — the fiber is <em>contractible</em> (<span class="math">H\u2070 = 0</span>). Watch the individual prices (orange dots) spring toward the social value curve. But at CC boundaries, the gap is topological: different monetary topologies <span class="math">j<sub>m\u2081</sub>, j<sub>m\u2082</sub></span> can't be smoothed away. Capital profits from these walls (<strong>H\u00B9 \u2260 0</strong>). The wall isn't a market inefficiency — it's a topological invariant.`,
+    text: `Within a <span class="math">CC</span>, competitive arbitrage contracts prices toward the determinant of value (§7.8) — price deviations are <em>coboundaries</em> (<span class="math">H\u2070 = 0</span>). Watch the individual prices (orange dots) spring toward the social value curve. But at CC boundaries, the gap is structural: different monetary topologies <span class="math">j<sub>m\u2081</sub>, j<sub>m\u2082</sub></span> produce Čech 1-cocycles that can't be trivialized (<strong>H\u00B9 \u2260 0</strong>). Capital profits from these walls. The wall isn't a market inefficiency — it's a cohomological invariant.`,
     cam: { pos: [0, 2.8, 16], target: [0, 2, 0] },
     stageData: {},
     setup(g) {
@@ -1711,7 +1899,7 @@ const STAGES = [
   {
     id: 'valorization',
     title: 'The Valorization Circuit',
-    text: `Capital traces a loop: <span class="math">M → C → P → C\u2019 → M\u2019</span>. This circuit bounds a <em>production disk</em>. We now ask: when you parallel-transport value around this loop, does the section close? If the connection is flat (value-preserving), the path closes. If curved (value-expanding), it doesn't.`,
+    text: `Capital traces a loop: <span class="math">M → C → P → C\u2019 → M\u2019</span>. This circuit bounds a <em>production disk</em>. We now ask: does the section extend consistently around this loop? If the Čech 1-cocycle around the boundary is trivial, sections glue and the loop closes. If not, the failure to glue is a <em>2-cocycle</em> — an obstruction living on the disk.`,
     cam: { pos: [6, 5, 10], target: [0, 2, 0] },
     setup(g) {
       // Build the loop in XZ plane
@@ -1748,7 +1936,7 @@ const STAGES = [
   {
     id: 'split',
     title: 'The Split Component',
-    text: `Constant capital (<span style="color:#0969da">\u03C4, cyan</span>) transports flatly — value in equals value out, the path closes. Labor power (<span style="color:#9a6700">\u2113, orange</span>) has a <em>double inscription</em>: purchased at <span class="math">t<sub>r</sub></span> but contributing <span class="math">t<sub>r</sub> + t<sub>s</sub></span> in production. The fiber jumps by <span class="math">t<sub>s</sub></span> — the path doesn't close. This <strong>holonomy</strong> is surplus value. The curvature lives on the production disk (<strong>H\u00B2 \u2260 0</strong>).`,
+    text: `Constant capital (<span style="color:#0969da">\u03C4, cyan</span>) contributes a coboundary: value in equals value out, and the section closes. Labor-power (<span style="color:#9a6700">\u2113, orange</span>) has a <em>double inscription</em>: purchased at <span class="math">t<sub>r</sub></span> but contributing <span class="math">t<sub>r</sub> + t<sub>s</sub></span> in production. The section jumps by <span class="math">t<sub>s</sub></span> — it fails to close. This non-trivial cocycle <em>is</em> surplus value. The obstruction lives on the production disk as a Čech 2-cocycle (<strong>H\u00B2 \u2260 0</strong>).`,
     cam: { pos: [7, 5.5, 9], target: [0, 2.5, 0] },
     stageData: {},
     setup(g) {
@@ -1814,8 +2002,8 @@ const STAGES = [
       this.stageData.surplus = SURPLUS;
       this.stageData.baseY = BASE_Y;
       // Legend
-      g.add(makeLabel('\u03C4 constant capital (flat)', new THREE.Vector3(-4.5, 4.8, 0), '#0969da', 0.7));
-      g.add(makeLabel('\u2113 labor power (curved)', new THREE.Vector3(-4.5, 4.2, 0), '#9a6700', 0.7));
+      g.add(makeLabel('\u03C4 constant capital (coboundary)', new THREE.Vector3(-4.5, 4.8, 0), '#0969da', 0.7));
+      g.add(makeLabel('\u2113 labor-power (2-cocycle)', new THREE.Vector3(-4.5, 4.2, 0), '#9a6700', 0.7));
       g.add(makeLabel('H\u00B2 \u2260 0', new THREE.Vector3(0, 4.8, 0), '#cf222e', 0.95));
     },
     update(t) {
@@ -1841,14 +2029,14 @@ const STAGES = [
   {
     id: 'obstruction',
     title: 'The Capital-Obstruction Theorem',
-    text: `The holonomy loop unrolls onto the value line <span class="math">T</span>. Production is a <strong>wormhole</strong>: it lifts the circuit out of the plane, adding a dimension. By <em>Stokes' theorem</em>, the line integral around the boundary (what the capitalist measures as <span class="math">\u03B4</span>) equals the surface integral over the production dome (where surplus is created).
+    text: `The circuit unrolls onto the value line <span class="math">T</span>. Production lifts the circuit out of the plane, adding a dimension. By <em>Stokes' theorem</em>, the line integral around the boundary (what the capitalist measures as <span class="math">\u03B4</span>) equals the surface integral over the production dome (where the 2-cocycle concentrates).
     <table class="cohom-table">
-      <tr><th>Dim</th><th>Obstruction</th><th>Capital form</th><th>Geometry</th></tr>
-      <tr><td><span class="math">H\u2070</span></td><td>Price deviation</td><td>None (arbitrage)</td><td>Sections agree on overlaps</td></tr>
-      <tr><td><span class="math">H\u00B9</span></td><td>Circulation gaps</td><td>Merchant / usury</td><td>Walls between charts</td></tr>
-      <tr><td><span class="math">H\u00B2</span></td><td>Surplus value</td><td>Industrial</td><td>Curvature over production dome</td></tr>
+      <tr><th>Dim</th><th>Obstruction</th><th>Capital form</th><th>Čech interpretation</th></tr>
+      <tr><td><span class="math">H\u2070</span></td><td>Price deviation</td><td>None (arbitrage)</td><td>Coboundaries — contractible within CC</td></tr>
+      <tr><td><span class="math">H\u00B9</span></td><td>Circulation gaps</td><td>Merchant / usury</td><td>1-cocycles across CC boundaries</td></tr>
+      <tr><td><span class="math">H\u00B2</span></td><td>Surplus value</td><td>Industrial</td><td>2-cocycles on production disk</td></tr>
     </table>
-    <em>Orbit the scene</em>: from above, the circuit appears to close (the capitalist's mystified view). From the side, the gap <span class="math">\u03B4</span> is visible. The dome is the source of curvature.`,
+    <em>Orbit the scene</em>: from above, the circuit appears to close (the capitalist's mystified view). From the side, the gap <span class="math">\u03B4</span> is visible. The dome is where the 2-cocycle concentrates — the source of surplus.`,
     cam: { pos: [7, 5.5, 9], target: [0, 2.5, 0] },
     stageData: {},
     setup(g) {
@@ -1963,8 +2151,8 @@ const STAGES = [
 
       // Legend (Phase 1, fades out during Phase 2)
       d.legendLabels = [];
-      const leg1 = makeLabel('\u03C4 constant capital (flat)', new THREE.Vector3(-4.5, 4.8, 0), '#0969da', 0.7);
-      const leg2 = makeLabel('\u2113 labor power (curved)', new THREE.Vector3(-4.5, 4.2, 0), '#9a6700', 0.7);
+      const leg1 = makeLabel('\u03C4 constant capital (coboundary)', new THREE.Vector3(-4.5, 4.8, 0), '#0969da', 0.7);
+      const leg2 = makeLabel('\u2113 labor-power (2-cocycle)', new THREE.Vector3(-4.5, 4.2, 0), '#9a6700', 0.7);
       const leg3 = makeLabel('H\u00B2 \u2260 0', new THREE.Vector3(0, 4.8, 0), '#cf222e', 0.95);
       d.legendLabels.push(leg1, leg2, leg3);
       g.add(leg1); g.add(leg2); g.add(leg3);
