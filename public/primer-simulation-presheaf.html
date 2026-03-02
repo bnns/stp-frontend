@@ -688,7 +688,7 @@ const STAGES = [
   {
     id: 'single-fiber',
     title: 'A Single Fiber',
-    text: `Pick one point in the <em>value space</em> <span class="math">T</span>. Above it rises a <em>fiber</em> — the collection of useful things evaluable at that point. The evaluation function <span class="math">e</span> organizes this raw diversity: bread, iron, cloth, labor, each at its own qualitative height. The fiber is the pre-image of a single point in <span class="math">T</span>.`,
+    text: `Pick one point in the <em>value space</em> <span class="math">T</span>. Above it rises a <em>fiber</em> — the set of <em>sections</em> passing through that point. Each section is a different evaluation function (<span class="math">e₁, e₂, e₃</span>), and they may assign different magnitudes to the same commodity at this condition. The vertical spread shows their <em>disagreement</em>. If all evaluators agreed, the fiber would collapse to a single height — that would be the sheaf condition.`,
     cam: { pos: [6, 5, 8], target: [0, 2.5, 0] },
     stageData: {},
     setup(g) {
@@ -729,9 +729,29 @@ const STAGES = [
       // Cloud clustered above origin
       const cloud = makeCloud3D(g, 60, { xRange: 1.2, zRange: 1.2, yMin: 0.5, yMax: 5 });
 
+      // Evaluator lines — three dashed lines at different heights showing e₁, e₂, e₃
+      const evalColors = [0x3fb950, 0xffa657, 0xbc8cff];
+      const evalYs = [1.5, 3.0, 4.2];
+      const evalNames = ['e₁', 'e₂', 'e₃'];
+      const evalLabelColors = ['#3fb950', '#ffa657', '#bc8cff'];
+      for (let i = 0; i < 3; i++) {
+        const pts = [new THREE.Vector3(-0.8, evalYs[i], 0), new THREE.Vector3(0.8, evalYs[i], 0)];
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const mat = new THREE.LineDashedMaterial({
+          color: evalColors[i], dashSize: 0.15, gapSize: 0.1,
+          transparent: true, opacity: 0.4
+        });
+        const line = new THREE.Line(geo, mat);
+        line.computeLineDistances();
+        g.add(line);
+        const lbl = makeLabel(evalNames[i], new THREE.Vector3(1.0, evalYs[i], 0), evalLabelColors[i], 0.4);
+        lbl.material.opacity = 0.6;
+        g.add(lbl);
+      }
+
       // Labels
       g.add(makeLabel('T — value space', new THREE.Vector3(3, -0.3, 3), '#57606a', 0.6));
-      g.add(makeLabel('fiber above t', new THREE.Vector3(1.5, 3, 0), '#0969da', 0.6));
+      g.add(makeLabel('stalk Eₜ', new THREE.Vector3(1.5, 3, 0), '#0969da', 0.6));
 
       this.stageData = { cloud };
     },
@@ -884,7 +904,7 @@ const STAGES = [
   {
     id: 'projection',
     title: 'Projection to the Line',
-    text: `The two-dimensional space of value conditions <span class="math">T</span> collapses to a line — the base space used in all subsequent stages. Watch the plane flatten: rectangular regions become intervals, section surfaces become section curves, and the familiar line picture emerges. This projection is not innocent: it is a <em>choice</em> of how to parametrize value conditions, suppressing one dimension of variation.`,
+    text: `The two-dimensional space of value conditions <span class="math">T</span> collapses to a line — the base space used in all subsequent stages. Watch the plane flatten: rectangular regions become intervals, section surfaces become section curves, and the familiar line picture emerges. This projection is a <em>choice</em> of how to parametrize value conditions.`,
     cam: { pos: [10, 8, 10], target: [0, 2, 0] },
     stageData: {},
     setup(g) {
@@ -1175,7 +1195,7 @@ const STAGES = [
   {
     id: 'fibers',
     title: 'Fibers: From Useful Things to Commodities',
-    text: `Above each point on the line sits a <em>fiber</em> — the collection of useful things <span class="math"><i>D</i></span> evaluable at that condition. These are heterogeneous: bread, iron, cloth, labor, at different qualitative levels, with no common scale.<br><br><strong>Click a dot</strong> to impose a value axis — the clicked commodity is maximally equivalent to itself (rises to the top), and the others order below it. Click again to release. The evaluation function <span class="math">e</span> stabilizes things into <em>commodities</em> <span class="math"><i>C</i></span>; the money-form collapses fibers onto a single magnitude axis. That structure is imposed, not given.`,
+    text: `Above each point on the line sits a <em>fiber</em> — the set of <em>sections</em> (evaluation functions) passing through that condition. Each evaluator (<span class="math">e₁, e₂, e₃</span>) may assign a different magnitude to the same commodity, so the dots spread vertically: the spread <em>is</em> the disagreement between evaluators.<br><br><strong>Click a dot</strong> to impose a value axis — one evaluator's ordering becomes dominant, and the others fall into line. Click again to release. When the money-form is chosen, it selects a single evaluator and collapses the fiber to one height. That collapse is the passage from presheaf to (attempted) sheaf.`,
     cam: { pos: [0, 2.5, 16], target: [0, 2, 0] },
     stageData: {},
     setup(g) {
@@ -1183,6 +1203,25 @@ const STAGES = [
       const cloud = makeCloud(g, FIBER_POSITIONS, 40);
       const { instancedMesh, dotData, fibers, fiberLines, TOTAL_DOTS } = cloud;
       const fiberPositions = FIBER_POSITIONS;
+
+      // Evaluator lines across each fiber
+      const evalColors = [0x3fb950, 0xffa657, 0xbc8cff];
+      const evalYs = [1.5, 3.0, 4.2];
+      const evaluatorLines = [];
+      for (const fx of fiberPositions) {
+        for (let i = 0; i < 3; i++) {
+          const pts = [new THREE.Vector3(fx - 0.5, evalYs[i], 0), new THREE.Vector3(fx + 0.5, evalYs[i], 0)];
+          const geo = new THREE.BufferGeometry().setFromPoints(pts);
+          const mat = new THREE.LineDashedMaterial({
+            color: evalColors[i], dashSize: 0.12, gapSize: 0.08,
+            transparent: true, opacity: 0.35
+          });
+          const line = new THREE.Line(geo, mat);
+          line.computeLineDistances();
+          g.add(line);
+          evaluatorLines.push(line);
+        }
+      }
 
       // Y-axis (hidden initially, shown on click)
       const yAxis = makeTube([new THREE.Vector3(-8.5, 0, 0), new THREE.Vector3(-8.5, 5, 0)], 0.025, 0xafb8c1, 0);
@@ -1260,7 +1299,7 @@ const STAGES = [
       renderer.domElement.addEventListener('click', onClick);
 
       this.stageData = {
-        cloud, yAxis, yLabel,
+        cloud, yAxis, yLabel, evaluatorLines,
         fixated: () => fixated,
         transitionStart: () => transitionStart,
         onClick,
@@ -1277,6 +1316,11 @@ const STAGES = [
       const lineOpacity = fixated ? 0.7 : 0.4;
       for (const fl of d.cloud.fiberLines) {
         fl.material.opacity = lerp(fl.material.opacity, lineOpacity, 0.05);
+      }
+      // Fade evaluator lines: visible when free, hidden when fixated
+      const evalTarget = fixated ? 0 : 0.35;
+      for (const el of d.evaluatorLines) {
+        el.material.opacity = lerp(el.material.opacity, evalTarget, 0.06);
       }
     },
     teardown() {
@@ -2304,5 +2348,6 @@ function animate() {
 animate();
 
 </script>
+<script src="https://cdn.counter.dev/script.js" data-id="594404c5-6814-4476-a5af-d35ddc284e98" data-utcoffset="-5"></script>
 </body>
 </html>
