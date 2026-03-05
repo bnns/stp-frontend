@@ -192,7 +192,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.enableZoom = false;
-controls.enablePan = false;
+controls.enablePan = true;
 controls.target.set(0, 1.5, 0);
 controls.addEventListener('start', () => { camLerpActive = false; });
 
@@ -355,6 +355,29 @@ function makeAnimatedDash(fn, xMin, xMax, color, opacity = 0.85, dashSize = 0.4,
 }
 function lerp(a, b, t) { return a + (b - a) * t; }
 function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+function makeArrow(origin, dir, length, color, shaftR = 0.02, headLen = 0.15, headR = 0.06) {
+  const group = new THREE.Group();
+  // Shaft
+  const shaftLen = length - headLen;
+  const shaftGeo = new THREE.CylinderGeometry(shaftR, shaftR, shaftLen, 8);
+  const mat = new THREE.MeshBasicMaterial({ color });
+  const shaft = new THREE.Mesh(shaftGeo, mat);
+  shaft.position.y = shaftLen / 2;
+  group.add(shaft);
+  // Head
+  const headGeo = new THREE.ConeGeometry(headR, headLen, 8);
+  const head = new THREE.Mesh(headGeo, mat);
+  head.position.y = shaftLen + headLen / 2;
+  group.add(head);
+  // Orient from +Y to dir
+  const up = new THREE.Vector3(0, 1, 0);
+  const d = dir.clone().normalize();
+  const q = new THREE.Quaternion().setFromUnitVectors(up, d);
+  group.quaternion.copy(q);
+  group.position.copy(origin);
+  return group;
+}
 
 // 3D cloud for plane-based stages
 function makeCloud3D(g, count, opts = {}) {
@@ -722,7 +745,7 @@ const STAGES = [
   {
     id: 'single-fiber',
     title: 'A Single Fiber',
-    text: `Pick one point in the <em>locale of value conditions</em> <span class="math">T</span>. Above it rises a <em>stalk</em> — the elements of <span class="math">𝒟</span> evaluated at this condition. Each evaluation function (<span class="math">e₁, e₂, e₃</span>) may assign a different magnitude to the same useful thing at this point, so the dots spread vertically: the spread <em>is</em> the disagreement between evaluators. If all evaluators agreed, the stalk would collapse to a single height — that would be <em>kernel-coherence</em> (§5.3.3).<br><br><strong>Click a dot</strong> to fix it as an <em>equivalent form</em> — the fuzzy disc is the predicate <span class="math">e<sub>b</sub></span> it generates (§2.6.1), assigning a degree to every other element.`,
+    text: `Pick one point in the <em>locale of value conditions</em> <span class="math">T</span>. Above it rises a <em>stalk</em> — the elements of <span class="math">𝒟</span> evaluated at this condition. Each evaluation function (<span class="math">e₁, e₂, e₃</span>) may assign a different magnitude to the same useful thing at this point, so the dots spread vertically: the spread <em>is</em> the disagreement between evaluators. If all evaluators agreed, the stalk would collapse to a single height — that would be <em>kernel-coherence</em> (§5.3.3).<br><br><strong>Click a dot</strong> to fix it as a <em>standard</em> — the fuzzy disc is the predicate <span class="math">e<sub>b</sub></span> it generates (§2.6.1), assigning a degree to every other element. <strong>Click a second dot</strong> to produce a second predicate — two local evaluations that will become sections.`,
     cam: { pos: [6, 5, 8], target: [0, 2.5, 0] },
     stageData: {},
     setup(g) {
@@ -791,29 +814,94 @@ const STAGES = [
       g.add(makeLabel('T — value space', new THREE.Vector3(3, -0.3, 3), '#57606a', 0.6));
       g.add(makeLabel('stalk Eₜ', new THREE.Vector3(1.5, 3, 0), '#0969da', 0.6));
 
-      // Predicate disc (hidden initially)
+      // Two predicate discs (hidden initially)
       const DISC_RADIUS = 2.5;
       const discGeo = new THREE.CircleGeometry(DISC_RADIUS, 64);
-      const discMat = new THREE.MeshBasicMaterial({
-        map: makeRadialGradientTex(),
-        color: 0x58a6ff,
-        transparent: true,
-        side: THREE.DoubleSide,
-        depthWrite: false,
+      const discTex = makeRadialGradientTex();
+      const disc1Mat = new THREE.MeshBasicMaterial({
+        map: discTex, color: 0xf85149,
+        transparent: true, side: THREE.DoubleSide, depthWrite: false,
       });
-      const disc = new THREE.Mesh(discGeo, discMat);
-      disc.rotation.x = -Math.PI / 2;
-      disc.scale.set(0, 0, 0);
-      g.add(disc);
+      const disc2Mat = new THREE.MeshBasicMaterial({
+        map: discTex, color: 0x58a6ff,
+        transparent: true, side: THREE.DoubleSide, depthWrite: false,
+      });
+      const disc1 = new THREE.Mesh(discGeo, disc1Mat);
+      const disc2 = new THREE.Mesh(discGeo, disc2Mat);
+      disc1.rotation.x = -Math.PI / 2;
+      disc2.rotation.x = -Math.PI / 2;
+      disc1.scale.set(0, 0, 0);
+      disc2.scale.set(0, 0, 0);
+      g.add(disc1);
+      g.add(disc2);
 
-      // Click handler for predicate visualization
+      // Click handler: idle → one → two → idle
       const raycaster = new THREE.Raycaster();
       const mouse = new THREE.Vector2();
-      let predicateActive = false;
-      let discTargetScale = 0;
+      let clickState = 'idle'; // 'idle' | 'one' | 'two'
+      let disc1Target = 0, disc2Target = 0;
+      let hit1Idx = -1, hit2Idx = -1;
 
       const predLabel = makeLabel('click a dot to see its predicate eᵦ', new THREE.Vector3(0, -1.5, 0), '#57606a', 0.5);
       g.add(predLabel);
+
+      function updatePredLabel(text, color) {
+        const ns = makeLabel(text, predLabel.position.clone(), color, 0.5);
+        predLabel.material = ns.material;
+        predLabel.scale.copy(ns.scale);
+      }
+
+      function resetDots() {
+        for (let i = 0; i < cloud.count; i++) {
+          cloud.dotData[i].scale = 1;
+          cloud.dotData[i].predicateX = null;
+          cloud.dotData[i].predicateY = null;
+          cloud.dotData[i].predicateZ = null;
+        }
+      }
+
+      function projectOntoDisc(hitIdx, discMesh) {
+        const dd = cloud.dotData[hitIdx];
+        dd.scale = 0; // hide the clicked dot
+        return dd;
+      }
+
+      function assignDotsToOneDisc(hitIdx) {
+        const dd = cloud.dotData[hitIdx];
+        for (let i = 0; i < cloud.count; i++) {
+          if (i === hitIdx) continue;
+          const degree = rng(hitIdx * 137 + i * 59);
+          const dist = (1 - degree) * DISC_RADIUS * 0.9;
+          const angle = rng(i * 83 + hitIdx * 29) * Math.PI * 2;
+          cloud.dotData[i].predicateX = dd.curX + dist * Math.cos(angle);
+          cloud.dotData[i].predicateY = dd.curY;
+          cloud.dotData[i].predicateZ = dd.curZ + dist * Math.sin(angle);
+        }
+      }
+
+      function assignDotsToTwoDiscs(idx1, idx2) {
+        const dd1 = cloud.dotData[idx1];
+        const dd2 = cloud.dotData[idx2];
+        for (let i = 0; i < cloud.count; i++) {
+          if (i === idx1 || i === idx2) continue;
+          const deg1 = rng(idx1 * 137 + i * 59);
+          const deg2 = rng(idx2 * 137 + i * 59);
+          // Assign to whichever predicate gives higher degree
+          if (deg1 >= deg2) {
+            const dist = (1 - deg1) * DISC_RADIUS * 0.9;
+            const angle = rng(i * 83 + idx1 * 29) * Math.PI * 2;
+            cloud.dotData[i].predicateX = dd1.curX + dist * Math.cos(angle);
+            cloud.dotData[i].predicateY = dd1.curY;
+            cloud.dotData[i].predicateZ = dd1.curZ + dist * Math.sin(angle);
+          } else {
+            const dist = (1 - deg2) * DISC_RADIUS * 0.9;
+            const angle = rng(i * 83 + idx2 * 29) * Math.PI * 2;
+            cloud.dotData[i].predicateX = dd2.curX + dist * Math.cos(angle);
+            cloud.dotData[i].predicateY = dd2.curY;
+            cloud.dotData[i].predicateZ = dd2.curZ + dist * Math.sin(angle);
+          }
+        }
+      }
 
       const onClick = (event) => {
         if (STAGES[currentStage]?.id !== 'single-fiber') return;
@@ -822,54 +910,52 @@ const STAGES = [
         mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
 
-        if (predicateActive) {
-          predicateActive = false;
-          discTargetScale = 0;
-          for (let i = 0; i < cloud.count; i++) {
-            cloud.dotData[i].scale = 1;
-            cloud.dotData[i].predicateX = null;
-            cloud.dotData[i].predicateY = null;
-            cloud.dotData[i].predicateZ = null;
-          }
-          const ns = makeLabel('click a dot to see its predicate eᵦ', predLabel.position.clone(), '#57606a', 0.5);
-          predLabel.material = ns.material;
-          predLabel.scale.copy(ns.scale);
+        if (clickState === 'two') {
+          // Third click: reset everything
+          clickState = 'idle';
+          disc1Target = 0;
+          disc2Target = 0;
+          hit1Idx = -1;
+          hit2Idx = -1;
+          resetDots();
+          updatePredLabel('click a dot to see its predicate eᵦ', '#57606a');
           return;
         }
 
         const hits = raycaster.intersectObject(cloud.instancedMesh);
         if (hits.length === 0) return;
         const hitIdx = hits[0].instanceId;
-        predicateActive = true;
-        discTargetScale = 1;
-        const dd = cloud.dotData[hitIdx];
-        disc.position.set(dd.curX, dd.curY, dd.curZ);
-        discMat.color.set(dd.color);
-        dd.scale = 0;
 
-        // Project dots onto disc: degree → distance from center
-        // High degree (≈1) = close to center (more equivalent)
-        // Low degree (≈0) = near edge (less equivalent)
-        for (let i = 0; i < cloud.count; i++) {
-          if (i === hitIdx) continue;
-          const degree = rng(hitIdx * 137 + i * 59); // e_b(a) ∈ [0,1]
-          const dist = (1 - degree) * DISC_RADIUS * 0.9;
-          const angle = rng(i * 83 + hitIdx * 29) * Math.PI * 2;
-          cloud.dotData[i].predicateX = dd.curX + dist * Math.cos(angle);
-          cloud.dotData[i].predicateY = dd.curY; // flatten to disc height
-          cloud.dotData[i].predicateZ = dd.curZ + dist * Math.sin(angle);
+        if (clickState === 'idle') {
+          clickState = 'one';
+          hit1Idx = hitIdx;
+          disc1Target = 1;
+          const dd = cloud.dotData[hitIdx];
+          disc1.position.set(dd.curX, dd.curY, dd.curZ);
+          disc1Mat.color.set(dd.color);
+          projectOntoDisc(hitIdx, disc1);
+          assignDotsToOneDisc(hitIdx);
+          updatePredLabel('eᵦ₁ — click a second dot', '#8250df');
+        } else if (clickState === 'one') {
+          if (hitIdx === hit1Idx) return; // same dot, ignore
+          clickState = 'two';
+          hit2Idx = hitIdx;
+          disc2Target = 1;
+          const dd = cloud.dotData[hitIdx];
+          disc2.position.set(dd.curX, dd.curY, dd.curZ);
+          disc2Mat.color.set(dd.color);
+          projectOntoDisc(hitIdx, disc2);
+          assignDotsToTwoDiscs(hit1Idx, hit2Idx);
+          updatePredLabel('eᵦ₁ , eᵦ₂ — two predicates (click to reset)', '#8250df');
         }
-
-        const ns = makeLabel('eᵦ : D → T — click to release', predLabel.position.clone(), '#8250df', 0.5);
-        predLabel.material = ns.material;
-        predLabel.scale.copy(ns.scale);
       };
       renderer.domElement.addEventListener('click', onClick);
 
       this.stageData = {
-        cloud, disc, evaluatorLines, evaluatorLabels,
-        predicateActive: () => predicateActive,
-        discTargetScale: () => discTargetScale,
+        cloud, disc1, disc2, evaluatorLines, evaluatorLabels,
+        clickState: () => clickState,
+        disc1Target: () => disc1Target,
+        disc2Target: () => disc2Target,
         onClick,
       };
     },
@@ -877,18 +963,17 @@ const STAGES = [
       const d = this.stageData;
       if (!d.cloud) return;
       const cloud = d.cloud;
-      const active = d.predicateActive();
+      const state = d.clickState();
+      const active = state !== 'idle';
       const mat = cloud.tmpMatrix;
 
       for (let i = 0; i < cloud.count; i++) {
         const dd = cloud.dotData[i];
         if (active && dd.predicateY != null) {
-          // Lerp toward disc-surface position
           dd.curX = lerp(dd.curX, dd.predicateX, 0.07);
           dd.curY = lerp(dd.curY, dd.predicateY, 0.07);
           dd.curZ = lerp(dd.curZ, dd.predicateZ, 0.07);
         } else {
-          // Restore to base wobble
           const targetY = dd.baseY + Math.sin(t * 1.2 + dd.phase) * dd.ampY;
           dd.curX = lerp(dd.curX, dd.baseX, 0.07);
           dd.curY = lerp(dd.curY, targetY, 0.07);
@@ -901,11 +986,11 @@ const STAGES = [
       }
       cloud.instancedMesh.instanceMatrix.needsUpdate = true;
 
-      // Lerp disc scale
-      const curS = d.disc.scale.x;
-      const tgtS = d.discTargetScale();
-      const newS = lerp(curS, tgtS, 0.08);
-      d.disc.scale.set(newS, newS, newS);
+      // Lerp disc scales
+      const s1 = lerp(d.disc1.scale.x, d.disc1Target(), 0.08);
+      d.disc1.scale.set(s1, s1, s1);
+      const s2 = lerp(d.disc2.scale.x, d.disc2Target(), 0.08);
+      d.disc2.scale.set(s2, s2, s2);
 
       // Evaluator line dimming
       const evalTgt = active ? 0.05 : 0.4;
@@ -919,6 +1004,240 @@ const STAGES = [
     },
     teardown() {
       if (this.stageData.onClick) renderer.domElement.removeEventListener('click', this.stageData.onClick);
+    }
+  },
+
+  // ─── STAGE 1b: PREDICATES BECOME SECTIONS ───
+  {
+    id: 'disc-to-section',
+    title: 'From Predicates to Sections',
+    text: `Each predicate <span class="math">e<sub>b</sub> : \u{1D4D3} \u2192 T</span> is a <em>local evaluation</em> \u2014 it assigns a degree to every element from the standpoint of <span class="math">b</span>. A <em>section</em> <span class="math">s \u2208 \u2130(U)</span> over a region of <span class="math">T</span> is exactly this: a local evaluation valid under those conditions (\u00A710.6). Watch the two predicate discs spread across the value space, stretch to cover regions <span class="math">U\u2081</span> and <span class="math">U\u2082</span>, and develop the height variation of section surfaces. Where the regions overlap, the sections meet \u2014 the <em>gluing condition</em> emerges from the predicate structure itself.`,
+    cam: { pos: [6, 5, 8], target: [0, 2.5, 0] },
+    stageData: {},
+    setup(g) {
+      // Faint ground plane + grid
+      makeCollapsibleGrid(g, 16, 16, 0xd0d8e0, 0.2);
+      const planeGeo = new THREE.PlaneGeometry(16, 16);
+      const planeMat = new THREE.MeshBasicMaterial({ color: 0xeceff3, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+      const plane = new THREE.Mesh(planeGeo, planeMat);
+      plane.rotation.x = -Math.PI / 2;
+      plane.position.y = -0.01;
+      g.add(plane);
+
+      // Base point (fades out during transition)
+      const basePoint = makeSphere(new THREE.Vector3(0, 0, 0), 0.15, 0x0969da);
+      g.add(basePoint);
+
+      // Section height functions (same as gluing-fibers stage)
+      const secFn = (x, z) => 2.8 + 0.5 * Math.sin(x * 0.5 + 0.3) + 0.35 * Math.cos(z * 0.55 + 0.5)
+                                   + 0.25 * Math.sin(x * 1.1 + z * 0.8) + 0.15 * Math.cos(x * 0.3 - z * 0.65);
+      const sec2Fn = (x, z) => {
+        if (x <= 1) return secFn(x, z);
+        const edge = secFn(1, z);
+        const tt = x - 1;
+        return edge + 0.45 * Math.sin(tt * 0.7) + 0.25 * Math.cos(z * 0.55 + tt * 0.9) + 0.15 * Math.sin(tt * 1.4 + z * 0.4);
+      };
+
+      // Region definitions
+      const u1 = { x1: -6, x2: 1, z1: -3, z2: 3 };
+      const u2 = { x1: -1, x2: 6, z1: -2, z2: 4 };
+
+      // ── Two morphing surfaces ──
+      // Start as small discs at origin, morph into rectangular section surfaces.
+      const SEGS = 40;
+
+      function makeMorphSurface(region, fn, color) {
+        const geo = new THREE.PlaneGeometry(1, 1, SEGS, SEGS);
+        geo.rotateX(-Math.PI / 2);
+        const pos = geo.attributes.position.array;
+        const count = pos.length / 3;
+
+        const initPositions = new Float32Array(pos.length);
+        const finalPositions = new Float32Array(pos.length);
+
+        const cx = (region.x1 + region.x2) / 2;
+        const cz = (region.z1 + region.z2) / 2;
+        const hw = (region.x2 - region.x1) / 2;
+        const hd = (region.z2 - region.z1) / 2;
+
+        for (let i = 0; i < count; i++) {
+          const ux = pos[i * 3];
+          const uz = pos[i * 3 + 2];
+
+          // Disc form: small circle at origin
+          const discR = 1.2;
+          const angle = Math.atan2(uz, ux);
+          const unitR = Math.sqrt(ux * ux + uz * uz) * 2;
+          const dr = unitR * discR;
+          initPositions[i * 3]     = dr * Math.cos(angle);
+          initPositions[i * 3 + 1] = 2.8;
+          initPositions[i * 3 + 2] = dr * Math.sin(angle);
+
+          // Section surface form
+          const wx = cx + ux * 2 * hw;
+          const wz = cz + uz * 2 * hd;
+          finalPositions[i * 3]     = wx;
+          finalPositions[i * 3 + 1] = fn(wx, wz);
+          finalPositions[i * 3 + 2] = wz;
+        }
+
+        for (let i = 0; i < pos.length; i++) pos[i] = initPositions[i];
+        geo.attributes.position.needsUpdate = true;
+        geo.computeVertexNormals();
+
+        const mat = new THREE.MeshBasicMaterial({
+          color, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        return { mesh, geo, initPositions, finalPositions, mat };
+      }
+
+      const surf1 = makeMorphSurface(u1, secFn, 0xf85149);
+      const surf2 = makeMorphSurface(u2, sec2Fn, 0x58a6ff);
+      g.add(surf1.mesh);
+      g.add(surf2.mesh);
+
+      // Wireframe overlays
+      const wire1Mat = new THREE.MeshBasicMaterial({
+        color: 0xf85149, wireframe: true, transparent: true, opacity: 0, depthWrite: false
+      });
+      g.add(new THREE.Mesh(surf1.geo, wire1Mat));
+      const wire2Mat = new THREE.MeshBasicMaterial({
+        color: 0x58a6ff, wireframe: true, transparent: true, opacity: 0, depthWrite: false
+      });
+      g.add(new THREE.Mesh(surf2.geo, wire2Mat));
+
+      // Overlap fill (fades in at end)
+      const ov = { x1: -1, x2: 1, z1: -2, z2: 3 };
+      const ovFill = new THREE.Mesh(
+        new THREE.PlaneGeometry(ov.x2 - ov.x1, ov.z2 - ov.z1),
+        new THREE.MeshBasicMaterial({ color: 0xbc8cff, transparent: true, opacity: 0, side: THREE.DoubleSide })
+      );
+      ovFill.rotation.x = -Math.PI / 2;
+      ovFill.position.set((ov.x1 + ov.x2) / 2, 0.03, (ov.z1 + ov.z2) / 2);
+      g.add(ovFill);
+
+      // Labels
+      const lbl1 = makeLabel('e\u2081 \u2192 section s\u2081', new THREE.Vector3(-4.5, 4.5, 0), '#cf222e', 0.6);
+      lbl1.material.opacity = 0.8;
+      g.add(lbl1);
+      const lbl2 = makeLabel('e\u2082 \u2192 section s\u2082', new THREE.Vector3(4.5, 4.5, 0), '#0969da', 0.6);
+      lbl2.material.opacity = 0.8;
+      g.add(lbl2);
+
+      const lblU1 = makeLabel('U\u2081', new THREE.Vector3(-5, 0.4, -2.5), '#cf222e', 0.8);
+      lblU1.material.opacity = 0;
+      g.add(lblU1);
+      const lblU2 = makeLabel('U\u2082', new THREE.Vector3(5, 0.4, 3.5), '#0969da', 0.8);
+      lblU2.material.opacity = 0;
+      g.add(lblU2);
+      const lblOv = makeLabel('U\u2081 \u2229 U\u2082', new THREE.Vector3(0, 0.4, -2.5), '#8250df', 0.6);
+      lblOv.material.opacity = 0;
+      g.add(lblOv);
+      const lblAgree = makeLabel('sections agree on overlap', new THREE.Vector3(0, secFn(0, 0.5) + 0.8, 0.5), '#8250df', 0.55);
+      lblAgree.material.opacity = 0;
+      g.add(lblAgree);
+
+      // Region outlines (dashed, fade in)
+      const outlines = [];
+      function addOutline(r, color) {
+        const y = 0.04;
+        const corners = [
+          new THREE.Vector3(r.x1, y, r.z1), new THREE.Vector3(r.x2, y, r.z1),
+          new THREE.Vector3(r.x2, y, r.z2), new THREE.Vector3(r.x1, y, r.z2),
+        ];
+        for (let i = 0; i < 4; i++) {
+          const line = makeDashedLine([corners[i], corners[(i + 1) % 4]], color);
+          line.material.opacity = 0;
+          g.add(line);
+          outlines.push(line);
+        }
+      }
+      addOutline(u1, 0xf85149);
+      addOutline(u2, 0x58a6ff);
+
+      // Region fills on ground (fade in)
+      const u1Fill = new THREE.Mesh(
+        new THREE.PlaneGeometry(u1.x2 - u1.x1, u1.z2 - u1.z1),
+        new THREE.MeshBasicMaterial({ color: 0xf85149, transparent: true, opacity: 0, side: THREE.DoubleSide })
+      );
+      u1Fill.rotation.x = -Math.PI / 2;
+      u1Fill.position.set((u1.x1 + u1.x2) / 2, 0.02, (u1.z1 + u1.z2) / 2);
+      g.add(u1Fill);
+      const u2Fill = new THREE.Mesh(
+        new THREE.PlaneGeometry(u2.x2 - u2.x1, u2.z2 - u2.z1),
+        new THREE.MeshBasicMaterial({ color: 0x58a6ff, transparent: true, opacity: 0, side: THREE.DoubleSide })
+      );
+      u2Fill.rotation.x = -Math.PI / 2;
+      u2Fill.position.set((u2.x1 + u2.x2) / 2, 0.02, (u2.z1 + u2.z2) / 2);
+      g.add(u2Fill);
+
+      this.stageData = {
+        surf1, surf2, wire1Mat, wire2Mat,
+        basePoint, ovFill, u1Fill, u2Fill, outlines,
+        lbl1, lbl2, lblU1, lblU2, lblOv, lblAgree,
+        morphStart: 1.5, morphDur: 4.0,
+      };
+    },
+    update(t) {
+      const d = this.stageData;
+      if (!d.surf1) return;
+
+      const rawP = Math.max(0, Math.min(1, (t - d.morphStart) / d.morphDur));
+      const p = smoothstep(rawP);
+
+      // Interpolate surface vertices: disc → section
+      for (const surf of [d.surf1, d.surf2]) {
+        const pos = surf.geo.attributes.position.array;
+        for (let i = 0; i < pos.length; i++) {
+          pos[i] = lerp(surf.initPositions[i], surf.finalPositions[i], p);
+        }
+        surf.geo.attributes.position.needsUpdate = true;
+        surf.geo.computeVertexNormals();
+      }
+
+      // Wireframes fade in
+      d.wire1Mat.opacity = p * 0.06;
+      d.wire2Mat.opacity = p * 0.06;
+
+      // Base point fades out
+      d.basePoint.material.opacity = 1 - p;
+
+      // Region outlines fade in
+      for (const ol of d.outlines) {
+        ol.material.opacity = p * 0.7;
+      }
+
+      // Region fills fade in
+      d.u1Fill.material.opacity = p * 0.08;
+      d.u2Fill.material.opacity = p * 0.08;
+
+      // Overlap fill fades in late
+      const ovP = Math.max(0, (p - 0.6) / 0.4);
+      d.ovFill.material.opacity = ovP * 0.15;
+
+      // Region labels
+      const lblP = Math.max(0, (p - 0.3) / 0.7);
+      d.lblU1.material.opacity = lblP;
+      d.lblU2.material.opacity = lblP;
+      d.lblOv.material.opacity = ovP;
+      d.lblAgree.material.opacity = ovP;
+
+      // Camera: fiber view → oblique gluing view
+      if (p > 0) {
+        targetCamPos.set(
+          lerp(6, 10, p),
+          lerp(5, 8, p),
+          lerp(8, 10, p)
+        );
+        targetCamTarget.set(0, lerp(2.5, 1.5, p), 0);
+        camLerpActive = true;
+      }
+
+      // Overlap pulse when morph complete
+      if (p >= 1) {
+        d.ovFill.material.opacity = 0.12 + 0.06 * Math.sin(t * 2);
+      }
     }
   },
 
@@ -982,18 +1301,18 @@ const STAGES = [
 
       // Section surfaces above each region
       // A shared height function — both sections agree on the overlap
-      const secFn = (x, z) => 2.8 + 0.4 * Math.sin(x * 0.45 + 0.3) + 0.3 * Math.cos(z * 0.4 + 0.5)
-                                   + 0.15 * Math.sin(x * 0.9 + z * 0.7);
+      const secFn = (x, z) => 2.8 + 0.5 * Math.sin(x * 0.5 + 0.3) + 0.35 * Math.cos(z * 0.55 + 0.5)
+                                   + 0.25 * Math.sin(x * 1.1 + z * 0.8) + 0.15 * Math.cos(x * 0.3 - z * 0.65);
       // sec2 agrees with secFn on overlap (x ≤ 1), continues independently beyond
       const sec2Fn = (x, z) => {
         if (x <= 1) return secFn(x, z);
         const edge = secFn(1, z);
         const t = x - 1;
-        return edge + 0.35 * Math.sin(t * 0.6) + 0.2 * Math.cos(z * 0.5 + t * 0.8);
+        return edge + 0.45 * Math.sin(t * 0.7) + 0.25 * Math.cos(z * 0.55 + t * 0.9) + 0.15 * Math.sin(t * 1.4 + z * 0.4);
       };
 
       function makeSectionSurface(r, fn, color, opacity) {
-        const segsX = 24, segsZ = 24;
+        const segsX = 40, segsZ = 40;
         const w = r.x2 - r.x1, h = r.z2 - r.z1;
         const geo = new THREE.PlaneGeometry(w, h, segsX, segsZ);
         geo.rotateX(-Math.PI / 2);
@@ -1008,7 +1327,7 @@ const STAGES = [
         geo.attributes.position.needsUpdate = true;
         geo.computeVertexNormals();
         const mat = new THREE.MeshBasicMaterial({
-          color, transparent: true, opacity, side: THREE.DoubleSide
+          color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false
         });
         return new THREE.Mesh(geo, mat);
       }
@@ -1020,11 +1339,11 @@ const STAGES = [
 
       // Wireframe edges on each surface for depth cue
       const wire1 = new THREE.Mesh(surf1.geometry, new THREE.MeshBasicMaterial({
-        color: u1.color, wireframe: true, transparent: true, opacity: 0.12
+        color: u1.color, wireframe: true, transparent: true, opacity: 0.06, depthWrite: false
       }));
       g.add(wire1);
       const wire2 = new THREE.Mesh(surf2.geometry, new THREE.MeshBasicMaterial({
-        color: u2.color, wireframe: true, transparent: true, opacity: 0.12
+        color: u2.color, wireframe: true, transparent: true, opacity: 0.06, depthWrite: false
       }));
       g.add(wire2);
 
@@ -1066,7 +1385,7 @@ const STAGES = [
   {
     id: 'projection',
     title: 'Projection to the Line',
-    text: `The two-dimensional locale of value conditions <span class="math">T</span> collapses to a line — the base space used in all subsequent stages. Watch the plane flatten: rectangular regions become intervals, section surfaces become section curves, and the familiar line picture emerges. This projection is a <em>choice</em> of how to parametrize value conditions.`,
+    text: `The two-dimensional locale of value conditions <span class="math">T</span> collapses to a line — the base space used in all subsequent stages. Watch the plane flatten: rectangular regions become intervals, section surfaces become section curves, and the familiar line picture emerges. We project to a line so that each value condition becomes a step you can walk along: later stages will show a dot tracing circuits, and the line makes that motion visible.`,
     cam: { pos: [10, 8, 10], target: [0, 2, 0] },
     stageData: {},
     setup(g) {
@@ -1125,17 +1444,17 @@ const STAGES = [
       addRegionOutline(u2, u2.color);
 
       // Section surfaces (same functions as gluing stage)
-      const secFn = (x, z) => 2.8 + 0.4 * Math.sin(x * 0.45 + 0.3) + 0.3 * Math.cos(z * 0.4 + 0.5)
-                                   + 0.15 * Math.sin(x * 0.9 + z * 0.7);
+      const secFn = (x, z) => 2.8 + 0.5 * Math.sin(x * 0.5 + 0.3) + 0.35 * Math.cos(z * 0.55 + 0.5)
+                                   + 0.25 * Math.sin(x * 1.1 + z * 0.8) + 0.15 * Math.cos(x * 0.3 - z * 0.65);
       const sec2Fn = (x, z) => {
         if (x <= 1) return secFn(x, z);
         const edge = secFn(1, z);
         const t = x - 1;
-        return edge + 0.35 * Math.sin(t * 0.6) + 0.2 * Math.cos(z * 0.5 + t * 0.8);
+        return edge + 0.45 * Math.sin(t * 0.7) + 0.25 * Math.cos(z * 0.55 + t * 0.9) + 0.15 * Math.sin(t * 1.4 + z * 0.4);
       };
 
       function makeSectionSurface(r, fn, color, opacity) {
-        const segsX = 24, segsZ = 24;
+        const segsX = 40, segsZ = 40;
         const w = r.x2 - r.x1, h = r.z2 - r.z1;
         const geo = new THREE.PlaneGeometry(w, h, segsX, segsZ);
         geo.rotateX(-Math.PI / 2);
@@ -1150,7 +1469,7 @@ const STAGES = [
         geo.attributes.position.needsUpdate = true;
         geo.computeVertexNormals();
         const mat = new THREE.MeshBasicMaterial({
-          color, transparent: true, opacity, side: THREE.DoubleSide
+          color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false
         });
         return new THREE.Mesh(geo, mat);
       }
@@ -1171,11 +1490,11 @@ const STAGES = [
 
       // Wireframes
       const wire1 = new THREE.Mesh(surf1.geometry, new THREE.MeshBasicMaterial({
-        color: u1.color, wireframe: true, transparent: true, opacity: 0.12
+        color: u1.color, wireframe: true, transparent: true, opacity: 0.06, depthWrite: false
       }));
       g.add(wire1);
       const wire2 = new THREE.Mesh(surf2.geometry, new THREE.MeshBasicMaterial({
-        color: u2.color, wireframe: true, transparent: true, opacity: 0.12
+        color: u2.color, wireframe: true, transparent: true, opacity: 0.06, depthWrite: false
       }));
       g.add(wire2);
       const wireframes = [wire1, wire2];
@@ -1219,10 +1538,42 @@ const STAGES = [
       postLabel.material.opacity = 0;
       g.add(postLabel);
 
+      // ── Scan line + intersection dots (appear after collapse) ──
+      // Vertical scan line
+      const scanLine = makeLine(
+        [new THREE.Vector3(0, -0.3, 0), new THREE.Vector3(0, 5, 0)],
+        0xafb8c1, 0
+      );
+      g.add(scanLine);
+      // Base dot
+      const baseDot = makeSphere(new THREE.Vector3(0, 0, 0), 0.1, 0x58a6ff);
+      baseDot.material.opacity = 0;
+      baseDot.material.transparent = true;
+      g.add(baseDot);
+      // Section dot(s) — one per section, visible when x is in range
+      const secDot1 = makeSphere(new THREE.Vector3(0, 0, 0), 0.1, u1.color);
+      secDot1.material.opacity = 0;
+      secDot1.material.transparent = true;
+      g.add(secDot1);
+      const secDot2 = makeSphere(new THREE.Vector3(0, 0, 0), 0.1, u2.color);
+      secDot2.material.opacity = 0;
+      secDot2.material.transparent = true;
+      g.add(secDot2);
+      // Dashed connector from base to section
+      const connectorLine = makeDashedLine(
+        [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 3, 0)],
+        0xafb8c1, 0.15, 0.1
+      );
+      connectorLine.material.opacity = 0;
+      g.add(connectorLine);
+
       this.stageData = {
         grid, planeMat, regionFills, outlineLines, surfaces, wireframes,
         sectionCurves, labels, baseLine, postLabel, initOpacity,
-        collapseStart: 1.5, collapseDur: 3.5
+        collapseStart: 1.5, collapseDur: 3.5,
+        scanLine, baseDot, secDot1, secDot2, connectorLine,
+        secFn: x => secFn(x, 0), sec2Fn: x => sec2Fn(x, 0),
+        u1, u2
       };
     },
     update(t) {
@@ -1291,7 +1642,7 @@ const STAGES = [
         }
         // Wireframes fade out
         for (const wire of d.wireframes) {
-          wire.material.opacity = 0.12 * (1 - p);
+          wire.material.opacity = 0.06 * (1 - p);
         }
         // Section curves fade in
         for (const curve of d.sectionCurves) {
@@ -1318,6 +1669,50 @@ const STAGES = [
           lerp(10, 16, p)
         );
         targetCamTarget.set(0, lerp(2, 1.5, p), 0);
+      }
+
+      // ── Scan line after collapse ──
+      const scanStart = d.collapseStart + d.collapseDur + 0.5;
+      if (t >= scanStart && d.scanLine) {
+        const fadeIn = Math.min((t - scanStart) / 0.8, 1);
+        const scanSpeed = 5; // seconds per sweep
+        const scanFrac = ((t - scanStart) / scanSpeed) % 1;
+        const sx = lerp(-6, 6, scanFrac);
+
+        // Update scan line position
+        const slPos = d.scanLine.geometry.attributes.position.array;
+        slPos[0] = sx; slPos[3] = sx;
+        d.scanLine.geometry.attributes.position.needsUpdate = true;
+        d.scanLine.material.opacity = fadeIn * 0.4;
+
+        // Base dot
+        d.baseDot.position.set(sx, 0, 0);
+        d.baseDot.material.opacity = fadeIn;
+
+        // Section dots — visible when x is within their domain
+        const inU1 = sx >= d.u1.x1 && sx <= d.u1.x2;
+        const inU2 = sx >= d.u2.x1 && sx <= d.u2.x2;
+        const y1 = inU1 ? d.secFn(sx) : 0;
+        const y2 = inU2 ? d.sec2Fn(sx) : 0;
+
+        d.secDot1.position.set(sx, y1, 0);
+        d.secDot1.material.opacity = inU1 ? fadeIn : 0;
+        d.secDot2.position.set(sx, y2, 0);
+        // Hide secDot2 when it overlaps secDot1 (in the overlap region they agree)
+        d.secDot2.material.opacity = (inU2 && !(inU1 && inU2)) ? fadeIn : 0;
+
+        // Connector line from base to highest section dot
+        const topY = inU1 ? y1 : (inU2 ? y2 : 0);
+        if (inU1 || inU2) {
+          const cPos = d.connectorLine.geometry.attributes.position.array;
+          cPos[0] = sx; cPos[1] = 0; cPos[2] = 0;
+          cPos[3] = sx; cPos[4] = topY; cPos[5] = 0;
+          d.connectorLine.geometry.attributes.position.needsUpdate = true;
+          d.connectorLine.computeLineDistances();
+          d.connectorLine.material.opacity = fadeIn * 0.35;
+        } else {
+          d.connectorLine.material.opacity = 0;
+        }
       }
     }
   },
@@ -1579,6 +1974,26 @@ const STAGES = [
       const mouse = new THREE.Vector2();
       let fixated = false;
       let transitionStart = -1;
+      let clickCount = 0;
+
+      // Shuffle bucket Y positions per fiber — same colors cluster,
+      // but each base point gets its own magnitude ordering
+      function shuffleBucketOrder(seed) {
+        for (const fx of FIBER_POSITIONS) {
+          // Fisher-Yates with per-fiber + per-click seed
+          const perm = [0, 1, 2, 3, 4];
+          for (let i = perm.length - 1; i > 0; i--) {
+            const j = Math.floor(rng(seed * 97 + fx * 131 + i * 53) * (i + 1));
+            [perm[i], perm[j]] = [perm[j], perm[i]];
+          }
+          // Update orderedY for dots on this fiber
+          for (const ii of cloud.fibers[fx]) {
+            const dd = dotData[ii];
+            const newSlot = perm[dd.bucket];
+            dd.orderedY = bucketYs[newSlot] + (rng(dd.fiberX * 41 + (ii % 40) * 67) - 0.5) * 0.15;
+          }
+        }
+      }
 
       const onClick = (event) => {
         if (STAGES[currentStage]?.id !== 'kernel') return;
@@ -1588,23 +2003,30 @@ const STAGES = [
         raycaster.setFromCamera(mouse, camera);
         const hits = raycaster.intersectObject(instancedMesh);
 
-        if (fixated) {
+        if (hits.length === 0 && fixated) {
           fixated = false;
           transitionStart = performance.now() / 1000;
           for (let ii = 0; ii < TOTAL_DOTS; ii++) dotData[ii].scale = 1;
-          Object.assign(stateLabel, makeLabel('click any dot — same buckets every time', stateLabel.position.clone(), '#57606a', 0.55));
+          const newState = makeLabel('click any dot — same groups, different magnitudes', stateLabel.position.clone(), '#57606a', 0.55);
+          stateLabel.material = newState.material;
+          stateLabel.scale.copy(newState.scale);
           return;
         }
 
         if (hits.length === 0) return;
         const clickedIdx = hits[0].instanceId;
         fixated = true;
+        clickCount++;
         transitionStart = performance.now() / 1000;
 
-        // Highlight clicked dot (but ordering doesn't change!)
+        // Reset all scales, then highlight clicked dot
+        for (let ii = 0; ii < TOTAL_DOTS; ii++) dotData[ii].scale = 1;
         dotData[clickedIdx].scale = 1.8;
 
-        const newState = makeLabel('same partition regardless of choice — click to release', stateLabel.position.clone(), '#1a7f37', 0.55);
+        // Shuffle bucket order — colors stay grouped, magnitudes change
+        shuffleBucketOrder(clickCount);
+
+        const newState = makeLabel('same classes, new magnitudes — click another dot', stateLabel.position.clone(), '#1a7f37', 0.55);
         stateLabel.material = newState.material;
         stateLabel.scale.copy(newState.scale);
       };
@@ -1624,9 +2046,6 @@ const STAGES = [
       const targetOpacity = fixated ? 0.8 : 0;
       d.yAxis.material.opacity = lerp(d.yAxis.material.opacity, targetOpacity, 0.06);
       d.yLabel.material.opacity = lerp(d.yLabel.material.opacity, targetOpacity, 0.06);
-      for (const lbl of d.bucketLabels) {
-        lbl.material.opacity = lerp(lbl.material.opacity, targetOpacity, 0.06);
-      }
       updateCloud(d.cloud, t, fixated);
       const lineOpacity = fixated ? 0.7 : 0.4;
       for (const fl of d.cloud.fiberLines) {
@@ -1791,30 +2210,101 @@ const STAGES = [
   {
     id: 'circulation',
     title: 'Multiple Circulation Spaces',
-    text: `The line fragments into circulation spaces <span class="math">CC\u2081, CC\u2082, CC\u2083</span> — each governed by its own <em>monetary topology</em> <span class="math">j<sub>m<sub>k</sub></sub></span> (§16.4.5), with its own money-commodity and price system. Within each, sections are locally coherent — the kernel is stable (§5.3.3). At the boundaries (red walls), sections disagree. These <em>circulation gaps</em> are Čech 1-cocycles: the presheaf <span class="math">\u2130</span> is separated but not a sheaf.`,
+    text: `The line fragments into circulation spaces <span class="math">CC\u2081, CC\u2082, CC\u2083</span> — each governed by its own <em>monetary topology</em> <span class="math">j<sub>m<sub>k</sub></sub></span> (§16.4.5), with its own money-commodity and price system. Within each, sections are locally coherent — the kernel is stable (§5.3.3). At the boundaries (red walls), sections disagree. These <em>circulation gaps</em> are Čech 1-cocycles: the presheaf <span class="math">\u2130</span> is separated but not a sheaf.<br><br><strong>Merchant and usury capital</strong> profit from these walls. But this profit is pure <em>redistribution</em>, not value creation: the wall shifts surplus between CCs without enlarging the total. Watch the wall dissolve and return — the gap is <em>eliminable in principle</em>: unifying monetary topologies turns the cocycle into a coboundary.`,
     cam: { pos: [0, 2.8, 16], target: [0, 2, 0] },
+    stageData: {},
     setup(g) {
+      const d = this.stageData;
       const names = ['CC\u2081', 'CC\u2082', 'CC\u2083'];
       for (let i = 0; i < 3; i++) {
         const [a, b] = CC_BOUNDS[i];
-        // Colored segment
         g.add(makeTube([new THREE.Vector3(a, 0, 0), new THREE.Vector3(b, 0, 0)], 0.05, CC_COLORS[i]));
-        // Glow
         g.add(makeTube([new THREE.Vector3(a, 0, 0), new THREE.Vector3(b, 0, 0)], 0.13, CC_COLORS[i], 0.12));
-        // Section curve
-        const pts = sampleCurve(CC_FNS[i], a + 0.1, b - 0.1);
-        g.add(makeTube(pts, 0.04, CC_COLORS[i]));
-        // Label
         g.add(makeLabel(names[i], new THREE.Vector3((a + b) / 2, -0.8, 0), '#57606a', 0.8));
       }
-      // Walls
-      g.add(makeWall(-2, 5.5));
+      // Section curves for CC₁ and CC₂ (stored for animation), CC₃ is static
+      const pts1 = sampleCurve(cc1Fn, -7.9, -2.1);
+      d.cc1Tube = makeTube(pts1, 0.04, CC_COLORS[0]);
+      g.add(d.cc1Tube);
+      const pts2 = sampleCurve(cc2Fn, -1.9, 2.9);
+      d.cc2Tube = makeTube(pts2, 0.04, CC_COLORS[1]);
+      g.add(d.cc2Tube);
+      const pts3 = sampleCurve(cc3Fn, 3.1, 7.9);
+      g.add(makeTube(pts3, 0.04, CC_COLORS[2]));
+      // Walls — left wall animates, right wall static
+      d.leftWall = makeWall(-2, 5.5);
+      g.add(d.leftWall);
       g.add(makeWall(3, 5.5));
       // Gap indicators
-      g.add(makeLabel('\u0394', new THREE.Vector3(-2, (CC_FNS[0](-2.1) + CC_FNS[1](-1.9)) / 2, 0), '#cf222e', 0.8));
-      g.add(makeLabel('\u0394', new THREE.Vector3(3, (CC_FNS[1](2.9) + CC_FNS[2](3.1)) / 2, 0), '#cf222e', 0.8));
+      d.deltaLeft = makeLabel('\u0394', new THREE.Vector3(-2, (cc1Fn(-2.1) + cc2Fn(-1.9)) / 2, 0), '#cf222e', 0.8);
+      g.add(d.deltaLeft);
+      g.add(makeLabel('\u0394', new THREE.Vector3(3, (cc2Fn(2.9) + cc3Fn(3.1)) / 2, 0), '#cf222e', 0.8));
       // Y-axis
       g.add(makeTube([new THREE.Vector3(-8.5, 0, 0), new THREE.Vector3(-8.5, 5, 0)], 0.02, 0xafb8c1));
+      // Animation labels (hidden initially)
+      d.mergeLabel = makeLabel('wall removed: cocycle \u2192 coboundary', new THREE.Vector3(-2, 5.8, 0), '#1a7f37', 0.8);
+      d.mergeLabel.material.opacity = 0;
+      g.add(d.mergeLabel);
+      d.restoreLabel = makeLabel('wall restored: obstruction returns', new THREE.Vector3(-2, 5.8, 0), '#cf222e', 0.8);
+      d.restoreLabel.material.opacity = 0;
+      g.add(d.restoreLabel);
+      d.lastBlend = -1;
+      d.group = g;
+    },
+    update(t) {
+      const d = this.stageData;
+      if (!d.leftWall) return;
+      // 15-second cycle
+      const cycle = 15;
+      const ct = t % cycle;
+      let blend = 0; // 0 = walls up (separate), 1 = walls down (merged)
+      if (ct >= 4 && ct < 6) {
+        blend = smoothstep((ct - 4) / 2);
+      } else if (ct >= 6 && ct < 9) {
+        blend = 1;
+      } else if (ct >= 9 && ct < 11) {
+        blend = 1 - smoothstep((ct - 9) / 2);
+      }
+      // Wall opacity
+      d.leftWall.material.opacity = 0.35 * (1 - blend);
+      // Delta label opacity
+      d.deltaLeft.material.opacity = 0.8 * (1 - blend);
+      // Labels
+      d.mergeLabel.material.opacity = (ct >= 5 && ct < 9) ? Math.min((ct - 5), 1) * 0.8 : 0;
+      d.restoreLabel.material.opacity = (ct >= 9.5 && ct < 12) ? Math.min((ct - 9.5) * 2, 1) * 0.8 * Math.max(0, 1 - (ct - 10.5)) : 0;
+      // Rebuild section tube geometry when blend changes
+      if (Math.abs(blend - d.lastBlend) > 0.02) {
+        d.lastBlend = blend;
+        // Blended function: sigmoid crossfade between cc1Fn and cc2Fn around x = -2
+        const blendedFn = x => {
+          const sig = 1 / (1 + Math.exp(-2 * (x + 2)));
+          return lerp(cc1Fn(x), cc2Fn(x), sig);
+        };
+        // CC₁ section: when blend > 0, extend rightward and blend toward merged
+        const pts1 = [];
+        const x1Min = -7.9;
+        const x1Max = lerp(-2.1, -0.5, blend);
+        for (let i = 0; i <= 120; i++) {
+          const x = x1Min + (x1Max - x1Min) * i / 120;
+          const y = lerp(cc1Fn(x), blendedFn(x), blend);
+          pts1.push(new THREE.Vector3(x, y, 0));
+        }
+        if (d.cc1Tube.geometry) d.cc1Tube.geometry.dispose();
+        const curve1 = new THREE.CatmullRomCurve3(pts1);
+        d.cc1Tube.geometry = new THREE.TubeGeometry(curve1, 480, 0.04, 8, false);
+        // CC₂ section: when blend > 0, extend leftward and blend toward merged
+        const pts2 = [];
+        const x2Min = lerp(-1.9, -3.5, blend);
+        const x2Max = 2.9;
+        for (let i = 0; i <= 120; i++) {
+          const x = x2Min + (x2Max - x2Min) * i / 120;
+          const y = lerp(cc2Fn(x), blendedFn(x), blend);
+          pts2.push(new THREE.Vector3(x, y, 0));
+        }
+        if (d.cc2Tube.geometry) d.cc2Tube.geometry.dispose();
+        const curve2 = new THREE.CatmullRomCurve3(pts2);
+        d.cc2Tube.geometry = new THREE.TubeGeometry(curve2, 480, 0.04, 8, false);
+      }
     }
   },
 
@@ -1822,7 +2312,7 @@ const STAGES = [
   {
     id: 'arbitrage',
     title: 'Arbitrage vs. Capital',
-    text: `Within a <span class="math">CC</span>, competitive arbitrage contracts prices toward the determinant of value (§7.8) — price deviations are <em>coboundaries</em> (<span class="math">H\u2070 = 0</span>). Watch the individual prices (orange dots) spring toward the social value curve. But at CC boundaries, the gap is structural: different monetary topologies <span class="math">j<sub>m\u2081</sub>, j<sub>m\u2082</sub></span> produce Čech 1-cocycles that can't be trivialized (<strong>H\u00B9 \u2260 0</strong>). Capital profits from these walls. The wall isn't a market inefficiency — it's a cohomological invariant.`,
+    text: `Within a <span class="math">CC</span>, competitive arbitrage contracts prices toward the determinant of value (§7.8) — price deviations are <em>coboundaries</em> (<span class="math">H\u2070 = 0</span>). Watch the individual prices (orange dots) spring toward the social value curve. But at CC boundaries, the gap is structural: different monetary topologies <span class="math">j<sub>m\u2081</sub>, j<sub>m\u2082</sub></span> produce Čech 1-cocycles (<strong>H\u00B9 \u2260 0</strong>).<br><br><strong>Merchant capital</strong> (gold dot) exploits <span class="math">H\u00B9</span>: buying low in one CC, selling high in another. The height-jump at the wall IS the profit. But the wall is <em>eliminable in principle</em> — unifying monetary topologies makes the cocycle a coboundary and the gap vanishes. <span class="math">H\u00B9</span> measures what is structurally present but contingently removable.`,
     cam: { pos: [0, 2.8, 16], target: [0, 2, 0] },
     stageData: {},
     setup(g) {
@@ -1874,6 +2364,33 @@ const STAGES = [
       const arrBotY = CC_FNS[0](-2.1);
       g.add(makeTube([new THREE.Vector3(-2.5, arrBotY, 0), new THREE.Vector3(-1.5, arrTopY, 0)], 0.035, 0xffa657));
       g.add(makeLabel('capital exploits gap', new THREE.Vector3(-4.5, (arrTopY + arrBotY) / 2 + 0.5, 0), '#9a6700', 0.55));
+
+      // Merchant capital dot (gold) — traces path across CC₁ → wall → CC₂ → return
+      const merchantDot = makeSphere(new THREE.Vector3(-4, cc1Fn(-4), 0), 0.14, 0xd4a017);
+      g.add(merchantDot);
+      this.stageData.merchantDot = merchantDot;
+
+      // Merchant keyframe path: CC₁ buy → wall → CC₂ sell → return
+      this.stageData.merchantPath = [
+        { x: -4, fn: cc1Fn },   // start in CC₁
+        { x: -2.1, fn: cc1Fn }, // approach wall from CC₁ side
+        { x: -1.9, fn: cc2Fn }, // cross wall into CC₂ (height jump)
+        { x: 0.5, fn: cc2Fn },  // sell point in CC₂
+        { x: -1.9, fn: cc2Fn }, // return to wall from CC₂ side
+        { x: -2.1, fn: cc1Fn }, // cross back into CC₁
+        { x: -4, fn: cc1Fn },   // return to start
+      ];
+
+      // Dashed route line (gold)
+      const routePts = this.stageData.merchantPath.map(p => new THREE.Vector3(p.x, p.fn(p.x), 0));
+      g.add(makeDashedLine(routePts, 0xd4a017, 0.2, 0.12));
+
+      // Labels
+      g.add(makeLabel('merchant capital', new THREE.Vector3(-4.5, cc1Fn(-4) + 0.8, 0), '#b8860b', 0.55));
+      const profitLabel = makeLabel('\u0394 profit', new THREE.Vector3(-0.5, cc2Fn(0.5) + 0.7, 0), '#b8860b', 0.65);
+      profitLabel.material.opacity = 0;
+      g.add(profitLabel);
+      this.stageData.profitLabel = profitLabel;
     },
     update(t) {
       if (!this.stageData.dots) return;
@@ -1890,6 +2407,32 @@ const STAGES = [
           const posArr = sp.geometry.attributes.position.array;
           posArr[1] = y;
           sp.geometry.attributes.position.needsUpdate = true;
+        }
+      }
+      // Merchant capital dot: 6-second cycle along keyframe path
+      const md = this.stageData.merchantDot;
+      const mp = this.stageData.merchantPath;
+      const pl = this.stageData.profitLabel;
+      if (md && mp) {
+        const cycle = 6;
+        const segments = mp.length - 1;
+        const frac = (t % cycle) / cycle;
+        const totalFrac = frac * segments;
+        const segIdx = Math.min(Math.floor(totalFrac), segments - 1);
+        const segFrac = totalFrac - segIdx;
+        const sf = segFrac * segFrac * (3 - 2 * segFrac); // smoothstep
+        const p0 = mp[segIdx], p1 = mp[segIdx + 1];
+        const mx = lerp(p0.x, p1.x, sf);
+        // Y from the appropriate CC function at interpolated x
+        const my = (segIdx === 1 && sf > 0.8) ? lerp(p0.fn(p0.x), p1.fn(p1.x), sf)
+                 : (segIdx === 4 && sf > 0.8) ? lerp(p0.fn(p0.x), p1.fn(p1.x), sf)
+                 : (mx < -2 ? cc1Fn(mx) : cc2Fn(mx));
+        md.position.set(mx, my, 0);
+        // Profit label pulses during sell segment (seg 2-3)
+        if (pl) {
+          const inSell = segIdx === 2 || segIdx === 3;
+          const targetOp = inSell ? 0.9 : 0;
+          pl.material.opacity = lerp(pl.material.opacity, targetOp, 0.1);
         }
       }
     }
@@ -2005,6 +2548,22 @@ const STAGES = [
       g.add(makeLabel('\u03C4 constant capital (coboundary)', new THREE.Vector3(-4.5, 4.8, 0), '#0969da', 0.7));
       g.add(makeLabel('\u2113 labor-power (2-cocycle)', new THREE.Vector3(-4.5, 4.2, 0), '#9a6700', 0.7));
       g.add(makeLabel('H\u00B2 \u2260 0', new THREE.Vector3(0, 4.8, 0), '#cf222e', 0.95));
+      // Parallel transport arrows
+      const upDir = new THREE.Vector3(0, 1, 0);
+      const constArrow = makeArrow(new THREE.Vector3(3.5, BASE_Y, 0), upDir, 0.8, 0x0969da, 0.025, 0.15, 0.07);
+      const laborArrow = makeArrow(new THREE.Vector3(3.5, BASE_Y, 0), upDir, 0.8, 0xd4a017, 0.025, 0.15, 0.07);
+      g.add(constArrow);
+      g.add(laborArrow);
+      this.stageData.constArrow = constArrow;
+      this.stageData.laborArrow = laborArrow;
+      // Angle label (hidden until production phase)
+      const angleLabel = makeLabel('\u03B8 = t\u209B / t\u1D63', new THREE.Vector3(0, 4.0, -2), '#b8860b', 0.7);
+      angleLabel.material.opacity = 0;
+      g.add(angleLabel);
+      this.stageData.angleLabel = angleLabel;
+      // Legend additions for arrows
+      g.add(makeLabel('vector returns unchanged', new THREE.Vector3(-4.5, 3.6, 0), '#0969da', 0.55));
+      g.add(makeLabel('vector rotated by \u03B8 (surplus)', new THREE.Vector3(-4.5, 3.0, 0), '#b8860b', 0.55));
     },
     update(t) {
       const d = this.stageData;
@@ -2022,6 +2581,43 @@ const STAGES = [
         ly = d.baseY + d.surplus;
       }
       d.laborSphere.position.set(x, ly, z);
+      // Parallel transport arrows ride with their spheres
+      const up = new THREE.Vector3(0, 1, 0);
+      if (d.constArrow) {
+        d.constArrow.position.set(x, d.baseY, z);
+        // Constant capital: always points up (flat connection, no rotation)
+        d.constArrow.quaternion.identity();
+      }
+      if (d.laborArrow) {
+        d.laborArrow.position.set(x, ly, z);
+        // Labor-power: rotates during production phase (frac 0.4–0.6)
+        const theta = Math.atan2(d.surplus, d.baseY); // ≈ 37°
+        let rotAmount = 0;
+        if (frac > 0.4 && frac < 0.6) {
+          rotAmount = theta * smoothstep((frac - 0.4) / 0.2);
+        } else if (frac >= 0.6) {
+          rotAmount = theta;
+        }
+        // Tangent direction along the loop at current angle
+        const tangentDir = new THREE.Vector3(
+          -Math.sin(angle) * 3.5,
+          0,
+          Math.cos(angle) * 2.5
+        ).normalize();
+        // Rotated direction: tilt from up toward tangent by rotAmount
+        const rotatedDir = new THREE.Vector3(
+          up.x * Math.cos(rotAmount) + tangentDir.x * Math.sin(rotAmount),
+          up.y * Math.cos(rotAmount) + tangentDir.y * Math.sin(rotAmount),
+          up.z * Math.cos(rotAmount) + tangentDir.z * Math.sin(rotAmount)
+        ).normalize();
+        const q = new THREE.Quaternion().setFromUnitVectors(up, rotatedDir);
+        d.laborArrow.quaternion.copy(q);
+      }
+      // Angle label fades in after production
+      if (d.angleLabel) {
+        const targetOp = frac >= 0.5 ? 0.7 : 0;
+        d.angleLabel.material.opacity = lerp(d.angleLabel.material.opacity, targetOp, 0.08);
+      }
     }
   },
 
@@ -2475,8 +3071,8 @@ function goToStage(idx) {
     disposeObject(c);
   }
 
-  // Hide persistent grid for plane-based stages (0-3)
-  gridHelper.visible = (idx >= 4);
+  // Hide persistent grid for plane-based stages (0-4: eval-plane through projection)
+  gridHelper.visible = (idx >= 5);
 
   // Setup new stage
   s.setup(stageGroup);
