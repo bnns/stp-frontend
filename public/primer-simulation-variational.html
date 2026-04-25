@@ -1,0 +1,2184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Variational Space of Commodity Types — Structure Maps</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Georgia', serif;
+    background: #0d1117;
+    color: #e6edf3;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    padding: 10px 20px;
+    border-bottom: 1px solid #21262d;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 20px; color: #f0f6fc; font-weight: 600; }
+  header .subtitle { font-size: 13px; color: #8b949e; }
+  .mode-badge {
+    margin-left: auto;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: #1f6feb;
+    color: #fff;
+  }
+
+  .main-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 260px 1fr 260px;
+    grid-template-rows: 1fr;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    padding: 14px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    font-size: 13px;
+  }
+  .sidebar.left  { border-right: 1px solid #21262d; }
+  .sidebar.right { border-left:  1px solid #21262d; }
+
+  .group { display: flex; flex-direction: column; gap: 6px; }
+  .group-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #b1bac4;
+    font-weight: 600;
+  }
+  .group .desc {
+    font-size: 12px;
+    color: #8b949e;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .btn-row { display: flex; gap: 4px; flex-wrap: wrap; }
+  button {
+    padding: 6px 10px;
+    border: 1px solid #30363d;
+    border-radius: 5px;
+    background: #21262d;
+    color: #e6edf3;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.12s;
+    font-family: inherit;
+  }
+  button:hover { background: #30363d; border-color: #484f58; }
+  button.active { background: #1f6feb; border-color: #388bfd; color: #fff; }
+  button.blue-tag { background: #0d419d; border-color: #1f6feb; color: #79c0ff; }
+  button.blue-tag.active { background: #1f6feb; color: #fff; }
+  button.orange-tag { background: #5b3000; border-color: #bf8700; color: #ffa060; }
+  button.orange-tag.active { background: #bf8700; color: #fff; }
+  button.green-tag { background: #0f4d1d; border-color: #2ea043; color: #7ee787; }
+  button.green-tag.active { background: #2ea043; color: #fff; }
+
+  .mode-list { display: flex; flex-direction: column; gap: 3px; }
+  .mode-list button {
+    text-align: left;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .mode-list .map-sym {
+    font-family: 'Cambria Math','Times New Roman',serif;
+    font-style: italic;
+    color: #d2a8ff;
+    margin-right: 6px;
+  }
+
+  input[type="range"] { width: 100%; accent-color: #388bfd; }
+  .slider-row { display: flex; flex-direction: column; gap: 3px; }
+  .slider-row .vlabel {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: #8b949e;
+  }
+  .slider-row .vlabel b { color: #f0f6fc; font-family: 'SF Mono','Consolas',monospace; }
+
+  .stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 2px 0; font-size: 13px;
+  }
+  .stat-value {
+    font-variant-numeric: tabular-nums;
+    color: #f0f6fc; font-weight: 700;
+    font-family: 'SF Mono','Consolas',monospace;
+    font-size: 13px;
+  }
+  .divider { border-top: 1px solid #21262d; margin: 2px 0; }
+
+  .scalar-bar {
+    height: 6px; background: #21262d; border-radius: 3px; overflow: hidden;
+  }
+  .scalar-bar > div { height: 100%; transition: width 0.2s; }
+
+  .formula {
+    font-family: 'Cambria Math','Times New Roman',serif;
+    background: #161b22;
+    padding: 6px 10px;
+    border-radius: 4px;
+    color: #d2a8ff;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .legend-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: #8b949e;
+  }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+
+  #canvas-container {
+    position: relative;
+    overflow: hidden;
+  }
+  canvas { display: block; }
+
+  #marginal-canvas {
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+    width: 160px; height: 160px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    pointer-events: none;
+    display: none;
+  }
+  #marginal-label {
+    position: absolute;
+    bottom: 178px; right: 14px;
+    font-size: 11px; color: #8b949e;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    display: none;
+  }
+
+  #axes-hud {
+    position: absolute; top: 12px; left: 14px;
+    font-size: 11px; color: #8b949e;
+    font-family: 'SF Mono','Consolas',monospace;
+    line-height: 1.6;
+  }
+  #axes-hud b { color: #e6edf3; font-weight: 700; }
+
+  /* ─────────────  Intro overlay & reveal animations  ───────────── */
+  #intro-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(20, 24, 32, 0.55) 0%, rgba(13, 17, 23, 0.94) 80%);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    transition: opacity 0.7s ease, backdrop-filter 0.7s ease, -webkit-backdrop-filter 0.7s ease;
+  }
+  #intro-overlay.dismissed {
+    opacity: 0;
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(0);
+    backdrop-filter: blur(0);
+  }
+
+  .intro-panel {
+    max-width: 640px;
+    padding: 36px 44px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .intro-panel > * {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  #intro-overlay.entering .intro-eyebrow { animation: introRise 0.7s 0.05s forwards cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #intro-overlay.entering .intro-title   { animation: introRise 0.8s 0.15s forwards cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #intro-overlay.entering .intro-sub     { animation: introRise 0.8s 0.30s forwards cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #intro-overlay.entering .intro-desc    { animation: introRise 0.9s 0.55s forwards cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #intro-overlay.entering .intro-formula { animation: introRise 0.9s 0.75s forwards cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #intro-overlay.entering .intro-marx    { animation: introRise 0.9s 0.95s forwards cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #intro-overlay.entering .intro-actions { animation: introRise 0.7s 1.25s forwards cubic-bezier(0.2, 0.8, 0.2, 1); }
+  @keyframes introRise {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .intro-eyebrow {
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #79c0ff;
+    font-weight: 700;
+  }
+  .intro-title {
+    font-size: 30px;
+    font-weight: 600;
+    color: #f0f6fc;
+    line-height: 1.25;
+    font-family: 'Georgia', serif;
+  }
+  .intro-sub {
+    font-size: 15px;
+    color: #b1bac4;
+    line-height: 1.55;
+  }
+  .intro-desc {
+    font-size: 17px;
+    color: #e6edf3;
+    line-height: 1.65;
+    font-family: 'Georgia', serif;
+  }
+  .intro-marx {
+    font-size: 14px;
+    color: #8b949e;
+    font-style: italic;
+    line-height: 1.55;
+    border-left: 2px solid #30363d;
+    padding-left: 14px;
+  }
+  .intro-actions {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .intro-actions button {
+    padding: 10px 22px;
+    background: #1f6feb;
+    border-color: #388bfd;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .intro-actions button:hover { background: #388bfd; border-color: #58a6ff; }
+  .intro-skip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #8b949e;
+    cursor: pointer;
+    user-select: none;
+  }
+  .intro-skip input { accent-color: #388bfd; cursor: pointer; }
+  .intro-formula {
+    font-family: 'Cambria Math','Times New Roman',serif;
+    color: #d2a8ff;
+    font-size: 16px;
+    margin-top: -4px;
+  }
+
+  /* Sidebar / header hide while intro is showing */
+  body.intro-active .sidebar.left   { transform: translateX(-110%); }
+  body.intro-active .sidebar.right  { transform: translateX(110%); }
+  body.intro-active header          { opacity: 0; transform: translateY(-12px); }
+  body.intro-active .mode-badge     { opacity: 0; }
+  .sidebar { transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  header   { transition: opacity 0.6s ease, transform 0.6s ease; }
+  .mode-badge { transition: opacity 0.6s ease 0.5s; }
+
+  body.controls-revealing .group {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: groupRise 0.55s forwards cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation-delay: var(--g-delay, 0s);
+  }
+  body.controls-revealing #params-body > * {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: groupRise 0.45s forwards cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation-delay: var(--p-delay, 0s);
+  }
+  @keyframes groupRise {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .replay-btn {
+    position: fixed;
+    bottom: 14px;
+    font-size: 11px;
+    padding: 6px 11px;
+    background: rgba(13, 17, 23, 0.7);
+    border: 1px solid #30363d;
+    color: #8b949e;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 5;
+    letter-spacing: 0.5px;
+    transition: all 0.15s ease;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+  .replay-btn:hover { color: #e6edf3; border-color: #484f58; background: rgba(33, 38, 45, 0.85); }
+  #replay-intro { left: 14px; }
+  #replay-tour  { left: 96px; }
+
+  /* ─────────────  Auto-demo tour toast  ───────────── */
+  #tour-toast {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translate(-50%, -10px);
+    padding: 7px 8px 7px 14px;
+    background: rgba(13, 17, 23, 0.85);
+    border: 1px solid #30363d;
+    border-radius: 18px;
+    font-size: 12px;
+    color: #b1bac4;
+    letter-spacing: 0.3px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    z-index: 10;
+    opacity: 0;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    pointer-events: auto;
+  }
+  #tour-toast.show {
+    display: flex;
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  #tour-toast .pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #58a6ff;
+    box-shadow: 0 0 8px rgba(88, 166, 255, 0.7);
+    animation: tourPulse 1.4s ease-in-out infinite;
+  }
+  #tour-toast .tour-mode {
+    color: #f0f6fc; font-weight: 600;
+  }
+  #tour-toast .tour-sym {
+    color: #d2a8ff;
+    font-family: 'Cambria Math','Times New Roman',serif;
+    font-style: italic;
+    margin-right: 4px;
+  }
+  #tour-toast .stop {
+    background: transparent;
+    border: 1px solid #30363d;
+    color: #79c0ff;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    margin-left: 4px;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+  #tour-toast .stop:hover {
+    color: #fff;
+    border-color: #58a6ff;
+    background: rgba(31, 111, 235, 0.25);
+  }
+  @keyframes tourPulse {
+    0%, 100% { transform: scale(0.75); opacity: 0.6; }
+    50%      { transform: scale(1.25); opacity: 1.0; }
+  }
+
+  /* While the tour is running, sliders read-only-feel: reduce hit feedback. */
+  body.tour-running .sidebar input[type="range"] {
+    pointer-events: none;
+  }
+  body.tour-running .sidebar {
+    box-shadow: inset 0 0 30px rgba(88, 166, 255, 0.04);
+  }
+  /* Active slider being driven by the tour gets a subtle glow. */
+  .slider-row.tour-active input[type="range"] {
+    filter: drop-shadow(0 0 4px rgba(88, 166, 255, 0.55));
+  }
+  .slider-row.tour-active .vlabel b {
+    color: #79c0ff;
+  }
+</style>
+</head>
+<body class="intro-active">
+
+<div id="intro-overlay" class="entering">
+  <div class="intro-panel">
+    <div class="intro-eyebrow">Variational space of commodity types</div>
+    <h2 class="intro-title">A commodity is not a bare quantity, but a profile across its space of variants</h2>
+    <div class="intro-sub">A coffee, a coat, an hour of labor power — each carries its own internal variation in grade, fabric, training. The maps below act on those profiles.</div>
+    <div class="intro-desc" id="intro-desc"></div>
+    <div class="intro-formula" id="intro-formula"></div>
+    <div class="intro-marx" id="intro-marx"></div>
+    <div class="intro-actions">
+      <button id="intro-begin">Begin exploring</button>
+      <label class="intro-skip"><input type="checkbox" id="intro-skip"> Skip this intro on next visit</label>
+    </div>
+  </div>
+</div>
+
+<button id="replay-intro" class="replay-btn" title="Replay intro">↻ INTRO</button>
+<button id="replay-tour"  class="replay-btn" title="Restart auto-demo">↻ DEMO</button>
+
+<header>
+  <h1>Variational Space of Commodity Types</h1>
+  <div class="subtitle">Structure maps as operations on distributions over X<sub>A</sub></div>
+  <div class="mode-badge" id="mode-badge">BUNDLING</div>
+</header>
+
+<div class="main-grid">
+
+  <aside class="sidebar left">
+    <div class="group">
+      <div class="group-label">Commodity type</div>
+      <div class="btn-row" id="commodity-row"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="group">
+      <div class="group-label">Structure map</div>
+      <div class="mode-list" id="mode-list">
+        <!-- injected -->
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="group" id="group-A">
+      <div class="group-label">Distribution A <span style="color:#79c0ff;">●</span></div>
+      <div class="desc" id="preset-desc-A"></div>
+      <div class="btn-row" id="preset-A-row"></div>
+    </div>
+
+    <div class="group" id="group-B">
+      <div class="group-label">Distribution B <span style="color:#ffa060;">●</span></div>
+      <div class="btn-row" id="preset-B-row"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="group">
+      <div class="group-label">View</div>
+      <div class="btn-row">
+        <button id="btn-showA" class="blue-tag active">A</button>
+        <button id="btn-showB" class="orange-tag active">B</button>
+        <button id="btn-showOut" class="green-tag active">Output</button>
+      </div>
+      <div class="btn-row">
+        <button id="btn-axes">Axes</button>
+        <button id="btn-reset-cam">Reset camera</button>
+      </div>
+    </div>
+  </aside>
+
+  <div id="canvas-container">
+    <div id="axes-hud">
+      <b>X</b> <span id="hud-x">—</span> &nbsp;→<br>
+      <b>Y</b> <span id="hud-y">—</span> &nbsp;↑<br>
+      <b>Z</b> <span id="hud-z">—</span> &nbsp;↗
+    </div>
+    <div id="tour-toast">
+      <span class="pulse"></span>
+      <span><span class="tour-sym" id="tour-sym"></span><span class="tour-mode" id="tour-mode">Demonstrating</span> <span id="tour-detail"></span></span>
+      <button class="stop" id="tour-stop">Take control</button>
+    </div>
+    <div id="marginal-label"></div>
+    <canvas id="marginal-canvas" width="160" height="160"></canvas>
+  </div>
+
+  <aside class="sidebar right">
+    <div class="group">
+      <div class="group-label" id="mode-name">Bundling (μ)</div>
+      <div class="formula" id="mode-formula">(A + B)[x] = A[x] + B[x]</div>
+      <div class="desc" id="mode-desc">Two distributions combine by pointwise sum. The bundle carries mass at each variant equal to the sum of its components.</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="group" id="params-group">
+      <div class="group-label">Parameters</div>
+      <div id="params-body"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="group">
+      <div class="group-label">Readouts</div>
+      <div class="stat-row"><span>|A| <span style="color:#8b949e;">(total mass)</span></span><span class="stat-value" id="read-magA">0.00</span></div>
+      <div class="scalar-bar"><div id="bar-magA" style="background:#388bfd;width:0%;"></div></div>
+      <div class="stat-row"><span>|B|</span><span class="stat-value" id="read-magB">0.00</span></div>
+      <div class="scalar-bar"><div id="bar-magB" style="background:#bf8700;width:0%;"></div></div>
+      <div class="stat-row"><span>|Output|</span><span class="stat-value" id="read-magOut">0.00</span></div>
+      <div class="scalar-bar"><div id="bar-magOut" style="background:#2ea043;width:0%;"></div></div>
+      <div class="stat-row"><span>d(A, B)</span><span class="stat-value" id="read-div">0.00</span></div>
+      <div class="scalar-bar"><div id="bar-div" style="background:#f85149;width:0%;"></div></div>
+    </div>
+
+  </aside>
+
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ──────────────────────────────────────────────────────────────────────────
+// Configuration
+// ──────────────────────────────────────────────────────────────────────────
+const N = 12;                                 // voxel resolution per axis
+const VOX = N * N * N;                        // 1728 voxels
+const BOX = 2.0;                              // world-space size of X_A cube
+const CELL = BOX / N;
+const COLOR_A   = new THREE.Color(0x388bfd);  // blue
+const COLOR_B   = new THREE.Color(0xffa060);  // orange
+const COLOR_OUT = new THREE.Color(0x2ea043);  // green
+const COLOR_GHOST = new THREE.Color(0x484f58);// dim gray for empty voxels
+
+function gauss3(x,y,z, cx,cy,cz, s) {
+  const dx = x-cx, dy = y-cy, dz = z-cz;
+  return Math.exp(-(dx*dx + dy*dy + dz*dz) / (2*s*s));
+}
+
+// Commodity catalogue — each commodity carries its own axes and presets.
+// Axis colors are fixed globally (red / blue / orange for x / y / z) so that
+// the 3D color semantics stay consistent across commodities.
+const COMMODITIES = [
+  {
+    id: 'labor',
+    name: 'Labor power',
+    axes: ['training', 'experience', 'specialization'],
+    blurb: 'The capacity sold as a commodity, variant in training, experience, and specialization.',
+    presets: [
+      { name: 'Novice',     fn: (x,y,z) => gauss3(x,y,z, 0.15, 0.15, 0.15, 0.20) },
+      { name: 'Expert',     fn: (x,y,z) => gauss3(x,y,z, 0.85, 0.85, 0.85, 0.22) },
+      { name: 'Specialist', fn: (x,y,z) => gauss3(x,y,z, 0.85, 0.50, 0.10, 0.16) },
+      { name: 'Generalist', fn: (x,y,z) => gauss3(x,y,z, 0.50, 0.50, 0.50, 0.35) },
+      { name: 'Bimodal',    fn: (x,y,z) => 0.6*gauss3(x,y,z, 0.20, 0.25, 0.20, 0.14)
+                                         + 0.6*gauss3(x,y,z, 0.80, 0.75, 0.70, 0.14) },
+      { name: 'Uniform',    fn: () => 0.3 },
+      { name: 'Empty',      fn: () => 0 },
+    ],
+    defaultA: 'Expert', defaultB: 'Specialist',
+  },
+  {
+    id: 'steel',
+    name: 'Steel',
+    axes: ['carbon', 'purity', 'grain fineness'],
+    blurb: 'An alloy varying in carbon content, purity, and grain fineness.',
+    presets: [
+      { name: 'Crude',       fn: (x,y,z) => gauss3(x,y,z, 0.75, 0.25, 0.20, 0.20) },
+      { name: 'Mild',        fn: (x,y,z) => gauss3(x,y,z, 0.25, 0.75, 0.55, 0.18) },
+      { name: 'Tool steel',  fn: (x,y,z) => gauss3(x,y,z, 0.80, 0.90, 0.85, 0.16) },
+      { name: 'Alloy',       fn: (x,y,z) => gauss3(x,y,z, 0.55, 0.80, 0.70, 0.18) },
+      { name: 'Mixed batch', fn: (x,y,z) => 0.5*gauss3(x,y,z, 0.30, 0.70, 0.55, 0.14)
+                                          + 0.5*gauss3(x,y,z, 0.75, 0.85, 0.75, 0.14) },
+      { name: 'Uniform',     fn: () => 0.3 },
+      { name: 'Empty',       fn: () => 0 },
+    ],
+    defaultA: 'Tool steel', defaultB: 'Crude',
+  },
+  {
+    id: 'wheat',
+    name: 'Wheat',
+    axes: ['protein', 'moisture', 'purity'],
+    blurb: 'Grain varying in protein content, moisture, and purity.',
+    presets: [
+      { name: 'Feed-grade',  fn: (x,y,z) => gauss3(x,y,z, 0.25, 0.55, 0.35, 0.20) },
+      { name: 'Bread-grade', fn: (x,y,z) => gauss3(x,y,z, 0.70, 0.40, 0.80, 0.16) },
+      { name: 'Durum',       fn: (x,y,z) => gauss3(x,y,z, 0.90, 0.30, 0.85, 0.15) },
+      { name: 'Damp batch',  fn: (x,y,z) => gauss3(x,y,z, 0.50, 0.85, 0.55, 0.18) },
+      { name: 'Blended lot', fn: (x,y,z) => 0.5*gauss3(x,y,z, 0.30, 0.55, 0.50, 0.14)
+                                          + 0.5*gauss3(x,y,z, 0.75, 0.45, 0.80, 0.14) },
+      { name: 'Uniform',     fn: () => 0.3 },
+      { name: 'Empty',       fn: () => 0 },
+    ],
+    defaultA: 'Bread-grade', defaultB: 'Feed-grade',
+  },
+  {
+    id: 'linen',
+    name: 'Linen',
+    axes: ['thread count', 'fiber quality', 'weave density'],
+    blurb: 'Cloth varying in thread count, fiber quality, and weave density.',
+    presets: [
+      { name: 'Sackcloth',   fn: (x,y,z) => gauss3(x,y,z, 0.20, 0.25, 0.30, 0.20) },
+      { name: 'Table linen', fn: (x,y,z) => gauss3(x,y,z, 0.65, 0.70, 0.70, 0.16) },
+      { name: 'Fine linen',  fn: (x,y,z) => gauss3(x,y,z, 0.90, 0.90, 0.85, 0.15) },
+      { name: 'Coarse bolt', fn: (x,y,z) => gauss3(x,y,z, 0.30, 0.40, 0.40, 0.18) },
+      { name: 'Bimodal lot', fn: (x,y,z) => 0.5*gauss3(x,y,z, 0.25, 0.30, 0.30, 0.14)
+                                          + 0.5*gauss3(x,y,z, 0.80, 0.80, 0.75, 0.14) },
+      { name: 'Uniform',     fn: () => 0.3 },
+      { name: 'Empty',       fn: () => 0 },
+    ],
+    defaultA: 'Fine linen', defaultB: 'Sackcloth',
+  },
+  {
+    id: 'coffee',
+    name: 'Coffee',
+    axes: ['grade', 'origin', 'freshness'],
+    blurb: 'A single commodity type with continuous variation in grade, origin, and freshness.',
+    presets: [
+      { name: 'Commodity',     fn: (x,y,z) => gauss3(x,y,z, 0.35, 0.40, 0.50, 0.20) },
+      { name: 'Specialty',     fn: (x,y,z) => gauss3(x,y,z, 0.85, 0.75, 0.80, 0.16) },
+      { name: 'Single-origin', fn: (x,y,z) => gauss3(x,y,z, 0.70, 0.90, 0.70, 0.14) },
+      { name: 'Stale lot',     fn: (x,y,z) => gauss3(x,y,z, 0.55, 0.50, 0.15, 0.18) },
+      { name: 'Blend',         fn: (x,y,z) => 0.5*gauss3(x,y,z, 0.35, 0.30, 0.55, 0.14)
+                                            + 0.5*gauss3(x,y,z, 0.80, 0.85, 0.75, 0.14) },
+      { name: 'Uniform',       fn: () => 0.3 },
+      { name: 'Empty',         fn: () => 0 },
+    ],
+    defaultA: 'Specialty', defaultB: 'Commodity',
+  },
+  {
+    id: 'coats',
+    name: 'Coats',
+    axes: ['size', 'fabric', 'style'],
+    blurb: 'Coats varying in size, fabric quality, and style — Marx\'s running example.',
+    presets: [
+      { name: 'Plain',       fn: (x,y,z) => gauss3(x,y,z, 0.50, 0.30, 0.30, 0.20) },
+      { name: 'Tailored',    fn: (x,y,z) => gauss3(x,y,z, 0.50, 0.80, 0.75, 0.16) },
+      { name: 'Small run',   fn: (x,y,z) => gauss3(x,y,z, 0.30, 0.75, 0.60, 0.14) },
+      { name: 'Mass market', fn: (x,y,z) => 0.5*gauss3(x,y,z, 0.40, 0.40, 0.40, 0.14)
+                                          + 0.5*gauss3(x,y,z, 0.60, 0.45, 0.50, 0.14) },
+      { name: 'Uniform',     fn: () => 0.3 },
+      { name: 'Empty',       fn: () => 0 },
+    ],
+    defaultA: 'Tailored', defaultB: 'Plain',
+  },
+];
+
+let currentCommodity = COMMODITIES[0];
+const axisName = (i) => currentCommodity.axes[i];
+
+// Distribution = Float32Array of length N^3, indexed [i,j,k] → i + j*N + k*N*N
+function newDist() { return new Float32Array(VOX); }
+function idx(i,j,k) { return i + j*N + k*N*N; }
+
+function fillFromPreset(dist, preset) {
+  for (let k=0; k<N; k++)
+    for (let j=0; j<N; j++)
+      for (let i=0; i<N; i++) {
+        const x = (i + 0.5) / N;
+        const y = (j + 0.5) / N;
+        const z = (k + 0.5) / N;
+        dist[idx(i,j,k)] = Math.max(0, preset.fn(x,y,z));
+      }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Structure maps (pure ops on distributions)
+// ──────────────────────────────────────────────────────────────────────────
+function opBundle(A, B) {
+  const C = newDist();
+  for (let n=0; n<VOX; n++) C[n] = A[n] + B[n];
+  return C;
+}
+function opMix(A, B, lambda) {
+  const C = newDist();
+  for (let n=0; n<VOX; n++) C[n] = lambda*A[n] + (1-lambda)*B[n];
+  return C;
+}
+// Division: partition into n equal slabs along an axis (returns an array of n distributions).
+// Binary case (n = 2) recovers the original planar split.
+function opDivideN(A, axis, n) {
+  const slabs = [];
+  for (let s = 0; s < n; s++) slabs.push(newDist());
+  for (let k = 0; k < N; k++)
+    for (let j = 0; j < N; j++)
+      for (let i = 0; i < N; i++) {
+        const coord = axis === 0 ? (i+0.5)/N
+                    : axis === 1 ? (j+0.5)/N
+                    :              (k+0.5)/N;
+        const sIdx = Math.min(n-1, Math.max(0, Math.floor(coord * n)));
+        slabs[sIdx][idx(i,j,k)] = A[idx(i,j,k)];
+      }
+  return slabs;
+}
+// Restriction: clip to axis-aligned box P = [xmin,xmax] × [ymin,ymax] × [zmin,zmax]
+function opRestrict(A, xmin, xmax, ymin, ymax, zmin, zmax) {
+  const C = newDist();
+  for (let k=0; k<N; k++)
+    for (let j=0; j<N; j++)
+      for (let i=0; i<N; i++) {
+        const x = (i+0.5)/N, y = (j+0.5)/N, z = (k+0.5)/N;
+        if (x>=xmin && x<=xmax && y>=ymin && y<=ymax && z>=zmin && z<=zmax)
+          C[idx(i,j,k)] = A[idx(i,j,k)];
+      }
+  return C;
+}
+function opMag(A) {
+  let s = 0;
+  for (let n=0; n<VOX; n++) s += A[n];
+  return s;
+}
+function opDivergence(A, B) {
+  // L2 distance between distributions, normalized by N^3 for scale
+  let s = 0;
+  for (let n=0; n<VOX; n++) { const d = A[n]-B[n]; s += d*d; }
+  return Math.sqrt(s);
+}
+function opMarginal(A, dropAxis) {
+  // Returns N×N 2D grid marginalizing over the dropped axis
+  const M = new Float32Array(N*N);
+  for (let k=0; k<N; k++)
+    for (let j=0; j<N; j++)
+      for (let i=0; i<N; i++) {
+        const a = A[idx(i,j,k)];
+        if (dropAxis === 0)      M[j + k*N] += a;  // drop x → (y,z)
+        else if (dropAxis === 1) M[i + k*N] += a;  // drop y → (x,z)
+        else                     M[i + j*N] += a;  // drop z → (x,y)
+      }
+  return M;
+}
+// Quotient: coarsen to (N/b)^3 grid by summing b×b×b blocks, then expand back
+function opQuotient(A, binSize) {
+  const C = newDist();
+  const M = Math.floor(N / binSize);
+  for (let ki=0; ki<M; ki++)
+    for (let ji=0; ji<M; ji++)
+      for (let ii=0; ii<M; ii++) {
+        let sum = 0;
+        for (let dk=0; dk<binSize; dk++)
+          for (let dj=0; dj<binSize; dj++)
+            for (let di=0; di<binSize; di++)
+              sum += A[idx(ii*binSize+di, ji*binSize+dj, ki*binSize+dk)];
+        const avg = sum / (binSize*binSize*binSize);  // spread evenly over block
+        for (let dk=0; dk<binSize; dk++)
+          for (let dj=0; dj<binSize; dj++)
+            for (let di=0; di<binSize; di++)
+              C[idx(ii*binSize+di, ji*binSize+dj, ki*binSize+dk)] = avg;
+      }
+  return C;
+}
+// Unit inclusion: delta concentrated at the distinguished variant (cube center by default)
+function opUnitDelta(cx, cy, cz) {
+  const C = newDist();
+  // place normalized mass at nearest voxel
+  const i = Math.min(N-1, Math.max(0, Math.floor(cx*N)));
+  const j = Math.min(N-1, Math.max(0, Math.floor(cy*N)));
+  const k = Math.min(N-1, Math.max(0, Math.floor(cz*N)));
+  C[idx(i,j,k)] = 1.0;
+  return C;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Three.js setup
+// ──────────────────────────────────────────────────────────────────────────
+const container = document.getElementById('canvas-container');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+// Cap DPR — volumetric raymarching cost scales with pixel count, and the
+// volume is naturally fuzzy so retina sharpness buys little.
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1117);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+// Pulled back from (3.5, 2.8, 3.8) so the scalar axis to the right of the
+// cube stays comfortably in frame.
+const initCamPos = new THREE.Vector3(4.8, 3.5, 5.2);
+camera.position.copy(initCamPos);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(BOX/2, BOX/2, BOX/2);
+controls.update();
+
+// Soft ambient + directional for any meshes we add
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const dl = new THREE.DirectionalLight(0xffffff, 0.5);
+dl.position.set(3,4,2);
+scene.add(dl);
+
+// X_A cube frame
+const cubeGroup = new THREE.Group();
+scene.add(cubeGroup);
+const cubeGeom = new THREE.BoxGeometry(BOX, BOX, BOX);
+const cubeEdges = new THREE.LineSegments(
+  new THREE.EdgesGeometry(cubeGeom),
+  new THREE.LineBasicMaterial({ color: 0x30363d })
+);
+cubeEdges.position.set(BOX/2, BOX/2, BOX/2);
+cubeGroup.add(cubeEdges);
+
+// Axis labels via sprites
+function paintLabel(canvas, text, color) {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = color; ctx.font = 'bold 30px Georgia';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+}
+function makeLabel(text, color) {
+  const c = document.createElement('canvas'); c.width = 320; c.height = 72;
+  paintLabel(c, text, color);
+  const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.LinearFilter;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  sprite.scale.set(1.5, 0.34, 1);
+  sprite.userData.canvas = c;
+  sprite.userData.color = color;
+  return sprite;
+}
+function updateLabel(sprite, text) {
+  paintLabel(sprite.userData.canvas, text, sprite.userData.color);
+  sprite.material.map.needsUpdate = true;
+}
+const labX = makeLabel('—', '#f85149'); labX.position.set(BOX+0.65, 0, 0);  cubeGroup.add(labX);
+const labY = makeLabel('—', '#a5d6ff'); labY.position.set(0, BOX+0.4, 0);   cubeGroup.add(labY);
+const labZ = makeLabel('—', '#ffa657'); labZ.position.set(0, 0, BOX+0.75);  cubeGroup.add(labZ);
+let axesVisible = true;
+
+// Axis lines at the origin
+function axisLine(dir, color) {
+  const geo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0,0,0),
+    new THREE.Vector3(dir[0]*BOX, dir[1]*BOX, dir[2]*BOX),
+  ]);
+  return new THREE.Line(geo, new THREE.LineBasicMaterial({ color }));
+}
+cubeGroup.add(axisLine([1,0,0], 0xf85149));
+cubeGroup.add(axisLine([0,1,0], 0xa5d6ff));
+cubeGroup.add(axisLine([0,0,1], 0xffa657));
+
+// ──────────────────────────────────────────────────────────────────────────
+// Volumetric rendering: a raymarched cube backed by two RGBA Data3DTextures.
+//
+// Up to 6 "roles" (A, B, Out, or 6 slabs in divide mode) are packed into
+// the RGB channels of two 3D textures. The fragment shader marches a ray
+// through the cube, accumulates per-role density × color, and shades each
+// step with a directional light whose attenuation is computed by a short
+// secondary march toward the sun (Beer–Lambert single-scattering).
+// ──────────────────────────────────────────────────────────────────────────
+
+const SLAB_COLORS = [
+  new THREE.Color(0x388bfd), // blue   — slab 0 / role A
+  new THREE.Color(0xffa060), // orange — slab 1 / role B
+  new THREE.Color(0x2ea043), // green  — slab 2 / role Out
+  new THREE.Color(0xd2a8ff), // purple — slab 3
+  new THREE.Color(0x79c0ff), // cyan   — slab 4
+  new THREE.Color(0xf85149), // red    — slab 5
+];
+const MAX_SLABS = SLAB_COLORS.length;
+
+// Two RGBA8 3D textures: tex0 holds roles 0..2, tex1 holds roles 3..5.
+const volBytes0 = new Uint8Array(VOX * 4);
+const volBytes1 = new Uint8Array(VOX * 4);
+
+function makeVolTex(buf) {
+  const tex = new THREE.Data3DTexture(buf, N, N, N);
+  tex.format = THREE.RGBAFormat;
+  tex.type = THREE.UnsignedByteType;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.wrapR = tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.unpackAlignment = 1;
+  tex.needsUpdate = true;
+  return tex;
+}
+const volTex0 = makeVolTex(volBytes0);
+const volTex1 = makeVolTex(volBytes1);
+
+const volumeMat = new THREE.ShaderMaterial({
+  glslVersion: THREE.GLSL3,
+  side: THREE.BackSide,
+  transparent: true,
+  depthTest: false,
+  depthWrite: false,
+  uniforms: {
+    uTex0:       { value: volTex0 },
+    uTex1:       { value: volTex1 },
+    uColor0:     { value: SLAB_COLORS[0].clone() },
+    uColor1:     { value: SLAB_COLORS[1].clone() },
+    uColor2:     { value: SLAB_COLORS[2].clone() },
+    uColor3:     { value: SLAB_COLORS[3].clone() },
+    uColor4:     { value: SLAB_COLORS[4].clone() },
+    uColor5:     { value: SLAB_COLORS[5].clone() },
+    uAlpha:      { value: [1, 1, 1, 0, 0, 0] },
+    uLightDir:   { value: new THREE.Vector3(0.6, 0.85, 0.4).normalize() },
+    uLightColor: { value: new THREE.Color(1.40, 1.30, 1.10) },
+    uAmbientLo:  { value: new THREE.Color(0.28, 0.30, 0.36) },
+    uAmbientHi:  { value: new THREE.Color(0.55, 0.60, 0.70) },
+    uBoxMin:     { value: new THREE.Vector3(0, 0, 0) },
+    uBoxMax:     { value: new THREE.Vector3(BOX, BOX, BOX) },
+    uTime:       { value: 0 },
+    uDensity:    { value: 7.5 },
+    uTurb:       { value: 0.55 },
+    uResolution: { value: new THREE.Vector2(1, 1) },
+  },
+  vertexShader: /* glsl */`
+    out vec3 vWorldPos;
+    void main() {
+      vec4 wp = modelMatrix * vec4(position, 1.0);
+      vWorldPos = wp.xyz;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }
+  `,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    precision highp sampler3D;
+
+    uniform sampler3D uTex0;
+    uniform sampler3D uTex1;
+    uniform vec3 uColor0, uColor1, uColor2, uColor3, uColor4, uColor5;
+    uniform float uAlpha[6];
+    uniform vec3 uLightDir;
+    uniform vec3 uLightColor;
+    uniform vec3 uAmbientLo;
+    uniform vec3 uAmbientHi;
+    uniform vec3 uBoxMin;
+    uniform vec3 uBoxMax;
+    uniform float uTime;
+    uniform float uDensity;
+    uniform float uTurb;
+    uniform vec2  uResolution;
+
+    in vec3 vWorldPos;
+    out vec4 fragColor;
+
+    // ──── Hash + value noise + fbm (3D) ────
+    float hash13(vec3 p) {
+      p = fract(p * 0.1031);
+      p += dot(p, p.yzx + 33.33);
+      return fract((p.x + p.y) * p.z);
+    }
+    float vnoise(vec3 p) {
+      vec3 i = floor(p);
+      vec3 f = fract(p);
+      f = f*f*(3.0 - 2.0*f);
+      float n000 = hash13(i);
+      float n100 = hash13(i + vec3(1,0,0));
+      float n010 = hash13(i + vec3(0,1,0));
+      float n110 = hash13(i + vec3(1,1,0));
+      float n001 = hash13(i + vec3(0,0,1));
+      float n101 = hash13(i + vec3(1,0,1));
+      float n011 = hash13(i + vec3(0,1,1));
+      float n111 = hash13(i + vec3(1,1,1));
+      return mix(
+        mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),
+        mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y),
+        f.z);
+    }
+    float fbm3(vec3 p) {
+      float v = 0.0, a = 0.55;
+      for (int i = 0; i < 4; i++) {
+        v += a * vnoise(p);
+        p = p * 2.07 + vec3(3.7, 5.1, 1.3);
+        a *= 0.5;
+      }
+      return v;
+    }
+
+    // ──── Sample density + emissive at a UV-cube point ────
+    void sampleVol(vec3 uvw, out float density, out vec3 emissive) {
+      vec4 s0 = texture(uTex0, uvw);
+      vec4 s1 = texture(uTex1, uvw);
+      density = 0.0;
+      emissive = vec3(0.0);
+      float v;
+      v = s0.r * uAlpha[0]; density += v; emissive += v * uColor0;
+      v = s0.g * uAlpha[1]; density += v; emissive += v * uColor1;
+      v = s0.b * uAlpha[2]; density += v; emissive += v * uColor2;
+      v = s1.r * uAlpha[3]; density += v; emissive += v * uColor3;
+      v = s1.g * uAlpha[4]; density += v; emissive += v * uColor4;
+      v = s1.b * uAlpha[5]; density += v; emissive += v * uColor5;
+    }
+    float sampleDensity(vec3 uvw) {
+      vec4 s0 = texture(uTex0, uvw);
+      vec4 s1 = texture(uTex1, uvw);
+      return s0.r*uAlpha[0] + s0.g*uAlpha[1] + s0.b*uAlpha[2]
+           + s1.r*uAlpha[3] + s1.g*uAlpha[4] + s1.b*uAlpha[5];
+    }
+
+    // ──── Slab-method ray-box intersection ────
+    vec2 rayBox(vec3 ro, vec3 rd, vec3 bmin, vec3 bmax) {
+      vec3 inv = 1.0 / rd;
+      vec3 t0 = (bmin - ro) * inv;
+      vec3 t1 = (bmax - ro) * inv;
+      vec3 tmin = min(t0, t1);
+      vec3 tmax = max(t0, t1);
+      return vec2(max(max(tmin.x, tmin.y), tmin.z),
+                  min(min(tmax.x, tmax.y), tmax.z));
+    }
+
+    void main() {
+      vec3 ro = cameraPosition;
+      vec3 rd = normalize(vWorldPos - cameraPosition);
+      vec2 hit = rayBox(ro, rd, uBoxMin, uBoxMax);
+      float t  = max(hit.x, 0.0);
+      float tE = hit.y;
+      if (tE <= t) discard;
+
+      vec3 boxSize = uBoxMax - uBoxMin;
+      const int   STEPS  = 56;
+      const int   LSTEPS = 3;
+      float dt = (tE - t) / float(STEPS);
+      // Blue-noise-ish jitter per pixel + per frame to dissolve banding.
+      float jit = hash13(vec3(gl_FragCoord.xy, fract(uTime * 17.0)));
+      t += dt * jit;
+
+      // Light step length proportional to box size.
+      float ldt = length(boxSize) * 0.07;
+
+      vec3 col = vec3(0.0);
+      float trans = 1.0;
+      float pathDensity = 0.0;
+
+      for (int i = 0; i < STEPS; i++) {
+        if (trans < 0.01) break;
+        vec3 p = ro + rd * t;
+        vec3 uvw = (p - uBoxMin) / boxSize;
+
+        float dens; vec3 emi;
+        sampleVol(uvw, dens, emi);
+
+        if (dens > 0.002) {
+          // Turbulence modulates density (preserves zero regions, breathes the cloud).
+          vec3 nc = uvw * 6.0 + vec3(uTime * 0.07, uTime * 0.05, uTime * 0.06);
+          float n = fbm3(nc);
+          float modul = mix(1.0 - uTurb, 1.0 + uTurb, n);
+          dens *= modul;
+          emi  *= modul;
+
+          // Beer–Lambert shadow toward the sun.
+          float ltrans = 1.0;
+          vec3 lp = p;
+          for (int j = 0; j < LSTEPS; j++) {
+            lp += uLightDir * ldt;
+            vec3 luvw = (lp - uBoxMin) / boxSize;
+            if (any(lessThan(luvw, vec3(0.0))) || any(greaterThan(luvw, vec3(1.0)))) break;
+            float ld = sampleDensity(luvw);
+            ltrans *= exp(-ld * uDensity * ldt * 0.85);
+          }
+
+          // Hemispheric ambient: cooler from below, warmer from above.
+          // We cheat a little — just use vertical position for a gradient.
+          vec3 amb = mix(uAmbientLo, uAmbientHi, smoothstep(0.0, 1.0, uvw.y));
+
+          // Henyey–Greenstein-ish forward scattering (cheap approx via dot).
+          float mu = clamp(dot(rd, uLightDir), -1.0, 1.0);
+          float forward = 0.55 + 0.45 * exp(-2.0 * (1.0 - mu));
+
+          vec3 albedo = emi / max(dens, 1e-4);
+          vec3 shade  = albedo * (amb + uLightColor * ltrans * forward);
+
+          // Self-emission: the densest cores glow with their own color.
+          shade += albedo * dens * 0.35;
+
+          float a = 1.0 - exp(-dens * uDensity * dt);
+          col   += trans * a * shade;
+          trans *= 1.0 - a;
+          pathDensity += dens * dt;
+        }
+        t += dt;
+      }
+
+      // Slight rim haze for empty-but-bounded space — grounds the cube
+      // visually so it doesn't look like a flat alpha hole.
+      float opacity = 1.0 - trans;
+      vec3 haze = mix(vec3(0.04, 0.05, 0.07), vec3(0.0), opacity);
+      col += haze * (1.0 - opacity) * 0.2;
+      opacity = max(opacity, 0.02 * (1.0 - opacity));
+
+      // Soft exposure boost — clouds were reading too dim against the dark
+      // background. exp tonemap compresses highlights without clipping.
+      col = vec3(1.0) - exp(-col * 1.35);
+
+      fragColor = vec4(col, opacity);
+    }
+  `,
+});
+
+const volumeCube = new THREE.Mesh(new THREE.BoxGeometry(BOX, BOX, BOX), volumeMat);
+volumeCube.position.set(BOX/2, BOX/2, BOX/2);
+volumeCube.renderOrder = 0;
+cubeGroup.add(volumeCube);
+
+// Ensure the box edges, axis lines, and labels render on top of the volume,
+// otherwise the back-face raymarched cube would composite over them.
+cubeEdges.material = new THREE.LineBasicMaterial({ color: 0x484f58, transparent: true, opacity: 0.85, depthTest: false });
+cubeEdges.renderOrder = 2;
+cubeGroup.children.forEach(c => {
+  if (c.isLine && c !== cubeEdges) {
+    c.material = new THREE.LineBasicMaterial({ color: c.material.color, transparent: true, opacity: 0.9, depthTest: false });
+    c.renderOrder = 2;
+  }
+});
+labX.renderOrder = labY.renderOrder = labZ.renderOrder = 3;
+
+// Division planes: a pool of up to MAX_SLABS-1 planes for n-ary cuts.
+const planeGeom = new THREE.PlaneGeometry(BOX*1.2, BOX*1.2);
+const planeMat  = new THREE.MeshBasicMaterial({
+  color: 0xd2a8ff,
+  transparent: true,
+  opacity: 0.18,
+  side: THREE.DoubleSide,
+  depthTest: false,
+  depthWrite: false,
+});
+const divPlanes = [];
+for (let i = 0; i < MAX_SLABS - 1; i++) {
+  const plane = new THREE.Mesh(planeGeom, planeMat);
+  plane.visible = false;
+  plane.renderOrder = 2;
+  cubeGroup.add(plane);
+  divPlanes.push(plane);
+}
+function placeDivPlane(plane, axis, pos01) {
+  plane.rotation.set(0, 0, 0);
+  if (axis === 0) { plane.rotation.y = Math.PI/2; plane.position.set(pos01*BOX, BOX/2, BOX/2); }
+  if (axis === 1) { plane.rotation.x = Math.PI/2; plane.position.set(BOX/2, pos01*BOX, BOX/2); }
+  if (axis === 2) {                               plane.position.set(BOX/2, BOX/2, pos01*BOX); }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Scalar axis HUD: a 3D number-line floating to the right of the cube.
+// Used by maps whose codomain is ℝ — magnitude (|A|) and divergence (d(A,B)) —
+// so the scalar output reads as a position on a line, making clear that the
+// map collapses the cube's distribution(s) onto a single point.
+// ──────────────────────────────────────────────────────────────────────────
+const scalarAxisGroup = new THREE.Group();
+cubeGroup.add(scalarAxisGroup);
+scalarAxisGroup.visible = false;
+
+const SAX_X   = BOX + 0.55;
+const SAX_LEN = BOX;
+
+// Vertical axis line
+{
+  const geo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(SAX_X, 0, 0),
+    new THREE.Vector3(SAX_X, SAX_LEN, 0),
+  ]);
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({
+    color: 0x6e7681, transparent: true, opacity: 0.75, depthTest: false,
+  }));
+  line.renderOrder = 2;
+  scalarAxisGroup.add(line);
+}
+
+// Top + bottom ticks
+[0, SAX_LEN].forEach(y => {
+  const geo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(SAX_X - 0.07, y, 0),
+    new THREE.Vector3(SAX_X + 0.07, y, 0),
+  ]);
+  const tick = new THREE.Line(geo, new THREE.LineBasicMaterial({
+    color: 0x8b949e, transparent: true, opacity: 0.85, depthTest: false,
+  }));
+  tick.renderOrder = 2;
+  scalarAxisGroup.add(tick);
+});
+
+// Halo ("glow") around the marker
+const scalarHalo = new THREE.Mesh(
+  new THREE.SphereGeometry(0.18, 24, 16),
+  new THREE.MeshBasicMaterial({
+    color: 0x58a6ff, transparent: true, opacity: 0.18,
+    depthTest: false, depthWrite: false,
+  })
+);
+scalarHalo.renderOrder = 2;
+scalarAxisGroup.add(scalarHalo);
+
+// Marker sphere
+const scalarMarker = new THREE.Mesh(
+  new THREE.SphereGeometry(0.085, 24, 16),
+  new THREE.MeshBasicMaterial({
+    color: 0x58a6ff, transparent: true, opacity: 0.95,
+    depthTest: false, depthWrite: false,
+  })
+);
+scalarMarker.renderOrder = 3;
+scalarAxisGroup.add(scalarMarker);
+
+// Dashed leader line from the cube's right face to the marker — this is the
+// "mapping": the cube collapses onto the axis. Pre-allocated geometry, updated
+// per-frame in tick().
+const leaderPositions = new Float32Array([BOX, BOX/2, BOX/2, SAX_X, 0, 0]);
+const leaderGeo = new THREE.BufferGeometry();
+leaderGeo.setAttribute('position', new THREE.BufferAttribute(leaderPositions, 3));
+const leaderMat = new THREE.LineDashedMaterial({
+  color: 0x58a6ff, transparent: true, opacity: 0.45,
+  dashSize: 0.10, gapSize: 0.07, depthTest: false,
+});
+const scalarLeader = new THREE.Line(leaderGeo, leaderMat);
+scalarLeader.renderOrder = 2;
+scalarLeader.computeLineDistances();
+scalarAxisGroup.add(scalarLeader);
+
+// Label sprites: title above the axis, value next to the marker.
+const scalarTitle = makeLabel('—', '#79c0ff');
+scalarTitle.scale.set(1.4, 0.32, 1);
+scalarTitle.position.set(SAX_X, SAX_LEN + 0.30, 0);
+scalarTitle.renderOrder = 3;
+scalarAxisGroup.add(scalarTitle);
+
+const scalarValueLbl = makeLabel('—', '#79c0ff');
+scalarValueLbl.scale.set(1.0, 0.26, 1);
+scalarValueLbl.renderOrder = 3;
+scalarAxisGroup.add(scalarValueLbl);
+
+const scalarZeroLbl = makeLabel('0', '#8b949e');
+scalarZeroLbl.scale.set(0.5, 0.22, 1);
+scalarZeroLbl.position.set(SAX_X + 0.30, -0.12, 0);
+scalarZeroLbl.renderOrder = 3;
+scalarAxisGroup.add(scalarZeroLbl);
+
+// Smooth marker animation: target Y is set by update(), eased per-frame in tick().
+let scalarTargetY = 0;
+let scalarCurrentY = 0;
+let scalarLastValueText = '';
+let scalarLastTitleText = '';
+let scalarColor = 0x58a6ff;
+
+function showScalarAxis(value, maxValue, titleText, valueText, hexColor) {
+  scalarAxisGroup.visible = true;
+  scalarColor = hexColor;
+  scalarMarker.material.color.setHex(hexColor);
+  scalarHalo.material.color.setHex(hexColor);
+  leaderMat.color.setHex(hexColor);
+
+  const t = Math.min(1, Math.max(0, value / Math.max(maxValue, 1e-6)));
+  scalarTargetY = t * SAX_LEN;
+
+  const css = '#' + hexColor.toString(16).padStart(6, '0');
+  if (titleText !== scalarLastTitleText || scalarTitle.userData.color !== css) {
+    scalarTitle.userData.color = css;
+    updateLabel(scalarTitle, titleText);
+    scalarLastTitleText = titleText;
+  }
+  if (valueText !== scalarLastValueText || scalarValueLbl.userData.color !== css) {
+    scalarValueLbl.userData.color = css;
+    updateLabel(scalarValueLbl, valueText);
+    scalarLastValueText = valueText;
+  }
+}
+function hideScalarAxis() {
+  scalarAxisGroup.visible = false;
+}
+
+// Restriction box outline
+const restrictBoxGroup = new THREE.Group();
+cubeGroup.add(restrictBoxGroup);
+let restrictBoxLines = null;
+function updateRestrictBox(xmin, xmax, ymin, ymax, zmin, zmax) {
+  if (restrictBoxLines) {
+    restrictBoxGroup.remove(restrictBoxLines);
+    restrictBoxLines.geometry.dispose();
+  }
+  const sx = (xmax-xmin)*BOX, sy = (ymax-ymin)*BOX, sz = (zmax-zmin)*BOX;
+  const g = new THREE.BoxGeometry(sx, sy, sz);
+  restrictBoxLines = new THREE.LineSegments(
+    new THREE.EdgesGeometry(g),
+    new THREE.LineBasicMaterial({ color: 0xd2a8ff, transparent: true, opacity: 0.95, depthTest: false })
+  );
+  restrictBoxLines.position.set(
+    (xmin+xmax)/2 * BOX,
+    (ymin+ymax)/2 * BOX,
+    (zmin+zmax)/2 * BOX,
+  );
+  restrictBoxLines.renderOrder = 2;
+  restrictBoxGroup.add(restrictBoxLines);
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Volume upload: pack up to 6 active "roles" into the RGB channels of two
+// 3D textures, then push them to the GPU. The shader composites them.
+// ──────────────────────────────────────────────────────────────────────────
+const ZERO_DIST = newDist();
+
+function uploadVolumes(roles, alphas) {
+  // roles: length-6 array of either Float32Array or null
+  // alphas: length-6 array of floats (0/1 for visibility, but free-form)
+  let maxV = 0;
+  for (let r = 0; r < 6; r++) {
+    const d = roles[r];
+    if (!d || alphas[r] <= 0) continue;
+    for (let n = 0; n < VOX; n++) if (d[n] > maxV) maxV = d[n];
+  }
+  if (maxV < 1e-6) maxV = 1;
+  const inv = 255 / maxV;
+  const r0 = roles[0] || ZERO_DIST;
+  const r1 = roles[1] || ZERO_DIST;
+  const r2 = roles[2] || ZERO_DIST;
+  const r3 = roles[3] || ZERO_DIST;
+  const r4 = roles[4] || ZERO_DIST;
+  const r5 = roles[5] || ZERO_DIST;
+  for (let n = 0; n < VOX; n++) {
+    volBytes0[4*n  ] = Math.min(255, r0[n] * inv) | 0;
+    volBytes0[4*n+1] = Math.min(255, r1[n] * inv) | 0;
+    volBytes0[4*n+2] = Math.min(255, r2[n] * inv) | 0;
+    volBytes0[4*n+3] = 0;
+    volBytes1[4*n  ] = Math.min(255, r3[n] * inv) | 0;
+    volBytes1[4*n+1] = Math.min(255, r4[n] * inv) | 0;
+    volBytes1[4*n+2] = Math.min(255, r5[n] * inv) | 0;
+    volBytes1[4*n+3] = 0;
+  }
+  volTex0.needsUpdate = true;
+  volTex1.needsUpdate = true;
+  volumeMat.uniforms.uAlpha.value = alphas;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Marginal canvas (2D heatmap shown bottom-right during projection mode)
+// ──────────────────────────────────────────────────────────────────────────
+const marginalCanvas = document.getElementById('marginal-canvas');
+const marginalLabel  = document.getElementById('marginal-label');
+const mctx = marginalCanvas.getContext('2d');
+
+function drawMarginal(M, axisDropped) {
+  const W = marginalCanvas.width, H = marginalCanvas.height;
+  const cw = W/N, ch = H/N;
+  // Find max
+  let mx = 0; for (let i=0; i<M.length; i++) if (M[i] > mx) mx = M[i];
+  mctx.fillStyle = '#0d1117';
+  mctx.fillRect(0, 0, W, H);
+  for (let b=0; b<N; b++)
+    for (let a=0; a<N; a++) {
+      const v = mx > 0 ? M[a + b*N] / mx : 0;
+      const alpha = v;
+      mctx.fillStyle = `rgba(46,160,67,${alpha})`;
+      mctx.fillRect(a*cw, (N-1-b)*ch, cw+0.5, ch+0.5);
+    }
+  let keptAxes = [0,1,2].filter(x => x !== axisDropped);
+  marginalLabel.textContent = `π drops ${axisName(axisDropped)} → (${axisName(keptAxes[0])}, ${axisName(keptAxes[1])})`;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────────────────────────────────
+const state = {
+  A: newDist(),
+  B: newDist(),
+  out: newDist(),
+  mode: 'bundle',
+  // parameters
+  lambda: 0.5,                // mixture weight
+  divAxis: 0,                 // division/plane axis
+  numSlabs: 2,                // n-ary division: number of slabs (2..MAX_SLABS)
+  restrict: { xmin:0.25, xmax:0.75, ymin:0.25, ymax:0.75, zmin:0.25, zmax:0.75 },
+  projAxis: 2,                // projection dropped axis
+  quotientBinSize: 2,         // quotient bin size (divides N)
+  unitCenter: { x:0.5, y:0.5, z:0.5 },
+  // view toggles
+  showA: true, showB: true, showOut: true,
+};
+
+function presetByName(name) {
+  return currentCommodity.presets.find(p => p.name === name) || currentCommodity.presets[0];
+}
+fillFromPreset(state.A, presetByName(currentCommodity.defaultA));
+fillFromPreset(state.B, presetByName(currentCommodity.defaultB));
+
+// ──────────────────────────────────────────────────────────────────────────
+// Modes
+// ──────────────────────────────────────────────────────────────────────────
+const MODES = [
+  {
+    id: 'bundle', sym: 'μ', name: 'Bundling',
+    formula: '(A + B)[x] = A[x] + B[x]',
+    desc: 'Two distributions combine by pointwise sum. The bundle carries mass at each variant equal to the sum of its components.',
+    marxian: 'Combining two stocks of the same commodity type: the aggregate profile is the pointwise sum — where A has 5 units at variant x and B has 3, the bundle has 8.',
+    useB: true,
+    params: [],
+    compute: (s) => opBundle(s.A, s.B),
+  },
+  {
+    id: 'mix', sym: 'mix_λ', name: 'Mixture',
+    formula: 'mix_λ(A, B)[x] = λ·A[x] + (1−λ)·B[x]',
+    desc: 'A weighted average of two distributions. For λ = 0.5, the output is the midpoint between A and B.',
+    marxian: 'Social averaging. When λ is the population share of profile A, the mixture is the market-average profile — the basis for socially necessary labor (§14) or price-forming averages.',
+    useB: true,
+    params: [
+      { id: 'lambda', label: 'λ', min: 0, max: 1, step: 0.01, get: s => s.lambda, set: (s,v) => s.lambda = v },
+    ],
+    compute: (s) => opMix(s.A, s.B, s.lambda),
+  },
+  {
+    id: 'divide', sym: 'δ_n', name: 'Division',
+    formula: 'δ_n(A) = (A|_{P_1}, …, A|_{P_n})',
+    desc: 'Partition A into n disjoint slabs along one axis. The slabs recompose to A under n-ary bundling μ_n.',
+    marxian: 'Sorting a stock into n tiers (e.g., n-tier quality grading, routing a shipment to n warehouses, or splitting a batch across n production lines). Equivalent to iterating binary division.',
+    useB: false,
+    params: [
+      { id: 'divAxis',  label: 'Axis',  min: 0, max: 2, step: 1, get: s=>s.divAxis,  set: (s,v)=>s.divAxis=v,  display: v => axisName(v) },
+      { id: 'numSlabs', label: 'Slabs', min: 2, max: MAX_SLABS, step: 1, get: s=>s.numSlabs, set: (s,v)=>s.numSlabs=v },
+    ],
+    compute: (s) => {
+      // Output = A itself, so |Output| = |A| (mass is preserved under n-ary partition).
+      // The actual slabs are rendered separately in update() for this mode.
+      state._slabs = opDivideN(s.A, s.divAxis, s.numSlabs);
+      return s.A;
+    },
+  },
+  {
+    id: 'restrict', sym: 'R_P', name: 'Restriction',
+    formula: 'R_P(A)[x] = A[x] · 1_P(x)',
+    desc: 'Clip A to an axis-aligned sub-region P of X_A. Mass outside P is zeroed.',
+    marxian: 'Filtering a stock by a use-predicate — "only graduate-level labor power" or "only size-42 coats." The sub-distribution inherits all structure but lives only on P.',
+    useB: false,
+    aGhost: true, // A is the input; Out is the bright clipped result.
+    params: [
+      { id: 'x-range', label: () => `${axisName(0)} range`, min: 0, max: 1, step: 0.02, isRange: true, get: s => [s.restrict.xmin, s.restrict.xmax], set: (s, v) => { s.restrict.xmin = v[0]; s.restrict.xmax = v[1]; } },
+      { id: 'y-range', label: () => `${axisName(1)} range`, min: 0, max: 1, step: 0.02, isRange: true, get: s => [s.restrict.ymin, s.restrict.ymax], set: (s, v) => { s.restrict.ymin = v[0]; s.restrict.ymax = v[1]; } },
+      { id: 'z-range', label: () => `${axisName(2)} range`, min: 0, max: 1, step: 0.02, isRange: true, get: s => [s.restrict.zmin, s.restrict.zmax], set: (s, v) => { s.restrict.zmin = v[0]; s.restrict.zmax = v[1]; } },
+    ],
+    compute: (s) => opRestrict(s.A, s.restrict.xmin, s.restrict.xmax, s.restrict.ymin, s.restrict.ymax, s.restrict.zmin, s.restrict.zmax),
+  },
+  {
+    id: 'magnitude', sym: '|·|', name: 'Magnitude',
+    formula: '|A| = Σ_x A[x]',
+    desc: 'Total mass of the distribution over X_A. In the discrete-type limit this is the ordinary quantity of the commodity.',
+    marxian: 'The quantitative aspect of the quality/quantity decomposition (§3.5) — total mass regardless of how it is distributed across the variation space.',
+    useB: false,
+    useOut: false, // The output is a scalar — the |A| readout — not a distribution.
+    params: [],
+    compute: (s) => s.A, // output = input (the scalar is the readout)
+  },
+  {
+    id: 'divergence', sym: 'd', name: 'Divergence',
+    formula: 'd(A, B) = (Σ_x (A[x] − B[x])²)^½',
+    desc: 'L² distance between two distributions. A zero divergence means A and B carry identical mass at every variant.',
+    marxian: 'The gap between an individual profile and the socially normalized profile. When labor is the determinant, this divergence registers as the signature of exploitation (§16) — the difference between concrete labor as produced and abstract labor as recognized.',
+    useB: true,
+    useOut: false, // The output is the scalar d(A,B) — the readout — not a third cloud.
+    params: [],
+    compute: (s) => s.A,
+  },
+  {
+    id: 'project', sym: 'π', name: 'Marginalization',
+    formula: 'π_k(A)[i,j] = Σ_k A[i,j,k]',
+    desc: 'Marginalize A over one axis. The result is a 2D distribution on the remaining two axes.',
+    marxian: 'Quality projection. Dropping one axis leaves a joint profile over the remaining two — forgetting one use-dimension while preserving the others.',
+    useB: false,
+    useOut: false, // Output lives in 2D — drawn on the side canvas, not in the cube.
+    params: [
+      { id: 'projAxis', label: 'drop axis', min: 0, max: 2, step: 1, get: s=>s.projAxis, set: (s,v)=>s.projAxis=v, display: v => axisName(v) },
+    ],
+    compute: (s) => s.A,
+  },
+  {
+    id: 'quotient', sym: 'q', name: 'Quotient',
+    formula: 'q(A)[class] = Σ_{x ∈ class} A[x]',
+    desc: 'Coarsen the variation space by grouping voxels into blocks. Mass is summed within each block and spread uniformly.',
+    marxian: 'Pushforward along a coarsening of X_A — treating nearby variants as equivalent. The coarsest non-trivial quotient collapses the entire space to a single point, recovering the bare type A₀ (§3.5.2).',
+    useB: false,
+    aGhost: true, // A faded so the coarsened Out reads cleanly as the result.
+    params: [
+      { id: 'bin', label: 'bin size', min: 1, max: 6, step: 1, get: s=>s.quotientBinSize, set: (s,v)=>s.quotientBinSize=v },
+    ],
+    compute: (s) => opQuotient(s.A, s.quotientBinSize),
+  },
+  {
+    id: 'unit', sym: 'ι', name: 'Unit inclusion',
+    formula: 'ι(A₀) = δ_{x*}   (unit mass at a distinguished variant)',
+    desc: 'The unit inclusion sends a quality type to a delta distribution concentrated at a single variant — the "reference unit" of that type.',
+    marxian: 'In the discrete case (§4.6.4), ι sends a type to its unit-quantity commodity. Here the reference variant is parametric: choosing a point in X_A chooses which variant counts as "the unit."',
+    useA: false, // ι takes a type (a 0-dim object), not a distribution; A is not the input here.
+    useB: false,
+    params: [
+      { id: 'ux', label: () => axisName(0), min: 0, max: 1, step: 0.02, get: s=>s.unitCenter.x, set: (s,v)=>s.unitCenter.x=v },
+      { id: 'uy', label: () => axisName(1), min: 0, max: 1, step: 0.02, get: s=>s.unitCenter.y, set: (s,v)=>s.unitCenter.y=v },
+      { id: 'uz', label: () => axisName(2), min: 0, max: 1, step: 0.02, get: s=>s.unitCenter.z, set: (s,v)=>s.unitCenter.z=v },
+    ],
+    compute: (s) => opUnitDelta(s.unitCenter.x, s.unitCenter.y, s.unitCenter.z),
+  },
+];
+
+// ──────────────────────────────────────────────────────────────────────────
+// UI: mode list
+// ──────────────────────────────────────────────────────────────────────────
+const modeList = document.getElementById('mode-list');
+MODES.forEach(m => {
+  const b = document.createElement('button');
+  b.innerHTML = `<span class="map-sym">${m.sym}</span> ${m.name}`;
+  b.onclick = () => setMode(m.id);
+  b.dataset.mode = m.id;
+  modeList.appendChild(b);
+});
+
+// UI: preset rows — rebuilt on every commodity switch
+function makePresetRow(rowId, which) {
+  const row = document.getElementById(rowId);
+  row.innerHTML = '';
+  currentCommodity.presets.forEach(p => {
+    const b = document.createElement('button');
+    b.textContent = p.name;
+    b.classList.add(which === 'A' ? 'blue-tag' : 'orange-tag');
+    b.onclick = () => {
+      fillFromPreset(state[which], p);
+      update();
+    };
+    row.appendChild(b);
+  });
+}
+
+// UI: commodity picker
+const commodityRow = document.getElementById('commodity-row');
+COMMODITIES.forEach(c => {
+  const b = document.createElement('button');
+  b.textContent = c.name;
+  b.dataset.commodity = c.id;
+  b.onclick = () => setCommodity(c.id);
+  commodityRow.appendChild(b);
+});
+
+function setCommodity(id) {
+  const c = COMMODITIES.find(x => x.id === id);
+  if (!c) return;
+  currentCommodity = c;
+  // 3D scene labels
+  updateLabel(labX, c.axes[0]);
+  updateLabel(labY, c.axes[1]);
+  updateLabel(labZ, c.axes[2]);
+  // HUD
+  document.getElementById('hud-x').textContent = c.axes[0];
+  document.getElementById('hud-y').textContent = c.axes[1];
+  document.getElementById('hud-z').textContent = c.axes[2];
+  // Description
+  document.getElementById('preset-desc-A').textContent = c.blurb;
+  // Preset rows
+  makePresetRow('preset-A-row', 'A');
+  makePresetRow('preset-B-row', 'B');
+  // Reset A and B to this commodity's defaults
+  fillFromPreset(state.A, presetByName(c.defaultA));
+  fillFromPreset(state.B, presetByName(c.defaultB));
+  // Commodity-picker active state
+  document.querySelectorAll('#commodity-row button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.commodity === id);
+  });
+  // Rebuild params panel (for axis-name-dependent labels and displays)
+  const mode = MODES.find(m => m.id === state.mode);
+  if (mode) buildParams(mode);
+  update();
+}
+
+// UI: view toggles
+document.getElementById('btn-showA').onclick = () => { state.showA   = !state.showA;   update(); document.getElementById('btn-showA').classList.toggle('active', state.showA); };
+document.getElementById('btn-showB').onclick = () => { state.showB   = !state.showB;   update(); document.getElementById('btn-showB').classList.toggle('active', state.showB); };
+document.getElementById('btn-showOut').onclick = () => { state.showOut = !state.showOut; update(); document.getElementById('btn-showOut').classList.toggle('active', state.showOut); };
+document.getElementById('btn-axes').onclick = () => {
+  axesVisible = !axesVisible;
+  labX.visible = labY.visible = labZ.visible = axesVisible;
+};
+document.getElementById('btn-reset-cam').onclick = () => {
+  camera.position.copy(initCamPos);
+  controls.target.set(BOX/2, BOX/2, BOX/2);
+  controls.update();
+};
+
+// ──────────────────────────────────────────────────────────────────────────
+// Mode switching + parameters
+// ──────────────────────────────────────────────────────────────────────────
+function setMode(id) {
+  state.mode = id;
+  const m = MODES.find(x => x.id === id);
+  // Mode badge + right panel
+  document.getElementById('mode-badge').textContent = m.name.toUpperCase();
+  document.getElementById('mode-name').textContent = `${m.name} (${m.sym})`;
+  document.getElementById('mode-formula').textContent = m.formula;
+  document.getElementById('mode-desc').textContent = m.desc;
+  // Mode button active state
+  document.querySelectorAll('#mode-list button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === id);
+  });
+  // Per-role availability: dim the panel sections that don't apply to this map.
+  const useA   = m.useA   !== false;
+  const useB   = !!m.useB;
+  const useOut = m.useOut !== false;
+  document.getElementById('group-A').style.opacity   = useA   ? '1' : '0.4';
+  document.getElementById('group-B').style.opacity   = useB   ? '1' : '0.4';
+  document.getElementById('btn-showA').style.opacity = useA   ? '1' : '0.4';
+  document.getElementById('btn-showB').style.opacity = useB   ? '1' : '0.4';
+  document.getElementById('btn-showOut').style.opacity = useOut ? '1' : '0.4';
+  // Rebuild params
+  buildParams(m);
+  // Clean up mode-specific visuals
+  divPlanes.forEach(p => p.visible = false);
+  restrictBoxGroup.visible = (id === 'restrict');
+  marginalCanvas.style.display = (id === 'project') ? 'block' : 'none';
+  marginalLabel.style.display = (id === 'project') ? 'block' : 'none';
+  state._slabs = null;
+  update();
+}
+
+function buildParams(mode) {
+  const body = document.getElementById('params-body');
+  body.innerHTML = '';
+  if (mode.params.length === 0) {
+    body.innerHTML = '<div class="desc" style="font-size:12px;color:#8b949e;">No parameters.</div>';
+    return;
+  }
+  mode.params.forEach(p => {
+    if (p.isRange) {
+      // Two sliders side by side for min/max
+      const vals = p.get(state);
+      const lbl = typeof p.label === 'function' ? p.label() : p.label;
+      const row = document.createElement('div');
+      row.className = 'slider-row';
+      row.innerHTML = `
+        <div class="vlabel"><span>${lbl}</span><span><b class="r-lo">${vals[0].toFixed(2)}</b> – <b class="r-hi">${vals[1].toFixed(2)}</b></span></div>
+        <input type="range" class="r-min" min="${p.min}" max="${p.max}" step="${p.step}" value="${vals[0]}">
+        <input type="range" class="r-max" min="${p.min}" max="${p.max}" step="${p.step}" value="${vals[1]}">
+      `;
+      body.appendChild(row);
+      const rMin = row.querySelector('.r-min'), rMax = row.querySelector('.r-max');
+      const rLo = row.querySelector('.r-lo'), rHi = row.querySelector('.r-hi');
+      rMin.oninput = () => {
+        let lo = +rMin.value, hi = +rMax.value;
+        if (lo > hi) { lo = hi; rMin.value = lo; }
+        p.set(state, [lo, hi]);
+        rLo.textContent = lo.toFixed(2); rHi.textContent = hi.toFixed(2);
+        update();
+      };
+      rMax.oninput = () => {
+        let lo = +rMin.value, hi = +rMax.value;
+        if (hi < lo) { hi = lo; rMax.value = hi; }
+        p.set(state, [lo, hi]);
+        rLo.textContent = lo.toFixed(2); rHi.textContent = hi.toFixed(2);
+        update();
+      };
+    } else {
+      const v = p.get(state);
+      const disp = p.display ? p.display(v) : (+v).toFixed(p.step < 0.1 ? 2 : 0);
+      const lbl = typeof p.label === 'function' ? p.label() : p.label;
+      const row = document.createElement('div');
+      row.className = 'slider-row';
+      row.innerHTML = `
+        <div class="vlabel"><span>${lbl}</span><span><b class="v">${disp}</b></span></div>
+        <input type="range" min="${p.min}" max="${p.max}" step="${p.step}" value="${v}">
+      `;
+      body.appendChild(row);
+      const r = row.querySelector('input'), vb = row.querySelector('.v');
+      r.oninput = () => {
+        p.set(state, +r.value);
+        vb.textContent = p.display ? p.display(+r.value) : (+r.value).toFixed(p.step < 0.1 ? 2 : 0);
+        update();
+      };
+    }
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Update pipeline: recompute output + readouts + render
+// ──────────────────────────────────────────────────────────────────────────
+function update() {
+  const m = MODES.find(x => x.id === state.mode);
+  state.out = m.compute(state);
+
+  // Decide which roles are active and at what alpha, then push to the volume.
+  const roles  = [null, null, null, null, null, null];
+  const alphas = [0, 0, 0, 0, 0, 0];
+
+  if (m.id === 'divide') {
+    // In divide mode, A / B / Output are hidden — the n slabs ARE the display,
+    // and their pointwise sum equals A (μ_n ∘ δ_n = id).
+    const slabs = state._slabs || [];
+    for (let i = 0; i < Math.min(MAX_SLABS, slabs.length); i++) {
+      roles[i]  = slabs[i];
+      alphas[i] = 1;
+    }
+  } else {
+    // Per-mode role visibility:
+    //   useA / useB / useOut === false  → that role is not part of this map
+    //   aGhost === true                 → A is rendered faded (it's the input,
+    //                                     Out is the bright result of the map)
+    const ghost = m.aGhost ? 0.45 : 1.0;
+    if (m.useA !== false) {
+      roles[0]  = state.A;
+      alphas[0] = state.showA ? ghost : 0;
+    }
+    if (m.useB) {
+      roles[1]  = state.B;
+      alphas[1] = state.showB ? 1 : 0;
+    }
+    if (m.useOut !== false) {
+      roles[2]  = state.out;
+      alphas[2] = state.showOut ? 1 : 0;
+    }
+  }
+  uploadVolumes(roles, alphas);
+
+  // Visual indicators for division / restriction
+  if (m.id === 'divide') {
+    // Show n-1 parallel planes at thresholds i/n for i = 1..n-1.
+    for (let i = 0; i < divPlanes.length; i++) {
+      if (i < state.numSlabs - 1) {
+        divPlanes[i].visible = true;
+        placeDivPlane(divPlanes[i], state.divAxis, (i + 1) / state.numSlabs);
+      } else {
+        divPlanes[i].visible = false;
+      }
+    }
+  } else {
+    divPlanes.forEach(p => p.visible = false);
+  }
+  if (m.id === 'restrict') {
+    updateRestrictBox(state.restrict.xmin, state.restrict.xmax, state.restrict.ymin, state.restrict.ymax, state.restrict.zmin, state.restrict.zmax);
+  }
+
+  // Marginal 2D canvas for projection mode
+  if (m.id === 'project') {
+    drawMarginal(opMarginal(state.A, state.projAxis), state.projAxis);
+  }
+
+  // Readouts
+  const magA = opMag(state.A);
+  const magB = opMag(state.B);
+  const magOut = opMag(state.out);
+  const div = opDivergence(state.A, state.B);
+  document.getElementById('read-magA').textContent   = magA.toFixed(2);
+  document.getElementById('read-magB').textContent   = magB.toFixed(2);
+  document.getElementById('read-magOut').textContent = magOut.toFixed(2);
+  document.getElementById('read-div').textContent    = div.toFixed(2);
+  const barMax = Math.max(magA, magB, magOut, 1);
+  document.getElementById('bar-magA').style.width   = `${100*magA/barMax}%`;
+  document.getElementById('bar-magB').style.width   = `${100*magB/barMax}%`;
+  document.getElementById('bar-magOut').style.width = `${100*magOut/barMax}%`;
+  const divMax = Math.sqrt(Math.max(1, magA*magA + magB*magB));
+  document.getElementById('bar-div').style.width    = `${Math.min(100, 100*div/divMax)}%`;
+
+  // Scalar-axis HUD: visible only for maps whose codomain is ℝ.
+  if (m.id === 'magnitude') {
+    showScalarAxis(magA, barMax, '|A|', magA.toFixed(1), 0x58a6ff);
+  } else if (m.id === 'divergence') {
+    showScalarAxis(div, divMax, 'd(A, B)', div.toFixed(2), 0xf85149);
+  } else {
+    hideScalarAxis();
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Resize + animate
+// ──────────────────────────────────────────────────────────────────────────
+function onResize() {
+  const w = container.clientWidth, h = container.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  volumeMat.uniforms.uResolution.value.set(w, h);
+}
+window.addEventListener('resize', onResize);
+onResize();
+
+const clock = new THREE.Clock();
+function tick() {
+  const t = clock.getElapsedTime();
+  volumeMat.uniforms.uTime.value = t;
+
+  // Ease the scalar-axis marker toward its target Y.
+  if (scalarAxisGroup.visible) {
+    scalarCurrentY += (scalarTargetY - scalarCurrentY) * 0.18;
+    scalarMarker.position.set(SAX_X, scalarCurrentY, 0);
+    scalarHalo.position.set(SAX_X, scalarCurrentY, 0);
+    scalarValueLbl.position.set(SAX_X + 0.55, scalarCurrentY + 0.08, 0);
+    leaderPositions[4] = scalarCurrentY;
+    leaderGeo.attributes.position.needsUpdate = true;
+    scalarLeader.computeLineDistances();
+    // Subtle halo pulse so the marker reads as "alive" even when value is steady.
+    const pulse = 1.0 + 0.20 * Math.sin(t * 2.4);
+    scalarHalo.scale.setScalar(pulse);
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Intro flow: hide controls, show a prominent description, stagger reveal.
+// ──────────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'variational3d.skipIntro';
+const introOverlay = document.getElementById('intro-overlay');
+const introBegin   = document.getElementById('intro-begin');
+const introSkipCB  = document.getElementById('intro-skip');
+const introDescEl  = document.getElementById('intro-desc');
+const introMarxEl  = document.getElementById('intro-marx');
+const introFormEl  = document.getElementById('intro-formula');
+
+introSkipCB.checked = localStorage.getItem(STORAGE_KEY) === 'true';
+introSkipCB.onchange = () => {
+  localStorage.setItem(STORAGE_KEY, introSkipCB.checked ? 'true' : 'false');
+};
+
+function refreshIntroText() {
+  const m = MODES.find(x => x.id === state.mode);
+  introDescEl.textContent = m.desc;
+  introFormEl.textContent = m.formula;
+  introMarxEl.textContent = m.marxian;
+}
+
+function startIntro() {
+  refreshIntroText();
+  document.body.classList.add('intro-active');
+  document.body.classList.remove('controls-revealing');
+  introOverlay.classList.remove('dismissed');
+  // Re-trigger CSS animations by toggling the .entering class.
+  introOverlay.classList.remove('entering');
+  void introOverlay.offsetWidth; // force reflow
+  introOverlay.classList.add('entering');
+}
+
+let _revealCleanup = null;
+function endIntro() {
+  document.body.classList.remove('intro-active');
+  introOverlay.classList.add('dismissed');
+
+  // Stagger-in groups inside both sidebars.
+  const lefts  = document.querySelectorAll('.sidebar.left  .group');
+  const rights = document.querySelectorAll('.sidebar.right .group');
+  lefts.forEach((g, i)  => g.style.setProperty('--g-delay', `${0.45 + i * 0.09}s`));
+  rights.forEach((g, i) => g.style.setProperty('--g-delay', `${0.55 + i * 0.09}s`));
+  // Stagger the param sliders too (rebuilt via buildParams; use animation on each row).
+  document.querySelectorAll('#params-body > *').forEach((el, i) => {
+    el.style.setProperty('--p-delay', `${0.95 + i * 0.07}s`);
+  });
+  document.body.classList.add('controls-revealing');
+  // Drop the reveal class once the staggered animations finish, so future
+  // mode changes that rebuild params don't re-animate everything.
+  if (_revealCleanup) clearTimeout(_revealCleanup);
+  _revealCleanup = setTimeout(() => {
+    document.body.classList.remove('controls-revealing');
+  }, 2500);
+}
+
+introBegin.onclick = () => { endIntro(); scheduleTour(); };
+document.getElementById('replay-intro').onclick = () => {
+  cancelTour();
+  userTookControl = false;
+  startIntro();
+};
+// Also dismiss on Escape / Enter.
+window.addEventListener('keydown', (e) => {
+  if (document.body.classList.contains('intro-active') && (e.key === 'Escape' || e.key === 'Enter')) {
+    endIntro(); scheduleTour();
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Auto-demo tour: cycle through every mode, animating each mode's params
+// through their range so the user sees what every knob does. The tour
+// cancels on the user's first interaction with the sidebar.
+// ──────────────────────────────────────────────────────────────────────────
+let tourRunning   = false;
+let tourCancelled = false;
+let tourFrame     = null;
+let userTookControl = false;
+
+const tourToast   = document.getElementById('tour-toast');
+const tourSymEl   = document.getElementById('tour-sym');
+const tourModeEl  = document.getElementById('tour-mode');
+const tourDetailEl= document.getElementById('tour-detail');
+
+function showToast(mode, detail) {
+  tourSymEl.textContent  = mode.sym;
+  tourModeEl.textContent = mode.name;
+  tourDetailEl.textContent = detail;
+  tourToast.classList.add('show');
+}
+function hideToast() { tourToast.classList.remove('show'); }
+
+// Find the slider row corresponding to a param id within the current mode.
+function rowForParam(paramId) {
+  const mode = MODES.find(m => m.id === state.mode);
+  if (!mode) return null;
+  const idx = mode.params.findIndex(p => p.id === paramId);
+  if (idx < 0) return null;
+  const rows = document.querySelectorAll('#params-body .slider-row');
+  return rows[idx] || null;
+}
+
+function setParamValue(paramId, value) {
+  const mode = MODES.find(m => m.id === state.mode);
+  const p = mode && mode.params.find(pp => pp.id === paramId);
+  if (!p) return;
+  p.set(state, value);
+  const row = rowForParam(paramId);
+  if (row) {
+    const r = row.querySelector('input[type=range]');
+    const vb = row.querySelector('.v');
+    if (r) r.value = value;
+    if (vb) vb.textContent = p.display ? p.display(+value) : (+value).toFixed(p.step < 0.1 ? 2 : 0);
+  }
+  update();
+}
+
+function setRangeValue(paramId, lo, hi) {
+  const mode = MODES.find(m => m.id === state.mode);
+  const p = mode && mode.params.find(pp => pp.id === paramId);
+  if (!p) return;
+  p.set(state, [lo, hi]);
+  const row = rowForParam(paramId);
+  if (row) {
+    const rMin = row.querySelector('.r-min');
+    const rMax = row.querySelector('.r-max');
+    const rLo  = row.querySelector('.r-lo');
+    const rHi  = row.querySelector('.r-hi');
+    if (rMin) rMin.value = lo;
+    if (rMax) rMax.value = hi;
+    if (rLo)  rLo.textContent = lo.toFixed(2);
+    if (rHi)  rHi.textContent = hi.toFixed(2);
+  }
+  update();
+}
+
+function highlightParam(paramIds) {
+  document.querySelectorAll('.slider-row.tour-active').forEach(el => el.classList.remove('tour-active'));
+  const ids = Array.isArray(paramIds) ? paramIds : [paramIds];
+  ids.forEach(id => {
+    const row = rowForParam(id);
+    if (row) row.classList.add('tour-active');
+  });
+}
+
+const lerp = (a, b, t) => a + (b - a) * t;
+const tri  = (t) => t < 0.5 ? 2 * t : 2 - 2 * t;
+
+// Each scene runs `dur` seconds, calling `run(t)` with t in [0,1].
+const TOUR_SCENES = [
+  {
+    mode: 'bundle', dur: 1.8, detail: 'A and B combine pointwise',
+    run: () => {},
+  },
+  {
+    mode: 'mix', dur: 3.6, detail: 'sweeping the mixture weight',
+    enter: () => highlightParam('lambda'),
+    run: (t) => setParamValue('lambda', tri(t)),
+  },
+  {
+    mode: 'divide', dur: 4.2, detail: 'partitioning into n disjoint slabs',
+    enter: () => highlightParam('numSlabs'),
+    run: (t) => {
+      if (t < 0.55) {
+        const slabs = Math.min(MAX_SLABS, Math.max(2, Math.floor(2 + (MAX_SLABS - 1) * (t / 0.55))));
+        if (slabs !== state.numSlabs) setParamValue('numSlabs', slabs);
+      } else {
+        highlightParam('divAxis');
+        const sub = (t - 0.55) / 0.45;
+        const axis = Math.min(2, Math.floor(sub * 3));
+        if (axis !== state.divAxis) setParamValue('divAxis', axis);
+      }
+    },
+  },
+  {
+    mode: 'restrict', dur: 3.6, detail: 'clipping to an axis-aligned sub-box',
+    enter: () => highlightParam(['x-range', 'y-range', 'z-range']),
+    run: (t) => {
+      const v = tri(t);
+      const lo = lerp(0.0, 0.32, v);
+      const hi = lerp(1.0, 0.68, v);
+      setRangeValue('x-range', lo, hi);
+      setRangeValue('y-range', lo, hi);
+      setRangeValue('z-range', lo, hi);
+    },
+  },
+  {
+    mode: 'magnitude', dur: 4.0, detail: 'A collapses onto |A| — a single point on the magnitude axis',
+    enter: () => {
+      // Snapshot A and pick a target preset to morph toward.
+      state._tour_savedA = new Float32Array(state.A);
+      const target = newDist();
+      const candidate = currentCommodity.presets.find(p => p.name === 'Bimodal')
+                     || currentCommodity.presets.find(p => p.name === 'Mixed batch')
+                     || currentCommodity.presets.find(p => p.name === 'Blended lot')
+                     || currentCommodity.presets.find(p => p.name === 'Blend')
+                     || currentCommodity.presets.find(p => p.name === 'Mass market')
+                     || currentCommodity.presets[2];
+      fillFromPreset(target, candidate);
+      state._tour_targetA = target;
+    },
+    run: (t) => {
+      // Smooth out-and-back morph: 0 → 1 → 0
+      const v = tri(t);
+      const a = state._tour_savedA, b = state._tour_targetA;
+      for (let n = 0; n < VOX; n++) state.A[n] = a[n] * (1 - v) + b[n] * v;
+      update();
+    },
+    exit: () => {
+      if (state._tour_savedA) state.A.set(state._tour_savedA);
+      delete state._tour_savedA;
+      delete state._tour_targetA;
+      update();
+    },
+  },
+  {
+    mode: 'divergence', dur: 4.0, detail: 'two distributions collapse onto d(A,B) — a single distance',
+    enter: () => {
+      // Morph B from current value toward A (zero divergence) and back.
+      state._tour_savedB = new Float32Array(state.B);
+      state._tour_targetB = new Float32Array(state.A);
+    },
+    run: (t) => {
+      const v = tri(t);
+      const sB = state._tour_savedB, tB = state._tour_targetB;
+      for (let n = 0; n < VOX; n++) state.B[n] = sB[n] * (1 - v) + tB[n] * v;
+      update();
+    },
+    exit: () => {
+      if (state._tour_savedB) state.B.set(state._tour_savedB);
+      delete state._tour_savedB;
+      delete state._tour_targetB;
+      update();
+    },
+  },
+  {
+    mode: 'project', dur: 3.0, detail: 'cycling the dropped axis',
+    enter: () => highlightParam('projAxis'),
+    run: (t) => {
+      const axis = Math.min(2, Math.floor(t * 3));
+      if (axis !== state.projAxis) setParamValue('projAxis', axis);
+    },
+  },
+  {
+    mode: 'quotient', dur: 2.8, detail: 'coarsening the variation grid',
+    enter: () => highlightParam('bin'),
+    run: (t) => {
+      const bin = Math.min(6, Math.max(1, Math.floor(1 + t * 6)));
+      if (bin !== state.quotientBinSize) setParamValue('bin', bin);
+    },
+  },
+  {
+    mode: 'unit', dur: 3.4, detail: 'orbiting the distinguished variant',
+    enter: () => highlightParam(['ux', 'uy', 'uz']),
+    run: (t) => {
+      const theta = t * 2 * Math.PI;
+      const cx = 0.5 + 0.30 * Math.cos(theta);
+      const cy = 0.5 + 0.30 * Math.sin(theta);
+      const cz = 0.5 + 0.20 * Math.sin(theta * 2);
+      setParamValue('ux', cx);
+      setParamValue('uy', cy);
+      setParamValue('uz', cz);
+    },
+  },
+];
+
+function runScene(scene) {
+  return new Promise(resolve => {
+    if (scene.enter) scene.enter();
+    const start = performance.now();
+    const dur = scene.dur * 1000;
+    function step() {
+      if (tourCancelled) {
+        if (scene.exit) scene.exit();
+        resolve();
+        return;
+      }
+      const elapsed = performance.now() - start;
+      const t = Math.min(1, elapsed / dur);
+      scene.run(t);
+      if (t < 1) {
+        tourFrame = requestAnimationFrame(step);
+      } else {
+        if (scene.exit) scene.exit();
+        resolve();
+      }
+    }
+    step();
+  });
+}
+
+async function startTour() {
+  if (tourRunning) return;
+  tourRunning = true;
+  tourCancelled = false;
+  document.body.classList.add('tour-running');
+  for (const scene of TOUR_SCENES) {
+    if (tourCancelled) break;
+    setMode(scene.mode);
+    const m = MODES.find(x => x.id === scene.mode);
+    showToast(m, scene.detail);
+    await runScene(scene); // runScene handles enter/exit internally
+  }
+  if (!tourCancelled) {
+    const m = MODES.find(x => x.id === state.mode);
+    showToast(m, 'tour complete — controls are yours');
+    await new Promise(r => setTimeout(r, 1600));
+  }
+  endTour();
+}
+
+function endTour() {
+  tourRunning = false;
+  if (tourFrame) cancelAnimationFrame(tourFrame);
+  tourFrame = null;
+  document.body.classList.remove('tour-running');
+  document.querySelectorAll('.slider-row.tour-active').forEach(el => el.classList.remove('tour-active'));
+  hideToast();
+}
+
+function cancelTour() {
+  if (tourRunning) tourCancelled = true;
+}
+
+function noteUserTookControl() {
+  userTookControl = true;
+  cancelTour();
+}
+
+function scheduleTour() {
+  // Wait for the staggered sidebar reveal to settle, then start the tour
+  // unless the user has already dived into the controls.
+  setTimeout(() => {
+    if (!userTookControl && !tourRunning) startTour();
+  }, 1700);
+}
+
+// Cancel tour on first sidebar interaction; the canvas (orbit) is exempt.
+['mousedown', 'wheel', 'keydown'].forEach(ev => {
+  document.querySelectorAll('.sidebar').forEach(s => {
+    s.addEventListener(ev, noteUserTookControl, true);
+  });
+});
+document.getElementById('tour-stop').onclick = cancelTour;
+document.getElementById('replay-tour').onclick = async () => {
+  // Cancel any current tour and wait for it to finish cleaning up before
+  // restarting from scene 0.
+  if (tourRunning) {
+    cancelTour();
+    while (tourRunning) await new Promise(r => setTimeout(r, 16));
+  }
+  startTour();
+};
+
+// Kick off
+setCommodity('labor');
+setMode('bundle');
+if (introSkipCB.checked) {
+  // Skip intro entirely on this load (keep the toggle for future sessions).
+  document.body.classList.remove('intro-active');
+  introOverlay.classList.add('dismissed');
+  // Still run the parameter tour the first time after skipping.
+  scheduleTour();
+} else {
+  refreshIntroText();
+}
+tick();
+</script>
+</body>
+</html>
