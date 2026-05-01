@@ -334,6 +334,8 @@
   .replay-btn:hover { color: #e6edf3; border-color: #484f58; background: rgba(33, 38, 45, 0.85); }
   #replay-intro { left: 14px; }
   #replay-tour  { left: 96px; }
+  #replay-loop  { left: 178px; }
+  #replay-loop.active { color: #58a6ff; border-color: #58a6ff; background: rgba(56, 139, 253, 0.12); }
 
   /* ─────────────  Auto-demo tour toast  ───────────── */
   #tour-toast {
@@ -434,7 +436,8 @@
 </div>
 
 <button id="replay-intro" class="replay-btn" title="Replay intro">↻ INTRO</button>
-<button id="replay-tour"  class="replay-btn" title="Restart auto-demo">↻ DEMO</button>
+<button id="replay-tour"  class="replay-btn" title="Restart full auto-demo">↻ DEMO</button>
+<button id="replay-loop"  class="replay-btn" title="Loop the current mode's demo">↻ LOOP</button>
 
 <header>
   <h1>Variational Space of Commodity Types</h1>
@@ -741,6 +744,11 @@ function opDivergence(A, B) {
   for (let n=0; n<VOX; n++) { const d = A[n]-B[n]; s += d*d; }
   return Math.sqrt(s);
 }
+function opSumSq(A) {
+  let s = 0;
+  for (let n=0; n<VOX; n++) s += A[n]*A[n];
+  return s;
+}
 function opMarginal(A, dropAxis) {
   // Returns N×N 2D grid marginalizing over the dropped axis
   const M = new Float32Array(N*N);
@@ -798,9 +806,8 @@ container.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0d1117);
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-// Pulled back from (3.5, 2.8, 3.8) so the scalar axis to the right of the
-// cube stays comfortably in frame.
-const initCamPos = new THREE.Vector3(4.8, 3.5, 5.2);
+// Pulled back so the floating scalar axis above the cube stays in frame.
+const initCamPos = new THREE.Vector3(5.0, 4.2, 5.4);
 camera.position.copy(initCamPos);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -1166,14 +1173,19 @@ const scalarAxisGroup = new THREE.Group();
 cubeGroup.add(scalarAxisGroup);
 scalarAxisGroup.visible = false;
 
-const SAX_X   = BOX + 0.55;
-const SAX_LEN = BOX;
+// Horizontal axis floating above the cube — placed off any of the cube's three
+// axes so the marker doesn't read as "value mapped onto the X / training axis."
+const SAX_Y    = BOX + 0.9;
+const SAX_X_LO = -0.3;
+const SAX_X_HI = BOX + 0.3;
+const SAX_Z    = BOX/2;
+const SAX_LEN  = SAX_X_HI - SAX_X_LO;
 
-// Vertical axis line
+// Horizontal axis line
 {
   const geo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(SAX_X, 0, 0),
-    new THREE.Vector3(SAX_X, SAX_LEN, 0),
+    new THREE.Vector3(SAX_X_LO, SAX_Y, SAX_Z),
+    new THREE.Vector3(SAX_X_HI, SAX_Y, SAX_Z),
   ]);
   const line = new THREE.Line(geo, new THREE.LineBasicMaterial({
     color: 0x6e7681, transparent: true, opacity: 0.75, depthTest: false,
@@ -1182,11 +1194,11 @@ const SAX_LEN = BOX;
   scalarAxisGroup.add(line);
 }
 
-// Top + bottom ticks
-[0, SAX_LEN].forEach(y => {
+// End ticks (small vertical bars) at left and right
+[SAX_X_LO, SAX_X_HI].forEach(x => {
   const geo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(SAX_X - 0.07, y, 0),
-    new THREE.Vector3(SAX_X + 0.07, y, 0),
+    new THREE.Vector3(x, SAX_Y - 0.07, SAX_Z),
+    new THREE.Vector3(x, SAX_Y + 0.07, SAX_Z),
   ]);
   const tick = new THREE.Line(geo, new THREE.LineBasicMaterial({
     color: 0x8b949e, transparent: true, opacity: 0.85, depthTest: false,
@@ -1217,10 +1229,37 @@ const scalarMarker = new THREE.Mesh(
 scalarMarker.renderOrder = 3;
 scalarAxisGroup.add(scalarMarker);
 
-// Dashed leader line from the cube's right face to the marker — this is the
-// "mapping": the cube collapses onto the axis. Pre-allocated geometry, updated
-// per-frame in tick().
-const leaderPositions = new Float32Array([BOX, BOX/2, BOX/2, SAX_X, 0, 0]);
+// Anchor: a static second dot pinned at 0. In divergence mode the static input
+// (A) sits at distance 0 from itself, so showing both dots makes the d(A,B) gap
+// readable as "the distance between these two points." Only used in divergence.
+const scalarAnchorHalo = new THREE.Mesh(
+  new THREE.SphereGeometry(0.18, 24, 16),
+  new THREE.MeshBasicMaterial({
+    color: 0x388bfd, transparent: true, opacity: 0.18,
+    depthTest: false, depthWrite: false,
+  })
+);
+scalarAnchorHalo.position.set(SAX_X_LO, SAX_Y, SAX_Z);
+scalarAnchorHalo.renderOrder = 2;
+scalarAnchorHalo.visible = false;
+scalarAxisGroup.add(scalarAnchorHalo);
+
+const scalarAnchor = new THREE.Mesh(
+  new THREE.SphereGeometry(0.085, 24, 16),
+  new THREE.MeshBasicMaterial({
+    color: 0x388bfd, transparent: true, opacity: 0.95,
+    depthTest: false, depthWrite: false,
+  })
+);
+scalarAnchor.position.set(SAX_X_LO, SAX_Y, SAX_Z);
+scalarAnchor.renderOrder = 3;
+scalarAnchor.visible = false;
+scalarAxisGroup.add(scalarAnchor);
+
+// Dashed leader from the cube's top center up to the marker — this is the
+// "mapping": the cube collapses onto a point on the floating axis above.
+// Pre-allocated geometry, updated per-frame in tick().
+const leaderPositions = new Float32Array([BOX/2, BOX, BOX/2, SAX_X_LO, SAX_Y, SAX_Z]);
 const leaderGeo = new THREE.BufferGeometry();
 leaderGeo.setAttribute('position', new THREE.BufferAttribute(leaderPositions, 3));
 const leaderMat = new THREE.LineDashedMaterial({
@@ -1232,10 +1271,10 @@ scalarLeader.renderOrder = 2;
 scalarLeader.computeLineDistances();
 scalarAxisGroup.add(scalarLeader);
 
-// Label sprites: title above the axis, value next to the marker.
+// Label sprites: title above the axis center, value above the marker, "0" below the left tick.
 const scalarTitle = makeLabel('—', '#79c0ff');
 scalarTitle.scale.set(1.4, 0.32, 1);
-scalarTitle.position.set(SAX_X, SAX_LEN + 0.30, 0);
+scalarTitle.position.set(BOX/2, SAX_Y + 0.32, SAX_Z);
 scalarTitle.renderOrder = 3;
 scalarAxisGroup.add(scalarTitle);
 
@@ -1246,26 +1285,36 @@ scalarAxisGroup.add(scalarValueLbl);
 
 const scalarZeroLbl = makeLabel('0', '#8b949e');
 scalarZeroLbl.scale.set(0.5, 0.22, 1);
-scalarZeroLbl.position.set(SAX_X + 0.30, -0.12, 0);
+scalarZeroLbl.position.set(SAX_X_LO, SAX_Y - 0.22, SAX_Z);
 scalarZeroLbl.renderOrder = 3;
 scalarAxisGroup.add(scalarZeroLbl);
 
-// Smooth marker animation: target Y is set by update(), eased per-frame in tick().
-let scalarTargetY = 0;
-let scalarCurrentY = 0;
+// Smooth marker animation: target X is set by update(), eased per-frame in tick().
+let scalarTargetX = SAX_X_LO;
+let scalarCurrentX = SAX_X_LO;
 let scalarLastValueText = '';
 let scalarLastTitleText = '';
 let scalarColor = 0x58a6ff;
 
-function showScalarAxis(value, maxValue, titleText, valueText, hexColor) {
+function showScalarAxis(value, maxValue, titleText, valueText, hexColor, anchorHex) {
   scalarAxisGroup.visible = true;
   scalarColor = hexColor;
   scalarMarker.material.color.setHex(hexColor);
   scalarHalo.material.color.setHex(hexColor);
   leaderMat.color.setHex(hexColor);
 
+  if (anchorHex != null) {
+    scalarAnchor.visible = true;
+    scalarAnchorHalo.visible = true;
+    scalarAnchor.material.color.setHex(anchorHex);
+    scalarAnchorHalo.material.color.setHex(anchorHex);
+  } else {
+    scalarAnchor.visible = false;
+    scalarAnchorHalo.visible = false;
+  }
+
   const t = Math.min(1, Math.max(0, value / Math.max(maxValue, 1e-6)));
-  scalarTargetY = t * SAX_LEN;
+  scalarTargetX = SAX_X_LO + t * SAX_LEN;
 
   const css = '#' + hexColor.toString(16).padStart(6, '0');
   if (titleText !== scalarLastTitleText || scalarTitle.userData.color !== css) {
@@ -1282,6 +1331,42 @@ function showScalarAxis(value, maxValue, titleText, valueText, hexColor) {
 function hideScalarAxis() {
   scalarAxisGroup.visible = false;
 }
+
+// Unit-inclusion input tag: ι takes a *type* (a 0-dimensional object), not a
+// distribution. We represent that input as a labeled marker outside the cube,
+// with a dashed leader to the delta voxel inside the cube — so the "map from
+// a type to a distinguished variant" reads correctly as a 0D → cube arrow.
+const unitInputGroup = new THREE.Group();
+cubeGroup.add(unitInputGroup);
+const UI_X = -0.85, UI_Y = BOX/2, UI_Z = BOX/2;
+
+const unitInputDot = new THREE.Mesh(
+  new THREE.SphereGeometry(0.06, 16, 12),
+  new THREE.MeshBasicMaterial({ color: 0xd2a8ff, transparent: true, opacity: 0.9, depthTest: false, depthWrite: false })
+);
+unitInputDot.position.set(UI_X, UI_Y, UI_Z);
+unitInputDot.renderOrder = 3;
+unitInputGroup.add(unitInputDot);
+
+const unitInputLbl = makeLabel('A₀', '#d2a8ff');
+unitInputLbl.scale.set(0.9, 0.24, 1);
+unitInputLbl.position.set(UI_X - 0.45, UI_Y + 0.18, UI_Z);
+unitInputLbl.renderOrder = 3;
+unitInputGroup.add(unitInputLbl);
+
+const unitLeaderPos = new Float32Array([UI_X, UI_Y, UI_Z, BOX/2, BOX/2, BOX/2]);
+const unitLeaderGeo = new THREE.BufferGeometry();
+unitLeaderGeo.setAttribute('position', new THREE.BufferAttribute(unitLeaderPos, 3));
+const unitLeaderMat = new THREE.LineDashedMaterial({
+  color: 0xd2a8ff, transparent: true, opacity: 0.55,
+  dashSize: 0.10, gapSize: 0.07, depthTest: false,
+});
+const unitLeader = new THREE.Line(unitLeaderGeo, unitLeaderMat);
+unitLeader.renderOrder = 2;
+unitLeader.computeLineDistances();
+unitInputGroup.add(unitLeader);
+
+unitInputGroup.visible = false;
 
 // Restriction box outline
 const restrictBoxGroup = new THREE.Group();
@@ -1313,14 +1398,29 @@ function updateRestrictBox(xmin, xmax, ymin, ymax, zmin, zmax) {
 // ──────────────────────────────────────────────────────────────────────────
 const ZERO_DIST = newDist();
 
-function uploadVolumes(roles, alphas) {
+function uploadVolumes(roles, alphas, options) {
   // roles: length-6 array of either Float32Array or null
   // alphas: length-6 array of floats (0/1 for visibility, but free-form)
+  // options.scaleMask: length-6 0/1 mask — only these roles set the brightness scale.
+  //   Use this for modes where the *relative* mass between input and output matters
+  //   (e.g. bundling: scale on inputs only, so the sum saturates above the inputs).
+  // options.headroom: multiplier on the computed peak. Bundle uses 2.0 so two inputs
+  //   that overlap fully take the cube to 1.0 — visibly brighter than either alone.
+  options = options || {};
   let maxV = 0;
-  for (let r = 0; r < 6; r++) {
-    const d = roles[r];
-    if (!d || alphas[r] <= 0) continue;
-    for (let n = 0; n < VOX; n++) if (d[n] > maxV) maxV = d[n];
+  if (options.scaleMask) {
+    for (let r = 0; r < 6; r++) {
+      if (!options.scaleMask[r] || !roles[r]) continue;
+      const d = roles[r];
+      for (let n = 0; n < VOX; n++) if (d[n] > maxV) maxV = d[n];
+    }
+    maxV *= (options.headroom || 1.0);
+  } else {
+    for (let r = 0; r < 6; r++) {
+      const d = roles[r];
+      if (!d || alphas[r] <= 0) continue;
+      for (let n = 0; n < VOX; n++) if (d[n] > maxV) maxV = d[n];
+    }
   }
   if (maxV < 1e-6) maxV = 1;
   const inv = 255 / maxV;
@@ -1352,21 +1452,37 @@ const marginalCanvas = document.getElementById('marginal-canvas');
 const marginalLabel  = document.getElementById('marginal-label');
 const mctx = marginalCanvas.getContext('2d');
 
+// Axis colors used both for cube sprite labels and for marginal axis annotations.
+const AXIS_COLORS = ['#f85149', '#a5d6ff', '#ffa657'];
+
 function drawMarginal(M, axisDropped) {
   const W = marginalCanvas.width, H = marginalCanvas.height;
-  const cw = W/N, ch = H/N;
-  // Find max
+  const PAD_L = 18, PAD_B = 16, PAD_T = 4, PAD_R = 4;
+  const plotW = W - PAD_L - PAD_R, plotH = H - PAD_T - PAD_B;
+  const cw = plotW/N, ch = plotH/N;
   let mx = 0; for (let i=0; i<M.length; i++) if (M[i] > mx) mx = M[i];
   mctx.fillStyle = '#0d1117';
   mctx.fillRect(0, 0, W, H);
   for (let b=0; b<N; b++)
     for (let a=0; a<N; a++) {
       const v = mx > 0 ? M[a + b*N] / mx : 0;
-      const alpha = v;
-      mctx.fillStyle = `rgba(46,160,67,${alpha})`;
-      mctx.fillRect(a*cw, (N-1-b)*ch, cw+0.5, ch+0.5);
+      mctx.fillStyle = `rgba(46,160,67,${v})`;
+      mctx.fillRect(PAD_L + a*cw, PAD_T + (N-1-b)*ch, cw+0.5, ch+0.5);
     }
-  let keptAxes = [0,1,2].filter(x => x !== axisDropped);
+  // Axis labels on the canvas: horizontal = kept[0], vertical = kept[1].
+  const keptAxes = [0,1,2].filter(x => x !== axisDropped);
+  mctx.font = 'bold 10px "SF Mono", Consolas, monospace';
+  mctx.textBaseline = 'middle';
+  mctx.fillStyle = AXIS_COLORS[keptAxes[0]];
+  mctx.textAlign = 'center';
+  mctx.fillText(axisName(keptAxes[0]), PAD_L + plotW/2, H - 6);
+  mctx.fillStyle = AXIS_COLORS[keptAxes[1]];
+  mctx.save();
+  mctx.translate(8, PAD_T + plotH/2);
+  mctx.rotate(-Math.PI/2);
+  mctx.textAlign = 'center';
+  mctx.fillText(axisName(keptAxes[1]), 0, 0);
+  mctx.restore();
   marginalLabel.textContent = `π drops ${axisName(axisDropped)} → (${axisName(keptAxes[0])}, ${axisName(keptAxes[1])})`;
 }
 
@@ -1377,6 +1493,8 @@ const state = {
   A: newDist(),
   B: newDist(),
   out: newDist(),
+  diff: newDist(),            // |A − B| residual cloud for divergence mode
+  shadow: newDist(),          // marginalization shadow on the dropped-axis face
   mode: 'bundle',
   // parameters
   lambda: 0.5,                // mixture weight
@@ -1722,8 +1840,68 @@ function update() {
       roles[2]  = state.out;
       alphas[2] = state.showOut ? 1 : 0;
     }
+    // Divergence: render |A-B| as a third cloud (red) so the L² scalar has a
+    // visible spatial origin — you see *where* A and B disagree, not just by how much.
+    if (m.id === 'divergence') {
+      for (let n = 0; n < VOX; n++) state.diff[n] = Math.abs(state.A[n] - state.B[n]);
+      roles[5]  = state.diff;
+      alphas[5] = 1;
+    }
+    // Marginalization: cast the marginal as a shadow on the face perpendicular to
+    // the dropped axis. Sum-along-axis ↔ shine light from that direction. The
+    // shadow lands on the low-end face (k=0 / j=0 / i=0 voxel slice).
+    if (m.id === 'project') {
+      const Marg = opMarginal(state.A, state.projAxis);
+      drawMarginal(Marg, state.projAxis);
+      state.shadow.fill(0);
+      let mMax = 0; for (let i = 0; i < Marg.length; i++) if (Marg[i] > mMax) mMax = Marg[i];
+      let aMax = 0; for (let n = 0; n < VOX; n++) if (state.A[n] > aMax) aMax = state.A[n];
+      // Rescale so the shadow's peak voxel matches A's peak — otherwise the marginal
+      // (a sum over N voxels) totally outshines A under per-frame normalization
+      // and the "3D blob → 2D projection" pairing is lost.
+      const sk = (mMax > 1e-6 && aMax > 1e-6) ? (aMax / mMax) : 1;
+      // 2 voxels thick — single-voxel slab raymarches too dimly because the ray
+      // integrates density only over 1 step, while A's blob integrates over many.
+      const ax = state.projAxis, T = 2;
+      if (ax === 2) {
+        for (let j = 0; j < N; j++)
+          for (let i = 0; i < N; i++) {
+            const v = Marg[i + j*N] * sk;
+            for (let t = 0; t < T; t++) state.shadow[idx(i, j, t)] = v;
+          }
+      } else if (ax === 1) {
+        for (let kk = 0; kk < N; kk++)
+          for (let i = 0; i < N; i++) {
+            const v = Marg[i + kk*N] * sk;
+            for (let t = 0; t < T; t++) state.shadow[idx(i, t, kk)] = v;
+          }
+      } else {
+        for (let kk = 0; kk < N; kk++)
+          for (let j = 0; j < N; j++) {
+            const v = Marg[j + kk*N] * sk;
+            for (let t = 0; t < T; t++) state.shadow[idx(t, j, kk)] = v;
+          }
+      }
+      roles[4]  = state.shadow;
+      alphas[4] = 1.0;
+      volumeMat.uniforms.uColor4.value.copy(COLOR_OUT);
+    } else {
+      volumeMat.uniforms.uColor4.value.copy(SLAB_COLORS[4]);
+    }
   }
-  uploadVolumes(roles, alphas);
+
+  // Pick a normalization policy. For modes whose claim is about mass relations
+  // between input and output (bundling sums, mixture averages, divergence subtracts),
+  // freeze the brightness scale on the inputs so the output's brightness reads as
+  // a true mass comparison. Otherwise stay with per-frame max — the cube tracks
+  // *shape* and a separate HUD carries scalar readouts.
+  let scaleOpts = null;
+  if (m.id === 'bundle') {
+    scaleOpts = { scaleMask: [1, 1, 0, 0, 0, 0], headroom: 2.0 };
+  } else if (m.id === 'mix' || m.id === 'divergence') {
+    scaleOpts = { scaleMask: [1, 1, 0, 0, 0, 0], headroom: 1.0 };
+  }
+  uploadVolumes(roles, alphas, scaleOpts);
 
   // Visual indicators for division / restriction
   if (m.id === 'divide') {
@@ -1743,9 +1921,26 @@ function update() {
     updateRestrictBox(state.restrict.xmin, state.restrict.xmax, state.restrict.ymin, state.restrict.ymax, state.restrict.zmin, state.restrict.zmax);
   }
 
-  // Marginal 2D canvas for projection mode
+  // Unit-inclusion input tag tracks the slider-controlled delta voxel.
+  if (m.id === 'unit') {
+    unitInputGroup.visible = true;
+    unitLeaderPos[3] = state.unitCenter.x * BOX;
+    unitLeaderPos[4] = state.unitCenter.y * BOX;
+    unitLeaderPos[5] = state.unitCenter.z * BOX;
+    unitLeaderGeo.attributes.position.needsUpdate = true;
+    unitLeader.computeLineDistances();
+  } else {
+    unitInputGroup.visible = false;
+  }
+
+  // Dim the dropped-axis sprite in project mode so it's clear which axis is
+  // being summed over. (Side-panel marginal + shadow slab are populated in the
+  // role-setup block above.)
+  const axisLabels = [labX, labY, labZ];
   if (m.id === 'project') {
-    drawMarginal(opMarginal(state.A, state.projAxis), state.projAxis);
+    axisLabels.forEach((s, i) => { s.material.opacity = (i === state.projAxis) ? 0.22 : 1.0; });
+  } else {
+    axisLabels.forEach(s => { s.material.opacity = 1.0; });
   }
 
   // Readouts
@@ -1761,17 +1956,41 @@ function update() {
   document.getElementById('bar-magA').style.width   = `${100*magA/barMax}%`;
   document.getElementById('bar-magB').style.width   = `${100*magB/barMax}%`;
   document.getElementById('bar-magOut').style.width = `${100*magOut/barMax}%`;
-  const divMax = Math.sqrt(Math.max(1, magA*magA + magB*magB));
+  // Tight L² ceiling: d(A,B) ≤ √(‖A‖₂² + ‖B‖₂²), with equality when A and B
+  // have disjoint support. Using magA/magB squared (the loose ‖·‖₁ ceiling)
+  // makes the marker barely move because real divergences are tiny relative to it.
+  const divMax = Math.sqrt(Math.max(1, opSumSq(state.A) + opSumSq(state.B)));
   document.getElementById('bar-div').style.width    = `${Math.min(100, 100*div/divMax)}%`;
 
   // Scalar-axis HUD: visible only for maps whose codomain is ℝ.
   if (m.id === 'magnitude') {
-    showScalarAxis(magA, barMax, '|A|', magA.toFixed(1), 0x58a6ff);
+    // Use a stable per-commodity scale so the marker swings on absolute mass —
+    // a barMax that depends on magB drags along with B and squashes the swing.
+    showScalarAxis(magA, getMagScale(), '|A|', magA.toFixed(1), 0x388bfd);
   } else if (m.id === 'divergence') {
-    showScalarAxis(div, divMax, 'd(A, B)', div.toFixed(2), 0xf85149);
+    // Two dots: anchor (A's color) at 0 = d(A,A), marker (B's color) at d(A,B).
+    // The gap between them reads as the L² distance the marker is showing.
+    showScalarAxis(div, divMax, 'd(A, B)', div.toFixed(2), 0xffa060, 0x388bfd);
   } else {
     hideScalarAxis();
   }
+}
+
+// Per-commodity peak magnitude across non-degenerate presets, cached on the
+// commodity descriptor. Excludes 'Uniform' (much higher mass than the gaussians)
+// and 'Empty' so the gaussian presets fill out most of the scalar axis.
+function getMagScale() {
+  if (currentCommodity._magScale !== undefined) return currentCommodity._magScale;
+  let mx = 1;
+  const tmp = newDist();
+  for (const p of currentCommodity.presets) {
+    if (p.name === 'Uniform' || p.name === 'Empty') continue;
+    fillFromPreset(tmp, p);
+    const m = opMag(tmp);
+    if (m > mx) mx = m;
+  }
+  currentCommodity._magScale = mx * 1.10;
+  return currentCommodity._magScale;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -1792,16 +2011,17 @@ function tick() {
   const t = clock.getElapsedTime();
   volumeMat.uniforms.uTime.value = t;
 
-  // Ease the scalar-axis marker toward its target Y.
+  // Ease the scalar-axis marker toward its target X (axis is horizontal).
   if (scalarAxisGroup.visible) {
-    scalarCurrentY += (scalarTargetY - scalarCurrentY) * 0.18;
-    scalarMarker.position.set(SAX_X, scalarCurrentY, 0);
-    scalarHalo.position.set(SAX_X, scalarCurrentY, 0);
-    scalarValueLbl.position.set(SAX_X + 0.55, scalarCurrentY + 0.08, 0);
-    leaderPositions[4] = scalarCurrentY;
+    scalarCurrentX += (scalarTargetX - scalarCurrentX) * 0.18;
+    scalarMarker.position.set(scalarCurrentX, SAX_Y, SAX_Z);
+    scalarHalo.position.set(scalarCurrentX, SAX_Y, SAX_Z);
+    scalarValueLbl.position.set(scalarCurrentX, SAX_Y - 0.28, SAX_Z);
+    leaderPositions[3] = scalarCurrentX;
+    leaderPositions[4] = SAX_Y;
+    leaderPositions[5] = SAX_Z;
     leaderGeo.attributes.position.needsUpdate = true;
     scalarLeader.computeLineDistances();
-    // Subtle halo pulse so the marker reads as "alive" even when value is steady.
     const pulse = 1.0 + 0.20 * Math.sin(t * 2.4);
     scalarHalo.scale.setScalar(pulse);
   }
@@ -1888,6 +2108,7 @@ window.addEventListener('keydown', (e) => {
 // ──────────────────────────────────────────────────────────────────────────
 let tourRunning   = false;
 let tourCancelled = false;
+let tourIsLoop    = false;
 let tourFrame     = null;
 let userTookControl = false;
 
@@ -1972,15 +2193,22 @@ const TOUR_SCENES = [
     run: (t) => setParamValue('lambda', tri(t)),
   },
   {
-    mode: 'divide', dur: 4.2, detail: 'partitioning into n disjoint slabs',
+    mode: 'divide', dur: 5.0, detail: 'partitioning into n disjoint slabs — and recomposing',
     enter: () => highlightParam('numSlabs'),
     run: (t) => {
-      if (t < 0.55) {
-        const slabs = Math.min(MAX_SLABS, Math.max(2, Math.floor(2 + (MAX_SLABS - 1) * (t / 0.55))));
+      if (t < 0.35) {
+        // Partition: 2 → MAX_SLABS (cuts get finer)
+        const u = t / 0.35;
+        const slabs = Math.min(MAX_SLABS, Math.max(2, Math.floor(2 + (MAX_SLABS - 1) * u)));
+        if (slabs !== state.numSlabs) setParamValue('numSlabs', slabs);
+      } else if (t < 0.65) {
+        // Recompose: MAX_SLABS → 2 (slabs merge back, A reassembles)
+        const u = (t - 0.35) / 0.30;
+        const slabs = Math.min(MAX_SLABS, Math.max(2, Math.ceil(MAX_SLABS - (MAX_SLABS - 2) * u)));
         if (slabs !== state.numSlabs) setParamValue('numSlabs', slabs);
       } else {
         highlightParam('divAxis');
-        const sub = (t - 0.55) / 0.45;
+        const sub = (t - 0.65) / 0.35;
         const axis = Math.min(2, Math.floor(sub * 3));
         if (axis !== state.divAxis) setParamValue('divAxis', axis);
       }
@@ -1999,51 +2227,43 @@ const TOUR_SCENES = [
     },
   },
   {
-    mode: 'magnitude', dur: 4.0, detail: 'A collapses onto |A| — a single point on the magnitude axis',
-    enter: () => {
-      // Snapshot A and pick a target preset to morph toward.
-      state._tour_savedA = new Float32Array(state.A);
-      const target = newDist();
-      const candidate = currentCommodity.presets.find(p => p.name === 'Bimodal')
-                     || currentCommodity.presets.find(p => p.name === 'Mixed batch')
-                     || currentCommodity.presets.find(p => p.name === 'Blended lot')
-                     || currentCommodity.presets.find(p => p.name === 'Blend')
-                     || currentCommodity.presets.find(p => p.name === 'Mass market')
-                     || currentCommodity.presets[2];
-      fillFromPreset(target, candidate);
-      state._tour_targetA = target;
-    },
+    mode: 'magnitude', dur: 4.5, detail: 'sweeping |A| across the full magnitude axis',
+    enter: () => { state._tour_savedA = new Float32Array(state.A); },
     run: (t) => {
-      // Smooth out-and-back morph: 0 → 1 → 0
-      const v = tri(t);
-      const a = state._tour_savedA, b = state._tour_targetA;
-      for (let n = 0; n < VOX; n++) state.A[n] = a[n] * (1 - v) + b[n] * v;
+      // Scale A by a factor that sweeps 0 → ~peak → 0, so the marker
+      // crosses the whole axis instead of wiggling near the starting position.
+      const v = tri(t);                  // 0 → 1 → 0
+      const factor = v * 1.05;           // 0 → 1.05 → 0 (just nudges past full)
+      const sA = state._tour_savedA;
+      for (let n = 0; n < VOX; n++) state.A[n] = sA[n] * factor;
       update();
     },
     exit: () => {
       if (state._tour_savedA) state.A.set(state._tour_savedA);
       delete state._tour_savedA;
-      delete state._tour_targetA;
       update();
     },
   },
   {
-    mode: 'divergence', dur: 4.0, detail: 'two distributions collapse onto d(A,B) — a single distance',
-    enter: () => {
-      // Morph B from current value toward A (zero divergence) and back.
-      state._tour_savedB = new Float32Array(state.B);
-      state._tour_targetB = new Float32Array(state.A);
-    },
+    mode: 'divergence', dur: 5.4, detail: 'sweeping d(A, B) across the full distance axis',
+    enter: () => { state._tour_savedB = new Float32Array(state.B); },
     run: (t) => {
-      const v = tri(t);
-      const sB = state._tour_savedB, tB = state._tour_targetB;
-      for (let n = 0; n < VOX; n++) state.B[n] = sB[n] * (1 - v) + tB[n] * v;
+      // First half: B morphs toward A then back (divergence drops to 0 and recovers).
+      // Second half: B fades to Empty then back (divergence climbs to its tight max).
+      // Combined: marker visits both ends of the axis in one cycle.
+      const sB = state._tour_savedB;
+      if (t < 0.5) {
+        const v = tri(t / 0.5);                            // 0 → 1 → 0
+        for (let n = 0; n < VOX; n++) state.B[n] = sB[n]*(1-v) + state.A[n]*v;
+      } else {
+        const v = tri((t - 0.5) / 0.5);                    // 0 → 1 → 0
+        for (let n = 0; n < VOX; n++) state.B[n] = sB[n]*(1-v); // sB → 0 → sB
+      }
       update();
     },
     exit: () => {
       if (state._tour_savedB) state.B.set(state._tour_savedB);
       delete state._tour_savedB;
-      delete state._tour_targetB;
       update();
     },
   },
@@ -2103,19 +2323,27 @@ function runScene(scene) {
   });
 }
 
-async function startTour() {
+async function playScenes(scenes, opts) {
+  // opts.loop  : restart the sequence forever until cancelled
+  // opts.toast : optional prefix appended before scene.detail
   if (tourRunning) return;
   tourRunning = true;
   tourCancelled = false;
+  tourIsLoop = !!opts && !!opts.loop;
   document.body.classList.add('tour-running');
-  for (const scene of TOUR_SCENES) {
-    if (tourCancelled) break;
-    setMode(scene.mode);
-    const m = MODES.find(x => x.id === scene.mode);
-    showToast(m, scene.detail);
-    await runScene(scene); // runScene handles enter/exit internally
-  }
-  if (!tourCancelled) {
+  if (tourIsLoop) document.getElementById('replay-loop').classList.add('active');
+  const loopForever = tourIsLoop;
+  do {
+    for (const scene of scenes) {
+      if (tourCancelled) break;
+      setMode(scene.mode);
+      const m = MODES.find(x => x.id === scene.mode);
+      const prefix = (opts && opts.toast) ? `${opts.toast} — ` : '';
+      showToast(m, prefix + scene.detail);
+      await runScene(scene); // runScene handles enter/exit internally
+    }
+  } while (loopForever && !tourCancelled);
+  if (!tourCancelled && !loopForever) {
     const m = MODES.find(x => x.id === state.mode);
     showToast(m, 'tour complete — controls are yours');
     await new Promise(r => setTimeout(r, 1600));
@@ -2123,11 +2351,23 @@ async function startTour() {
   endTour();
 }
 
+async function startTour() {
+  return playScenes(TOUR_SCENES, {});
+}
+
+async function startModeLoop(modeId) {
+  const scene = TOUR_SCENES.find(s => s.mode === modeId);
+  if (!scene) return;
+  return playScenes([scene], { loop: true, toast: 'looping' });
+}
+
 function endTour() {
   tourRunning = false;
+  tourIsLoop = false;
   if (tourFrame) cancelAnimationFrame(tourFrame);
   tourFrame = null;
   document.body.classList.remove('tour-running');
+  document.getElementById('replay-loop').classList.remove('active');
   document.querySelectorAll('.slider-row.tour-active').forEach(el => el.classList.remove('tour-active'));
   hideToast();
 }
@@ -2164,6 +2404,18 @@ document.getElementById('replay-tour').onclick = async () => {
     while (tourRunning) await new Promise(r => setTimeout(r, 16));
   }
   startTour();
+};
+document.getElementById('replay-loop').onclick = async () => {
+  // Toggle: if a loop is already running, stop. Otherwise start one for the
+  // currently selected mode. (Whatever else is playing — the full tour, say —
+  // we cancel and replace with a loop in the current mode.)
+  if (tourRunning) {
+    const wasLoop = tourIsLoop;
+    cancelTour();
+    while (tourRunning) await new Promise(r => setTimeout(r, 16));
+    if (wasLoop) return;
+  }
+  startModeLoop(state.mode);
 };
 
 // Kick off
