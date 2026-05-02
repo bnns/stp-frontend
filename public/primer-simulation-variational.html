@@ -1368,6 +1368,130 @@ unitInputGroup.add(unitLeader);
 
 unitInputGroup.visible = false;
 
+// ──────────────────────────────────────────────────────────────────────────
+// Input thumbnails (bundle / mix only): two small cubes off to the left of
+// the main cube, each rendering one input in isolation. Dashed leaders point
+// from each thumbnail into the main cube's left face — so the user can see
+// where the composite cloud comes from. Each thumbnail uses its own pair of
+// 3D textures and a clone of the main shader, with uAlpha masked to a single
+// channel and that channel colored as A (blue) or B (orange).
+// ──────────────────────────────────────────────────────────────────────────
+const THUMB_SIZE = 1.0;                       // half the main cube's edge
+const THUMB_X    = -1.55;                     // center X (negative = left of main)
+const THUMB_DY   = 0.95;                      // vertical offset from main center
+const THUMB_Z    = BOX / 2;
+const MAIN_LEFT  = new THREE.Vector3(0, BOX/2, BOX/2);  // anchor for leaders
+
+const thumbnailsGroup = new THREE.Group();
+cubeGroup.add(thumbnailsGroup);
+thumbnailsGroup.visible = false;
+
+// Single zero-filled "dummy" 3D texture shared by both thumbnails for the
+// unused second sampler slot — saves an alloc and we never read from it.
+const dummyTex = makeVolTex(new Uint8Array(VOX * 4));
+
+function makeThumbnail(labelText, hexColor, centerY) {
+  const group = new THREE.Group();
+  thumbnailsGroup.add(group);
+
+  const cx = THUMB_X, cy = centerY, cz = THUMB_Z;
+  const half = THUMB_SIZE / 2;
+  const boxMin = new THREE.Vector3(cx - half, cy - half, cz - half);
+  const boxMax = new THREE.Vector3(cx + half, cy + half, cz + half);
+
+  // Volume texture — only channel 0 (R of tex0) is used.
+  const bytes = new Uint8Array(VOX * 4);
+  const tex   = makeVolTex(bytes);
+
+  const mat = new THREE.ShaderMaterial({
+    glslVersion: THREE.GLSL3,
+    side: THREE.BackSide,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    vertexShader:   volumeMat.vertexShader,
+    fragmentShader: volumeMat.fragmentShader,
+    uniforms: {
+      uTex0:       { value: tex },
+      uTex1:       { value: dummyTex },
+      uColor0:     { value: new THREE.Color(hexColor) },
+      uColor1:     { value: new THREE.Color(0x000000) },
+      uColor2:     { value: new THREE.Color(0x000000) },
+      uColor3:     { value: new THREE.Color(0x000000) },
+      uColor4:     { value: new THREE.Color(0x000000) },
+      uColor5:     { value: new THREE.Color(0x000000) },
+      uAlpha:      { value: [1, 0, 0, 0, 0, 0] },
+      // Share lighting / time / density / resolution so thumbnails track the main cube.
+      uLightDir:   volumeMat.uniforms.uLightDir,
+      uLightColor: volumeMat.uniforms.uLightColor,
+      uAmbientLo:  volumeMat.uniforms.uAmbientLo,
+      uAmbientHi:  volumeMat.uniforms.uAmbientHi,
+      uBoxMin:     { value: boxMin },
+      uBoxMax:     { value: boxMax },
+      uTime:       volumeMat.uniforms.uTime,
+      uDensity:    volumeMat.uniforms.uDensity,
+      uTurb:       volumeMat.uniforms.uTurb,
+      uResolution: volumeMat.uniforms.uResolution,
+    },
+  });
+
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(THUMB_SIZE, THUMB_SIZE, THUMB_SIZE), mat);
+  mesh.position.set(cx, cy, cz);
+  mesh.renderOrder = 0;
+  group.add(mesh);
+
+  // Edge frame
+  const edges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(THUMB_SIZE, THUMB_SIZE, THUMB_SIZE)),
+    new THREE.LineBasicMaterial({ color: 0x484f58, transparent: true, opacity: 0.85, depthTest: false })
+  );
+  edges.position.set(cx, cy, cz);
+  edges.renderOrder = 2;
+  group.add(edges);
+
+  // Label sprite to the left of the cube
+  const lbl = makeLabel(labelText, '#' + hexColor.toString(16).padStart(6, '0'));
+  lbl.scale.set(0.55, 0.26, 1);
+  lbl.position.set(cx - half - 0.30, cy, cz);
+  lbl.renderOrder = 3;
+  group.add(lbl);
+
+  // Dashed leader from the thumbnail's right-face center → main cube's left-face center.
+  const leaderStart = new THREE.Vector3(cx + half, cy, cz);
+  const leaderPos = new Float32Array([
+    leaderStart.x, leaderStart.y, leaderStart.z,
+    MAIN_LEFT.x,   MAIN_LEFT.y,   MAIN_LEFT.z,
+  ]);
+  const leaderGeo = new THREE.BufferGeometry();
+  leaderGeo.setAttribute('position', new THREE.BufferAttribute(leaderPos, 3));
+  const leaderMat = new THREE.LineDashedMaterial({
+    color: hexColor, transparent: true, opacity: 0.55,
+    dashSize: 0.10, gapSize: 0.07, depthTest: false,
+  });
+  const leader = new THREE.Line(leaderGeo, leaderMat);
+  leader.computeLineDistances();
+  leader.renderOrder = 2;
+  group.add(leader);
+
+  return { group, bytes, tex };
+}
+
+const thumbA = makeThumbnail('A', 0x388bfd, BOX/2 + THUMB_DY);
+const thumbB = makeThumbnail('B', 0xffa060, BOX/2 - THUMB_DY);
+
+// Upload one distribution into a thumbnail's channel-0, sharing the main
+// cube's normalization so brightness comparisons read true.
+function uploadThumbnail(thumb, dist, inv) {
+  const b = thumb.bytes;
+  for (let n = 0; n < VOX; n++) {
+    b[4*n  ] = Math.min(255, dist[n] * inv) | 0;
+    b[4*n+1] = 0;
+    b[4*n+2] = 0;
+    b[4*n+3] = 0;
+  }
+  thumb.tex.needsUpdate = true;
+}
+
 // Restriction box outline
 const restrictBoxGroup = new THREE.Group();
 cubeGroup.add(restrictBoxGroup);
@@ -1390,6 +1514,123 @@ function updateRestrictBox(xmin, xmax, ymin, ymax, zmin, zmax) {
   );
   restrictBoxLines.renderOrder = 2;
   restrictBoxGroup.add(restrictBoxLines);
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Quotient bucket visualization: an explicit (N/b)³ grid of cells inside the
+// main cube. Each non-empty bucket renders as a translucent colored box whose
+// brightness tracks the bucket's average mass; thin lines mark the partition
+// boundaries. Replaces the green Out cloud in quotient mode so the bucketing
+// reads as discrete chunks rather than a slightly-blockier cloud.
+// ──────────────────────────────────────────────────────────────────────────
+const quotientGroup = new THREE.Group();
+cubeGroup.add(quotientGroup);
+quotientGroup.visible = false;
+
+const MAX_BUCKETS = N * N * N;
+const bucketGeom = new THREE.BoxGeometry(1, 1, 1);
+const bucketMat  = new THREE.MeshBasicMaterial({
+  color: 0xffffff,           // multiplied by per-instance color (set via setColorAt)
+  transparent: true,
+  opacity: 0.55,
+  depthWrite: false,
+});
+const bucketMesh = new THREE.InstancedMesh(bucketGeom, bucketMat, MAX_BUCKETS);
+// Pre-allocate the per-instance color buffer so setColorAt has somewhere to write.
+bucketMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_BUCKETS * 3), 3);
+bucketMesh.count = 0;
+bucketMesh.renderOrder = 1;
+quotientGroup.add(bucketMesh);
+
+let bucketGridLines = null;
+let bucketGridBin   = -1;
+function rebuildBucketGrid(binSize) {
+  if (bucketGridBin === binSize) return;
+  if (bucketGridLines) {
+    quotientGroup.remove(bucketGridLines);
+    bucketGridLines.geometry.dispose();
+    bucketGridLines.material.dispose();
+    bucketGridLines = null;
+  }
+  bucketGridBin = binSize;
+  const M = Math.floor(N / binSize);
+  // Skip the grid for the identity quotient (binSize=1 → grid would be at voxel
+  // resolution, overwhelmingly dense and adding no information).
+  if (M < 2 || binSize === 1) return;
+  const step = (binSize / N) * BOX;
+  const positions = [];
+  for (let j = 0; j <= M; j++)
+    for (let k = 0; k <= M; k++)
+      positions.push(0, j*step, k*step,  BOX, j*step, k*step);
+  for (let i = 0; i <= M; i++)
+    for (let k = 0; k <= M; k++)
+      positions.push(i*step, 0, k*step,  i*step, BOX, k*step);
+  for (let i = 0; i <= M; i++)
+    for (let j = 0; j <= M; j++)
+      positions.push(i*step, j*step, 0,  i*step, j*step, BOX);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+  bucketGridLines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
+    color: 0x6e7681, transparent: true, opacity: 0.35, depthTest: false,
+  }));
+  bucketGridLines.renderOrder = 2;
+  quotientGroup.add(bucketGridLines);
+}
+
+const _bucketMat4  = new THREE.Matrix4();
+const _bucketColor = new THREE.Color();
+const BUCKET_THRESHOLD = 0.04;   // hide near-empty buckets so the grid breathes
+const BUCKET_INSET     = 0.88;   // shrink each cube so partition lines stay visible
+
+function updateQuotientBuckets(binSize) {
+  rebuildBucketGrid(binSize);
+  const M = Math.floor(N / binSize);
+  if (M < 1) { bucketMesh.count = 0; return; }
+  const step     = (binSize / N) * BOX;
+  const cubeSize = step * BUCKET_INSET;
+  const denom    = binSize * binSize * binSize;
+
+  // Compute bucket averages from state.A (state.out is the expanded version,
+  // but recomputing from A keeps this independent of the compute() pipeline
+  // and lets us find max for normalization in one pass).
+  const avgs = new Float32Array(M * M * M);
+  let maxAvg = 0;
+  for (let kk = 0; kk < M; kk++)
+    for (let jj = 0; jj < M; jj++)
+      for (let ii = 0; ii < M; ii++) {
+        let sum = 0;
+        for (let dk = 0; dk < binSize; dk++)
+          for (let dj = 0; dj < binSize; dj++)
+            for (let di = 0; di < binSize; di++)
+              sum += state.A[idx(ii*binSize+di, jj*binSize+dj, kk*binSize+dk)];
+        const avg = sum / denom;
+        avgs[ii + jj*M + kk*M*M] = avg;
+        if (avg > maxAvg) maxAvg = avg;
+      }
+  const inv = maxAvg > 1e-6 ? 1 / maxAvg : 1;
+
+  let count = 0;
+  for (let kk = 0; kk < M; kk++)
+    for (let jj = 0; jj < M; jj++)
+      for (let ii = 0; ii < M; ii++) {
+        const v = avgs[ii + jj*M + kk*M*M] * inv;
+        if (v < BUCKET_THRESHOLD) continue;
+        const cx = (ii + 0.5) * step;
+        const cy = (jj + 0.5) * step;
+        const cz = (kk + 0.5) * step;
+        _bucketMat4.makeScale(cubeSize, cubeSize, cubeSize);
+        _bucketMat4.setPosition(cx, cy, cz);
+        bucketMesh.setMatrixAt(count, _bucketMat4);
+        // Per-instance color: COLOR_OUT scaled by bucket intensity, so dim
+        // buckets read dim. Material opacity (0.55) supplies the constant
+        // translucency.
+        _bucketColor.setRGB(COLOR_OUT.r * v, COLOR_OUT.g * v, COLOR_OUT.b * v);
+        bucketMesh.setColorAt(count, _bucketColor);
+        count++;
+      }
+  bucketMesh.count = count;
+  bucketMesh.instanceMatrix.needsUpdate = true;
+  bucketMesh.instanceColor.needsUpdate = true;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -1443,6 +1684,7 @@ function uploadVolumes(roles, alphas, options) {
   volTex0.needsUpdate = true;
   volTex1.needsUpdate = true;
   volumeMat.uniforms.uAlpha.value = alphas;
+  return inv;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -1607,7 +1849,8 @@ const MODES = [
     desc: 'Coarsen the variation space by grouping voxels into blocks. Mass is summed within each block and spread uniformly.',
     marxian: 'Pushforward along a coarsening of X_A — treating nearby variants as equivalent. The coarsest non-trivial quotient collapses the entire space to a single point, recovering the bare type A₀ (§3.5.2).',
     useB: false,
-    aGhost: true, // A faded so the coarsened Out reads cleanly as the result.
+    useOut: false,            // Replaced by explicit bucket geometry — see updateQuotientBuckets.
+    aGhost: true,             // A faded behind the bucket cells so the partition reads as "the result."
     params: [
       { id: 'bin', label: 'bin size', min: 1, max: 6, step: 1, get: s=>s.quotientBinSize, set: (s,v)=>s.quotientBinSize=v },
     ],
@@ -1740,6 +1983,7 @@ function setMode(id) {
   // Clean up mode-specific visuals
   divPlanes.forEach(p => p.visible = false);
   restrictBoxGroup.visible = (id === 'restrict');
+  quotientGroup.visible = (id === 'quotient');
   marginalCanvas.style.display = (id === 'project') ? 'block' : 'none';
   marginalLabel.style.display = (id === 'project') ? 'block' : 'none';
   state._slabs = null;
@@ -1901,7 +2145,16 @@ function update() {
   } else if (m.id === 'mix' || m.id === 'divergence') {
     scaleOpts = { scaleMask: [1, 1, 0, 0, 0, 0], headroom: 1.0 };
   }
-  uploadVolumes(roles, alphas, scaleOpts);
+  const mainInv = uploadVolumes(roles, alphas, scaleOpts);
+
+  // Input thumbnails: only meaningful for two-input composition modes.
+  if (m.id === 'bundle' || m.id === 'mix') {
+    uploadThumbnail(thumbA, state.A, mainInv);
+    uploadThumbnail(thumbB, state.B, mainInv);
+    thumbnailsGroup.visible = true;
+  } else {
+    thumbnailsGroup.visible = false;
+  }
 
   // Visual indicators for division / restriction
   if (m.id === 'divide') {
@@ -1919,6 +2172,14 @@ function update() {
   }
   if (m.id === 'restrict') {
     updateRestrictBox(state.restrict.xmin, state.restrict.xmax, state.restrict.ymin, state.restrict.ymax, state.restrict.zmin, state.restrict.zmax);
+  }
+
+  // Quotient buckets: explicit cell grid replaces the green Out cloud.
+  if (m.id === 'quotient') {
+    quotientGroup.visible = true;
+    updateQuotientBuckets(state.quotientBinSize);
+  } else {
+    quotientGroup.visible = false;
   }
 
   // Unit-inclusion input tag tracks the slider-controlled delta voxel.
