@@ -1,0 +1,27 @@
+{
+  "theme": {
+    "backgroundColor": "#fff",
+    "cardBackgroundColor": "#f9f9f9",
+    "textColor": "#111",
+    "accentColor": "#111",
+    "fontFamily": "'Raleway', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif"
+  },
+  "visibility": {
+    "nav": false,
+    "nextMeeting": true,
+    "plannedMeetings": true,
+    "previousMeetings": true,
+    "meetingSearch": true,
+    "bibliography": false,
+    "rssLinks": false,
+    "zoomLink": true,
+    "youtubeLinks": true
+  },
+  "layout": {
+    "maxWidth": "540px",
+    "wideMaxWidth": "40%",
+    "cardWidth": "360px",
+    "titleFontSize": "35px"
+  },
+  "customCSS": ""
+}

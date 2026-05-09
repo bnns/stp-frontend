@@ -2,6 +2,7 @@ import React from "react";
 import { MdRssFeed } from "react-icons/md";
 import styled from "@emotion/styled";
 import { Bibliography } from "../types";
+import type { SiteVisibility } from "../site-config";
 
 const Box = styled.div`
   z-index: 1;
@@ -31,9 +32,10 @@ const Link = styled.a<LinkProps>`
 
 export interface NavProps {
   bibliography?: Bibliography[];
+  siteVisibility?: SiteVisibility;
 }
 
-export default function Nav({ bibliography }: NavProps) {
+export default function Nav({ bibliography, siteVisibility }: NavProps) {
   return (
     <Box>
       <Title>Pages</Title>
@@ -42,30 +44,38 @@ export default function Nav({ bibliography }: NavProps) {
       <Link href="/links">Links</Link>
       <Link href="/about">About STP</Link>
       <Link href="/contact">Contact Us</Link>
-      {bibliography ? <Title>Our Work</Title> : null}
-      {bibliography?.map(({ link, name }: { link: string; name: string }) => (
-        <Link key={name} href={link} target="_blank" rel="noopener noreferrer">
-          {name}
-        </Link>
-      ))}
-      <Title>
-        Syndicate{" "}
-        <Link
-          inline
-          href="https://en.wikipedia.org/wiki/RSS"
-          rel="noreferrer"
-          target="_blank"
-        >
-          *
-        </Link>
-      </Title>
-      <Link inline href="/rss/rss2.xml" rel="noreferrer" target="_blank">
-        RSS <MdRssFeed />
-      </Link>
-      /
-      <Link inline href="/rss/atom1.xml" rel="noreferrer" target="_blank">
-        Atom <MdRssFeed />
-      </Link>
+      {(!siteVisibility || siteVisibility.bibliography) && bibliography ? (
+        <>
+          <Title>Our Work</Title>
+          {bibliography.map(({ link, name }: { link: string; name: string }) => (
+            <Link key={name} href={link} target="_blank" rel="noopener noreferrer">
+              {name}
+            </Link>
+          ))}
+        </>
+      ) : null}
+      {(!siteVisibility || siteVisibility.rssLinks) && (
+        <>
+          <Title>
+            Syndicate{" "}
+            <Link
+              inline
+              href="https://en.wikipedia.org/wiki/RSS"
+              rel="noreferrer"
+              target="_blank"
+            >
+              *
+            </Link>
+          </Title>
+          <Link inline href="/rss/rss2.xml" rel="noreferrer" target="_blank">
+            RSS <MdRssFeed />
+          </Link>
+          /
+          <Link inline href="/rss/atom1.xml" rel="noreferrer" target="_blank">
+            Atom <MdRssFeed />
+          </Link>
+        </>
+      )}
     </Box>
   );
 }

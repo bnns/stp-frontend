@@ -2,6 +2,7 @@ import React from "react";
 import Nav, { NavProps } from "./Nav";
 import Head from "next/head";
 import styled from "@emotion/styled";
+import type { SiteVisibility } from "../site-config";
 
 const Wrapper = styled.div`
   display: flex;
@@ -18,9 +19,9 @@ const CenterPiece = styled.div`
   width: 100%;
   height: 100%;
   min-height: 1500px;
-  max-width: 540px;
+  max-width: var(--site-max-width, 540px);
   @media (min-width: 1450px) {
-    max-width: 40%;
+    max-width: var(--site-wide-max-width, 40%);
   }
 `;
 
@@ -39,7 +40,7 @@ export const Row = styled.div<RowProps>`
 
 const Title = styled.h1`
   font-family: Futura;
-  font-size: 35px;
+  font-size: var(--site-title-font-size, 35px);
   font-weight: 300;
   text-align: center;
   width: 100%;
@@ -54,13 +55,16 @@ const PageTitle = styled.h2`
 interface PageWrapperProps extends NavProps {
   children: React.ReactNode;
   title?: string;
+  siteVisibility?: SiteVisibility;
 }
 
 export default function PageWrapper({
   children,
   title,
+  siteVisibility,
   ...navProps
 }: PageWrapperProps) {
+  const showNav = !siteVisibility || siteVisibility.nav;
   return (
     <main>
       <Head>
@@ -70,9 +74,9 @@ export default function PageWrapper({
       <Wrapper>
         <CenterPiece>
           <Row>
-            <Title>Subset of Theoretical Practice</Title>
+            <Title>Common Space of Theoretical Practice</Title>
           </Row>
-          <Nav {...(navProps as NavProps)} />
+          {showNav && <Nav {...(navProps as NavProps)} siteVisibility={siteVisibility} />}
           <PageTitle>{title}</PageTitle>
           {children}
         </CenterPiece>

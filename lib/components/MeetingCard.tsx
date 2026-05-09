@@ -113,12 +113,14 @@ export default function MeetingCard({
   tags,
   setSearch,
   current = false,
-  zoom
+  zoom,
+  hideYoutube = false
 }: Meeting & {
   raised?: boolean;
   current?: boolean;
   setSearch?: (val: string) => void;
-  zoom?: { link: string }
+  zoom?: { link: string };
+  hideYoutube?: boolean;
 }) {
   return (
     <Card raised={raised}>
@@ -188,7 +190,7 @@ export default function MeetingCard({
             </a>
           </RightItem>
         ) : null}
-        {recording ? (
+        {recording && !hideYoutube ? (
           <RightItem>
             <a href={recording} target="_blank" rel="noopener noreferrer">
               <Icon
