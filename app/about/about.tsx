@@ -20,7 +20,7 @@ type Props = {
 
 const About = ({markdown, bibliography}: Props & NavProps) => {
   return (
-    <PageWrapper title="About STP" bibliography={bibliography}>
+    <PageWrapper title="About us" bibliography={bibliography}>
       <div className="video-responsive">
         <iframe
           width="600"
