@@ -214,7 +214,7 @@ const ICC_PARTS = [
     chapters: [
       {
         title: "Introduction",
-        url: `${BASE}/title-and-introductory-note.pdf`,
+        url: `${BASE}/00-title-and-introductory-note.pdf`,
       },
     ],
   },
@@ -223,19 +223,19 @@ const ICC_PARTS = [
     chapters: [
       {
         title: "I. What Does a Communist Do?",
-        url: `${BASE}/i-what-does-a-communist-do.pdf`,
+        url: `${BASE}/01-what-does-a-communist-do.pdf`,
       },
       {
         title: "II. The Challenge for Communists Today",
-        url: `${BASE}/ii-the-challenge-for-communists-today.pdf`,
+        url: `${BASE}/02-the-challenge-for-communists-today.pdf`,
       },
       {
         title: "III. The peripheralization of the world",
-        url: `${BASE}/iii-the-peripheralization-of-the-world.pdf`,
+        url: `${BASE}/03-the-peripheralization-of-the-world.pdf`,
       },
       {
         title: "IV. The peripheralization of the left",
-        url: `${BASE}/iv-the-peripheralization-of-the-left.pdf`,
+        url: `${BASE}/04-the-peripheralization-of-the-left.pdf`,
       },
     ],
   },
@@ -244,23 +244,23 @@ const ICC_PARTS = [
     chapters: [
       {
         title: "V. A theory for communist practice",
-        url: `${BASE}/v-a-theory-for-communist-practice.pdf`,
+        url: `${BASE}/05-a-theory-for-communist-practice.pdf`,
       },
       {
         title: "VI. The organization's point of view",
-        url: `${BASE}/vi-the-organizations-point-of-view.pdf`,
+        url: `${BASE}/06-the-organizations-point-of-view.pdf`,
       },
       {
         title: "VII. The logics of social organization",
-        url: `${BASE}/vii-the-logics-of-social-organization.pdf`,
+        url: `${BASE}/07-the-logics-of-social-organization.pdf`,
       },
       {
         title: "VIII. Concrete organization and social dominance",
-        url: `${BASE}/viii-concrete-organization-and-social-dominance.pdf`,
+        url: `${BASE}/08-concrete-organization-and-social-dominance.pdf`,
       },
       {
         title: "IX. The worker and marginalization",
-        url: `${BASE}/ix-the-worker-and-marginalization.pdf`,
+        url: `${BASE}/09-the-worker-and-marginalization.pdf`,
       },
     ],
   },
@@ -269,19 +269,19 @@ const ICC_PARTS = [
     chapters: [
       {
         title: "X. Political organization",
-        url: `${BASE}/x-political-organization.pdf`,
+        url: `${BASE}/10-political-organization.pdf`,
       },
       {
         title: "XI. Political struggle",
-        url: `${BASE}/xi-political-struggle.pdf`,
+        url: `${BASE}/11-political-struggle.pdf`,
       },
       {
         title: "XII. Political thought",
-        url: `${BASE}/xii-political-thought.pdf`,
+        url: `${BASE}/12-political-thought.pdf`,
       },
       {
         title: "XIII. Political transformation",
-        url: `${BASE}/xiii-political-transformation.pdf`,
+        url: `${BASE}/13-political-transformation.pdf`,
       },
     ],
   },
@@ -290,19 +290,19 @@ const ICC_PARTS = [
     chapters: [
       {
         title: "XIV. Communist construction",
-        url: `${BASE}/xiv-communist-construction.pdf`,
+        url: `${BASE}/14-communist-construction.pdf`,
       },
       {
         title: "XV. Dimensions of communist practice",
-        url: `${BASE}/xv-dimensions-of-communist-practice.pdf`,
+        url: `${BASE}/15-dimensions-of-communist-practice.pdf`,
       },
       {
         title: "XVI. Communist investigations",
-        url: `${BASE}/xvi-communist-investigations.pdf`,
+        url: `${BASE}/16-communist-investigations.pdf`,
       },
       {
         title: "XVII. Common Space of Organizations",
-        url: `${BASE}/xvii-common-space-of-organizations.pdf`,
+        url: `${BASE}/17-common-space-of-organizations.pdf`,
       },
     ],
   },
@@ -311,7 +311,7 @@ const ICC_PARTS = [
     chapters: [
       {
         title: "Continue",
-        url: `${BASE}/continue.pdf`,
+        url: `${BASE}/18-continue.pdf`,
       },
     ],
   },
