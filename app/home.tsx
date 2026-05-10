@@ -137,13 +137,6 @@ const ChapterLink = styled.a`
   }
 `;
 
-const PlaceholderNote = styled.span`
-  font-size: 12px;
-  color: #aaa;
-  margin-left: 6px;
-  font-style: italic;
-`;
-
 const DownloadLink = styled.a`
   display: inline-block;
   font-size: 15px;
@@ -211,112 +204,114 @@ const MeetingRow = styled.div`
   gap: 12px;
 `;
 
-// ─── ICC data (PT placeholder links — EN coming soon) ──────────────────────
+// ─── ICC data ──────────────────────────────────────────────────────────────
+
+const BASE = "https://space.ideaofcommunism.com/icc/en";
 
 const ICC_PARTS = [
   {
-    label: "Introdução",
+    label: "Introduction",
     chapters: [
       {
-        title: "Introdução",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_d99327c86f074ae382f292c05de4395a.pdf",
+        title: "Introduction",
+        url: `${BASE}/title-and-introductory-note.pdf`,
       },
     ],
   },
   {
-    label: "Parte Um",
+    label: "Part One",
     chapters: [
       {
-        title: "1. O que faz um comunista?",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_1d3f74b0b7684c6cba4338a8d200627c.pdf",
+        title: "I. What Does a Communist Do?",
+        url: `${BASE}/i-what-does-a-communist-do.pdf`,
       },
       {
-        title: "2. O desafio dos comunistas hoje",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_7366ab27d169499f93d81318503a91a0.pdf",
+        title: "II. The Challenge for Communists Today",
+        url: `${BASE}/ii-the-challenge-for-communists-today.pdf`,
       },
       {
-        title: "3. A periferização do mundo",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_206cb17d688a46fbba5b83b8f4e1a1b3.pdf",
+        title: "III. The peripheralization of the world",
+        url: `${BASE}/iii-the-peripheralization-of-the-world.pdf`,
       },
       {
-        title: "4. A periferização das esquerdas",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_04c8116af8934f979babef677a8042ff.pdf",
+        title: "IV. The peripheralization of the left",
+        url: `${BASE}/iv-the-peripheralization-of-the-left.pdf`,
       },
     ],
   },
   {
-    label: "Parte Dois",
+    label: "Part Two",
     chapters: [
       {
-        title: "5. Uma teoria para a prática comunista",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_796f114f181043338705fa00ec651b2c.pdf",
+        title: "V. A theory for communist practice",
+        url: `${BASE}/v-a-theory-for-communist-practice.pdf`,
       },
       {
-        title: "6. O ponto de vista da organização",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_02395f2b7b9d460ca84512efa094233c.pdf",
+        title: "VI. The organization's point of view",
+        url: `${BASE}/vi-the-organizations-point-of-view.pdf`,
       },
       {
-        title: "7. As lógicas da organização social",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_4f2415c942d146bfb1db4c87974feb9f.pdf",
+        title: "VII. The logics of social organization",
+        url: `${BASE}/vii-the-logics-of-social-organization.pdf`,
       },
       {
-        title: "8. Organização concreta e dominância social",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_d268ceef50104076b944d93c0db89849.pdf",
+        title: "VIII. Concrete organization and social dominance",
+        url: `${BASE}/viii-concrete-organization-and-social-dominance.pdf`,
       },
       {
-        title: "9. O trabalhador e a periferização",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_60f38b3d7e3f428fbcf86e48365f64ee.pdf",
+        title: "IX. The worker and marginalization",
+        url: `${BASE}/ix-the-worker-and-marginalization.pdf`,
       },
     ],
   },
   {
-    label: "Parte Três",
+    label: "Part Three",
     chapters: [
       {
-        title: "10. Organização política",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_0fa6b81d99434f0cb8cc101e31c1b0ae.pdf",
+        title: "X. Political organization",
+        url: `${BASE}/x-political-organization.pdf`,
       },
       {
-        title: "11. Luta política",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_5c41a8f565c84cd98587ee413b6c1476.pdf",
+        title: "XI. Political struggle",
+        url: `${BASE}/xi-political-struggle.pdf`,
       },
       {
-        title: "12. Pensamento político",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_49cb82f1edd94df4994472a984ebdbfa.pdf",
+        title: "XII. Political thought",
+        url: `${BASE}/xii-political-thought.pdf`,
       },
       {
-        title: "13. Transformação política",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_26629aeefacc43ff97e67b17cf756b5a.pdf",
+        title: "XIII. Political transformation",
+        url: `${BASE}/xiii-political-transformation.pdf`,
       },
     ],
   },
   {
-    label: "Parte Quatro",
+    label: "Part Four",
     chapters: [
       {
-        title: "14. A construção comunista",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_211bd83fadc045639a44ee92a7725ca1.pdf",
+        title: "XIV. Communist construction",
+        url: `${BASE}/xiv-communist-construction.pdf`,
       },
       {
-        title: "15. As dimensões da prática comunista",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_591d873581c34aed85b8cd0bfff4fc96.pdf",
+        title: "XV. Dimensions of communist practice",
+        url: `${BASE}/xv-dimensions-of-communist-practice.pdf`,
       },
       {
-        title: "16. A investigação comunista",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_ec399eeaa013466cbfd5c999dc4667a5.pdf",
+        title: "XVI. Communist investigations",
+        url: `${BASE}/xvi-communist-investigations.pdf`,
       },
       {
-        title: "17. Espaço Comum de Organizações",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_b3488fb84f504fccbe87a8c68032114e.pdf",
+        title: "XVII. Common Space of Organizations",
+        url: `${BASE}/xvii-common-space-of-organizations.pdf`,
       },
     ],
   },
   {
-    label: "Continuar",
+    label: "Continue",
     chapters: [
       {
-        title: "Continuar",
-        url: "https://www.espacocomum.org/_files/ugd/e4314a_631978206af048ecbb67d7cc87c7f2a6.pdf",
+        title: "Continue",
+        url: `${BASE}/continue.pdf`,
       },
     ],
   },
@@ -434,18 +429,17 @@ const Home = ({ meetings, zoom, siteConfig }: Props) => {
               rel="noopener noreferrer"
             >
               {ch.title}
-              <PlaceholderNote>PT — EN coming soon</PlaceholderNote>
             </ChapterLink>
           ))}
         </div>
       ))}
 
       <DownloadLink
-        href="https://www.espacocomum.org/_files/ugd/e4314a_7a17ac9e452649669c56d26e9efddef3.pdf"
+        href={`${BASE}/full-text.pdf`}
         target="_blank"
         rel="noopener noreferrer"
       >
-        Download the complete book (PT)
+        Download the complete book (EN)
       </DownloadLink>
 
       <Divider style={{ marginTop: "60px" }} />
