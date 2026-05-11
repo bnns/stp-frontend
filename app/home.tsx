@@ -14,6 +14,10 @@ import MeetingCard from "../lib/components/MeetingCard";
 import { LightText } from "../lib/components";
 import type { SiteConfig } from "../lib/site-config";
 
+// FEATURE FLAG — hide the entire meeting list section while bnns decides
+// which meetings to surface going forward. Flip to true to restore.
+const SHOW_MEETINGS = false;
+
 // ─── Layout ────────────────────────────────────────────────────────────────
 
 const Page = styled.div`
@@ -442,10 +446,12 @@ const Home = ({ meetings, zoom, siteConfig }: Props) => {
         Download the complete book (EN)
       </DownloadLink>
 
-      <Divider style={{ marginTop: "60px" }} />
+      {SHOW_MEETINGS && (
+        <>
+          <Divider style={{ marginTop: "60px" }} />
 
-      {/* ── Meetings ── */}
-      <MeetingsWrap>
+          {/* ── Meetings ── */}
+          <MeetingsWrap>
         {visibility.nextMeeting && (
           <>
             <MeetingsTitle>
@@ -511,7 +517,9 @@ const Home = ({ meetings, zoom, siteConfig }: Props) => {
             ) : null}
           </>
         )}
-      </MeetingsWrap>
+          </MeetingsWrap>
+        </>
+      )}
     </Page>
   );
 };
